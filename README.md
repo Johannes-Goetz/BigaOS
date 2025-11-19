@@ -9,6 +9,8 @@ A comprehensive boat monitoring and automation system built with Node.js, Expres
 - **State-Based UI** - Dashboard adapts to current boat activity
 - **WebSocket Communication** - Real-time data streaming to connected clients
 - **REST API** - Complete API for sensor data, state management, weather, and cameras
+- **SQLite Database** - Lightweight, serverless database for logging, maintenance, and trip records
+- **Raspberry Pi Ready** - One-command installation script for Raspberry Pi 5
 - **Dummy Data Generator** - Realistic simulated sensor data for development
 
 ## Project Structure
@@ -18,11 +20,13 @@ biga-os/
 ├── server/                 # Backend Express server
 │   ├── src/
 │   │   ├── controllers/   # API controllers
+│   │   ├── database/      # SQLite database & schema
 │   │   ├── routes/        # API routes
 │   │   ├── services/      # Business logic & dummy data
 │   │   ├── types/         # TypeScript type definitions
 │   │   ├── websocket/     # WebSocket server
 │   │   └── index.ts       # Server entry point
+│   ├── data/              # SQLite database file (auto-created)
 │   └── package.json
 │
 ├── client/                 # React frontend
@@ -37,9 +41,12 @@ biga-os/
 │   │   └── main.tsx      # Entry point
 │   └── package.json
 │
-├── HARDWARE.md            # Hardware specifications
-├── SOFTWARE_SPEC.md       # Complete software specification
-└── README.md              # This file
+├── docs/                   # Documentation
+│   ├── DATABASE_SETUP.md          # Complete database guide
+│   └── DATABASE_QUICK_REFERENCE.md # Quick reference
+│
+├── setup-raspberry-pi.sh   # Automated Raspberry Pi setup
+└── README.md               # This file
 ```
 
 ## Prerequisites
@@ -223,9 +230,79 @@ The `dummy-data.service.ts` generates realistic sensor data that changes based o
 
 You can manually change boat states using the emoji buttons in the State Indicator card. The dummy data will automatically adjust to reflect the new state.
 
-## Next Steps (Raspberry Pi Deployment)
+## Database
 
-When you're ready to deploy to the Raspberry Pi 5:
+Biga OS uses **SQLite** - a lightweight, serverless database perfect for Raspberry Pi.
+
+### Features
+- State history logging
+- Sensor data archival
+- Events and notifications
+- Maintenance log tracking
+- Trip/passage logbook
+- System settings storage
+
+### Quick Start
+
+The database is created automatically when you start the server. It's stored at `server/data/bigaos.db`.
+
+### Documentation
+
+- **[Complete Database Setup Guide](docs/DATABASE_SETUP.md)** - Full installation and usage
+- **[Quick Reference](docs/DATABASE_QUICK_REFERENCE.md)** - Common commands and API endpoints
+
+### API Endpoints
+
+```bash
+GET  /api/database/stats              # Database statistics
+GET  /api/database/settings           # Get all settings
+PUT  /api/database/settings           # Update settings
+GET  /api/database/events             # Get events/notifications
+GET  /api/database/maintenance        # Maintenance log
+POST /api/database/maintenance        # Add maintenance item
+GET  /api/database/trips              # Trip log
+POST /api/database/trips/start        # Start new trip
+POST /api/database/trips/:id/end      # End trip
+```
+
+## Raspberry Pi Deployment
+
+### Automated Setup (Recommended)
+
+**One command installs everything:**
+
+```bash
+./setup-raspberry-pi.sh
+```
+
+This script will:
+1. ✅ Update system packages
+2. ✅ Install Node.js 20 LTS
+3. ✅ Install build tools
+4. ✅ Install all dependencies
+5. ✅ Build client and server
+6. ✅ Create database directory
+7. ✅ Set up systemd service (auto-start on boot)
+
+### After Installation
+
+```bash
+# Start Biga OS
+sudo systemctl start bigaos
+
+# Check status
+sudo systemctl status bigaos
+
+# View logs
+sudo journalctl -u bigaos -f
+
+# Access web interface
+http://<raspberry-pi-ip>:3000
+```
+
+### Next Steps for Production
+
+Once deployed to Raspberry Pi 5:
 
 1. **Install SignalK Server** - For real marine sensor data
 2. **Set up CAN Bus** - Connect ESP32 sensor nodes

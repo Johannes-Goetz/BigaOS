@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { dummyDataService } from '../services/dummy-data.service';
 import { BoatState } from '../types/boat-state.types';
+import db from '../database/database';
 
 export class StateController {
   // GET /api/state - Get current boat state
@@ -27,6 +28,13 @@ export class StateController {
 
     dummyDataService.changeState(state);
 
+    // Log state change to database
+    try {
+      db.addStateHistory(state, reason, 'manual_override');
+    } catch (error) {
+      console.error('Failed to log state change:', error);
+    }
+
     res.json({
       success: true,
       currentState: state,
@@ -42,26 +50,32 @@ export class StateController {
 
   // GET /api/state/history - Get state history
   getStateHistory(req: Request, res: Response) {
-    // Return dummy history data
-    const history = [
-      {
-        state: BoatState.DRIFTING,
-        timestamp: new Date(Date.now() - 7200000),
-        duration: 3600
-      },
-      {
-        state: BoatState.MOTORING,
-        timestamp: new Date(Date.now() - 3600000),
-        duration: 1800
-      },
-      {
-        state: dummyDataService.getCurrentState(),
-        timestamp: new Date(Date.now() - 1800000),
-        duration: 1800
-      }
-    ];
-
-    res.json(history);
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const history = db.getStateHistory(limit);
+      res.json(history);
+    } catch (error: any) {
+      console.error('Failed to get state history:', error);
+      // Fallback to dummy data if database fails
+      const history = [
+        {
+          state: BoatState.DRIFTING,
+          timestamp: new Date(Date.now() - 7200000),
+          duration: 3600
+        },
+        {
+          state: BoatState.MOTORING,
+          timestamp: new Date(Date.now() - 3600000),
+          duration: 1800
+        },
+        {
+          state: dummyDataService.getCurrentState(),
+          timestamp: new Date(Date.now() - 1800000),
+          duration: 1800
+        }
+      ];
+      res.json(history);
+    }
   }
 }
 

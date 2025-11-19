@@ -4,9 +4,18 @@ import { createServer } from 'http';
 import dotenv from 'dotenv';
 import routes from './routes';
 import { WebSocketServer } from './websocket/websocket-server';
+import db from './database/database';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize database
+try {
+  db.initialize();
+} catch (error) {
+  console.error('Failed to initialize database:', error);
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,10 +36,15 @@ app.use('/api', routes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const dbStats = db.getStats();
   res.json({
     status: 'healthy',
     timestamp: new Date(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: {
+      connected: true,
+      ...dbStats
+    }
   });
 });
 
@@ -66,6 +80,7 @@ httpServer.listen(PORT, () => {
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
   wsServer.stop();
+  db.close();
   httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);
@@ -75,6 +90,7 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully...');
   wsServer.stop();
+  db.close();
   httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);

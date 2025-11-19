@@ -1,4 +1,4 @@
-# Boat OS - Intelligent Boat Automation System
+# Biga OS - Intelligent Boat Automation System
 
 A comprehensive boat monitoring and automation system built with Node.js, Express, React, and WebSocket communication. This is the development version with dummy sensor data for testing before deployment to the Raspberry Pi 5.
 
@@ -14,7 +14,7 @@ A comprehensive boat monitoring and automation system built with Node.js, Expres
 ## Project Structure
 
 ```
-boat-os/
+biga-os/
 ├── server/                 # Backend Express server
 │   ├── src/
 │   │   ├── controllers/   # API controllers
@@ -122,7 +122,7 @@ npm start
 Once both are running:
 
 1. Open your browser to **http://localhost:5173** (development) or **http://localhost:3000** (production)
-2. You should see the Boat OS dashboard with real-time updating sensor data
+2. You should see the Biga OS dashboard with real-time updating sensor data
 
 ## API Endpoints
 
@@ -276,14 +276,11 @@ ISC
 
 ## Author
 
-Boat OS Development Team
+Biga OS Development Team
 
 ---
 
 **Current Status**: Development version with dummy data
 **Target Deployment**: Raspberry Pi 5 on 24ft sailboat
 **Next Phase**: Hardware integration and SignalK setup
-# BoatOS
-# BoatOS
-# BoatOS
 # BigaOS

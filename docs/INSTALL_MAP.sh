@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🗺️  Installing OpenSeaMap Dependencies for Boat OS"
+echo "🗺️  Installing OpenSeaMap Dependencies for Biga OS"
 echo "=================================================="
 echo ""
 

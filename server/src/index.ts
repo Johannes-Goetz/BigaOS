@@ -56,7 +56,7 @@ const wsServer = new WebSocketServer(httpServer);
 
 // Start server
 httpServer.listen(PORT, () => {
-  console.log('🚤 Boat OS Server Started');
+  console.log('🚤 Biga OS Server Started');
   console.log(`📡 REST API: http://localhost:${PORT}`);
   console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
   console.log(`💚 Health: http://localhost:${PORT}/health`);

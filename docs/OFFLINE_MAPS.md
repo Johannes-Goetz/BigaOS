@@ -1,8 +1,8 @@
-# Offline Map Capabilities for Boat OS
+# Offline Map Capabilities for Biga OS
 
 ## Overview
 
-When sailing, you often won't have internet connectivity. Here's how to enable offline maps for Boat OS so you can navigate even when offshore.
+When sailing, you often won't have internet connectivity. Here's how to enable offline maps for Biga OS so you can navigate even when offshore.
 
 ## Current Status
 
@@ -52,8 +52,8 @@ Use a Progressive Web App (PWA) with service worker to cache tiles reliably.
 Create `client/public/sw.js`:
 
 ```javascript
-const CACHE_NAME = 'boat-os-maps-v1';
-const TILE_CACHE = 'boat-os-tiles-v1';
+const CACHE_NAME = 'biga-os-maps-v1';
+const TILE_CACHE = 'biga-os-tiles-v1';
 
 // Cache application files
 const APP_FILES = [
@@ -137,8 +137,8 @@ Update `client/public/manifest.json`:
 
 ```json
 {
-  "name": "Boat OS",
-  "short_name": "Boat OS",
+  "name": "Biga OS",
+  "short_name": "Biga OS",
   "description": "Intelligent Boat Automation System",
   "start_url": "/",
   "display": "standalone",
@@ -266,7 +266,7 @@ Here's a complete script for Raspberry Pi deployment:
 #!/bin/bash
 # setup-offline-maps.sh
 
-echo "🗺️  Setting up offline maps for Boat OS"
+echo "🗺️  Setting up offline maps for Biga OS"
 echo "========================================"
 
 # 1. Install tile downloader
@@ -340,9 +340,9 @@ Electronic Navigational Charts (NOAA, UKHO) have detailed depth data.
 
 ### Option B: Use Chart Plotter Integration
 
-If you have a dedicated chart plotter, Boat OS can overlay position on that.
+If you have a dedicated chart plotter, Biga OS can overlay position on that.
 
-**Recommended:** Use Boat OS for automation, chart plotter for navigation.
+**Recommended:** Use Biga OS for automation, chart plotter for navigation.
 
 ## GPS Without Internet
 

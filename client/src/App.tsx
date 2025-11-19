@@ -85,7 +85,7 @@ function App() {
         height: '100vh',
         fontSize: '1.5rem'
       }}>
-        Loading Boat OS...
+        Loading Biga OS...
       </div>
     );
   }
@@ -109,7 +109,7 @@ function App() {
           gap: '1rem'
         }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-            🚤 Boat OS
+            🚤 Biga OS
           </h1>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

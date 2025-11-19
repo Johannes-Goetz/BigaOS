@@ -153,7 +153,7 @@ Even with auto-center OFF:
 
 Our implementation matches Google Maps behavior:
 
-| Action | Google Maps | Boat OS |
+| Action | Google Maps | Biga OS |
 |--------|-------------|---------|
 | Auto-center on start | ✅ | ✅ |
 | Pan disables auto-center | ✅ | ✅ |

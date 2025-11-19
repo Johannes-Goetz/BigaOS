@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get Boat OS running in 5 minutes!
+Get Biga OS running in 5 minutes!
 
 ## Step 1: Install Dependencies
 
@@ -23,7 +23,7 @@ npm run dev:server
 
 You should see:
 ```
-🚤 Boat OS Server Started
+🚤 Biga OS Server Started
 📡 REST API: http://localhost:3000
 🔌 WebSocket: ws://localhost:3000
 💚 Health: http://localhost:3000/health
@@ -45,7 +45,7 @@ You should see:
 
 Navigate to: **http://localhost:5173**
 
-You should see the Boat OS dashboard with:
+You should see the Biga OS dashboard with:
 - Current boat state indicator (Drifting by default)
 - Real-time sensor widgets updating every second
 - Connection status indicator (should show "Connected")
@@ -119,4 +119,4 @@ curl http://localhost:3000/health
 
 ---
 
-Enjoy exploring Boat OS! 🚤⚓⛵
+Enjoy exploring Biga OS! 🚤⚓⛵

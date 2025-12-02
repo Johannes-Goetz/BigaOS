@@ -92,21 +92,60 @@ body {
 }
 
 /* Fix Leaflet control styles for dark theme */
-.leaflet-control-zoom a {
-  background-color: rgba(10, 25, 41, 0.9) !important;
-  color: #e0e0e0 !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
+.leaflet-control-zoom {
+  position: fixed !important;
+  top: 50% !important;
+  right: 110px !important;
+  left: auto !important;
+  transform: translateY(-50%) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.leaflet-control-zoom a:hover {
+.leaflet-control-zoom a {
+  background-color: rgba(10, 25, 41, 0.95) !important;
+  color: #e0e0e0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  font-size: 20px !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.leaflet-control-zoom a:not(:active):not(:hover) {
+  background-color: rgba(10, 25, 41, 0.95) !important;
+}
+
+.leaflet-control-zoom a:hover:not(:active) {
   background-color: rgba(25, 118, 210, 0.9) !important;
 }
 
-.leaflet-control-attribution {
-  background-color: rgba(10, 25, 41, 0.8) !important;
-  color: #e0e0e0 !important;
+.leaflet-control-zoom a:active {
+  background-color: rgba(25, 118, 210, 0.7) !important;
 }
 
-.leaflet-control-attribution a {
-  color: #4fc3f7 !important;
+.leaflet-control-zoom a.leaflet-disabled,
+.leaflet-control-zoom a.leaflet-disabled:hover,
+.leaflet-control-zoom a.leaflet-disabled:active {
+  background-color: rgba(10, 25, 41, 0.5) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+  cursor: default !important;
+}
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Depth alarm pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(-50%) scale(1.02);
+  }
 }

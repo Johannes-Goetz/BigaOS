@@ -1,4 +1,5 @@
 import React from 'react';
+import { theme } from '../../../styles/theme';
 
 interface COGItemProps {
   cog: number;
@@ -18,21 +19,26 @@ export const COGItem: React.FC<COGItemProps> = ({ cog }) => {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      padding: '1rem',
+      padding: theme.space.lg,
     }}>
-      <div style={{ fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      }}>
         COG
       </div>
       <div style={{
-        fontSize: '3rem',
-        fontWeight: 'bold',
-        color: '#29b6f6',
+        fontSize: theme.fontSize['3xl'],
+        fontWeight: theme.fontWeight.bold,
+        color: theme.colors.dataCog,
         lineHeight: 1,
-        marginTop: '0.25rem',
+        marginTop: theme.space.xs,
       }}>
         {cog.toFixed(0)}°
       </div>
-      <div style={{ fontSize: '0.875rem', opacity: 0.5 }}>{getCardinalDirection(cog)}</div>
+      <div style={{ fontSize: theme.fontSize.md, color: theme.colors.textMuted }}>{getCardinalDirection(cog)}</div>
     </div>
   );
 };

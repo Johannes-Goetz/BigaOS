@@ -6,4 +6,3 @@ export { PositionItem } from './PositionItem';
 export { BatteryItem } from './BatteryItem';
 export { COGItem } from './COGItem';
 export { ChartMiniItem } from './ChartMiniItem';
-export { SettingsItem } from './SettingsItem';

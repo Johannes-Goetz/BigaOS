@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import GridLayout, { Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import { SensorData } from '../../types';
@@ -18,13 +18,13 @@ import {
   BatteryItem,
   COGItem,
   ChartMiniItem,
-  SettingsItem,
 } from './items';
+import { theme } from '../../styles/theme';
 
 const LAYOUT_STORAGE_KEY = 'bigaos-dashboard-layout';
-const GRID_COLS = 12;
-const GRID_ROWS = 6;
-const ADD_ITEM_ID = '__add_item__';
+const GRID_CONFIG_KEY = 'bigaos-grid-config';
+const DEFAULT_GRID_COLS = 6;
+const DEFAULT_GRID_ROWS = 3;
 
 interface DashboardProps {
   sensorData: SensorData;
@@ -32,15 +32,14 @@ interface DashboardProps {
 }
 
 const ITEM_TYPE_CONFIG: Record<DashboardItemType, { label: string; targetView: ViewType; defaultSize: { w: number; h: number } }> = {
-  'speed': { label: 'Speed', targetView: 'chart', defaultSize: { w: 2, h: 2 } },
-  'heading': { label: 'Heading', targetView: 'chart', defaultSize: { w: 2, h: 2 } },
-  'depth': { label: 'Depth', targetView: 'depth', defaultSize: { w: 2, h: 2 } },
-  'wind': { label: 'Wind', targetView: 'wind', defaultSize: { w: 2, h: 2 } },
-  'position': { label: 'Position', targetView: 'chart', defaultSize: { w: 2, h: 2 } },
-  'battery': { label: 'Battery', targetView: 'electrical', defaultSize: { w: 2, h: 2 } },
-  'cog': { label: 'COG', targetView: 'chart', defaultSize: { w: 2, h: 2 } },
-  'chart-mini': { label: 'Chart', targetView: 'chart', defaultSize: { w: 4, h: 4 } },
-  'settings': { label: 'Settings', targetView: 'settings', defaultSize: { w: 2, h: 2 } },
+  'speed': { label: 'Speed', targetView: 'chart', defaultSize: { w: 1, h: 1 } },
+  'heading': { label: 'Heading', targetView: 'chart', defaultSize: { w: 1, h: 1 } },
+  'depth': { label: 'Depth', targetView: 'depth', defaultSize: { w: 1, h: 1 } },
+  'wind': { label: 'Wind', targetView: 'wind', defaultSize: { w: 1, h: 1 } },
+  'position': { label: 'Position', targetView: 'chart', defaultSize: { w: 1, h: 1 } },
+  'battery': { label: 'Battery', targetView: 'electrical', defaultSize: { w: 1, h: 1 } },
+  'cog': { label: 'COG', targetView: 'chart', defaultSize: { w: 1, h: 1 } },
+  'chart-mini': { label: 'Chart', targetView: 'chart', defaultSize: { w: 2, h: 2 } },
 };
 
 export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) => {
@@ -60,6 +59,127 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
+  // Grid configuration state
+  const [gridCols, setGridCols] = useState(() => {
+    const saved = localStorage.getItem(GRID_CONFIG_KEY);
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        return config.cols || DEFAULT_GRID_COLS;
+      } catch {
+        return DEFAULT_GRID_COLS;
+      }
+    }
+    return DEFAULT_GRID_COLS;
+  });
+
+  const [gridRows, setGridRows] = useState(() => {
+    const saved = localStorage.getItem(GRID_CONFIG_KEY);
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        return config.rows || DEFAULT_GRID_ROWS;
+      } catch {
+        return DEFAULT_GRID_ROWS;
+      }
+    }
+    return DEFAULT_GRID_ROWS;
+  });
+
+  // Save grid config and clear items when grid size changes
+  const handleGridColsChange = useCallback((newCols: number) => {
+    setGridCols(newCols);
+    setItems([]);
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify([]));
+    localStorage.setItem(GRID_CONFIG_KEY, JSON.stringify({ cols: newCols, rows: gridRows }));
+  }, [gridRows]);
+
+  const handleGridRowsChange = useCallback((newRows: number) => {
+    setGridRows(newRows);
+    setItems([]);
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify([]));
+    localStorage.setItem(GRID_CONFIG_KEY, JSON.stringify({ cols: gridCols, rows: newRows }));
+  }, [gridCols]);
+
+  // Pull-down menu with settings and edit icons
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showColsPicker, setShowColsPicker] = useState(false);
+  const [showRowsPicker, setShowRowsPicker] = useState(false);
+  const touchStartY = useRef<number | null>(null);
+  const isValidPullStart = useRef(false);
+  const TOP_ZONE = 60; // Only start pull if touch begins in top 60px
+  const PULL_THRESHOLD = 80; // Distance needed to open menu
+  const MENU_HEIGHT = 140; // Height of open menu
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (editMode) return;
+    // Don't close menu if a picker is open
+    if (showColsPicker || showRowsPicker) return;
+
+    const startY = e.touches[0].clientY;
+
+    // If menu is open, check if touch is outside menu to close it
+    if (menuOpen) {
+      if (startY > MENU_HEIGHT) {
+        setMenuOpen(false);
+        setPullDistance(0);
+      }
+      return;
+    }
+
+    // Only allow pull-down if starting from top zone
+    if (startY <= TOP_ZONE) {
+      touchStartY.current = startY;
+      isValidPullStart.current = true;
+      setIsPulling(true);
+    } else {
+      isValidPullStart.current = false;
+    }
+  }, [editMode, menuOpen, showColsPicker, showRowsPicker]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (menuOpen || !isValidPullStart.current || touchStartY.current === null) return;
+
+    const currentY = e.touches[0].clientY;
+    const delta = Math.max(0, currentY - touchStartY.current);
+    // Apply resistance - pull slows down as it gets further
+    const resistedDelta = Math.min(MENU_HEIGHT, delta * 0.7);
+    setPullDistance(resistedDelta);
+  }, [menuOpen]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (menuOpen || !isValidPullStart.current) {
+      return;
+    }
+
+    if (pullDistance >= PULL_THRESHOLD) {
+      // Open the menu
+      setMenuOpen(true);
+      setPullDistance(MENU_HEIGHT);
+    } else {
+      // Snap back
+      setPullDistance(0);
+    }
+
+    setIsPulling(false);
+    touchStartY.current = null;
+    isValidPullStart.current = false;
+  }, [pullDistance, menuOpen]);
+
+  const handleSettingsClick = useCallback(() => {
+    setMenuOpen(false);
+    setPullDistance(0);
+    onNavigate('settings');
+  }, [onNavigate]);
+
+  const handleEditClick = useCallback(() => {
+    setMenuOpen(false);
+    setPullDistance(0);
+    setEditMode(true);
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       setContainerSize({ width: window.innerWidth, height: window.innerHeight });
@@ -68,16 +188,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const margin = 8;
-  const rowHeight = Math.floor((containerSize.height - margin * (GRID_ROWS + 1)) / GRID_ROWS);
-  const gridWidth = containerSize.width - margin * 2;
+  const margin = 2;
+  // Account for containerPadding (margin on all sides) and gaps between items
+  const rowHeight = Math.floor((containerSize.height - margin * 2 - margin * (gridRows - 1)) / gridRows);
+  const gridWidth = containerSize.width;
 
   const findNextAvailablePosition = useCallback((w: number, h: number): { x: number; y: number } | null => {
-    const grid: boolean[][] = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(false));
+    const grid: boolean[][] = Array(gridRows).fill(null).map(() => Array(gridCols).fill(false));
 
     items.forEach((item) => {
-      for (let row = item.layout.y; row < item.layout.y + item.layout.h && row < GRID_ROWS; row++) {
-        for (let col = item.layout.x; col < item.layout.x + item.layout.w && col < GRID_COLS; col++) {
+      for (let row = item.layout.y; row < item.layout.y + item.layout.h && row < gridRows; row++) {
+        for (let col = item.layout.x; col < item.layout.x + item.layout.w && col < gridCols; col++) {
           if (row >= 0 && col >= 0) {
             grid[row][col] = true;
           }
@@ -85,8 +206,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       }
     });
 
-    for (let y = 0; y <= GRID_ROWS - h; y++) {
-      for (let x = 0; x <= GRID_COLS - w; x++) {
+    for (let y = 0; y <= gridRows - h; y++) {
+      for (let x = 0; x <= gridCols - w; x++) {
         let fits = true;
         for (let row = y; row < y + h && fits; row++) {
           for (let col = x; col < x + w && fits; col++) {
@@ -101,32 +222,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       }
     }
     return null;
-  }, [items]);
+  }, [items, gridRows, gridCols]);
 
-  // Calculate add item position (use 2x2 to find available space)
-  const addItemPosition = useMemo(() => {
-    return findNextAvailablePosition(2, 2);
+  // Check if there's space to add a new item
+  const hasSpaceForNewItem = useMemo(() => {
+    return findNextAvailablePosition(1, 1) !== null;
   }, [findNextAvailablePosition]);
 
   const handleLayoutChange = useCallback((newLayout: Layout[]) => {
-    // Filter out the add item from layout changes
-    const filteredLayout = newLayout.filter(l => l.i !== ADD_ITEM_ID);
-
     // Enforce bounds - prevent items from going below the grid
-    const boundedLayout = filteredLayout.map(layoutItem => {
+    const boundedLayout = newLayout.map(layoutItem => {
       let { x, y, w, h } = layoutItem;
 
       // Clamp x position
       if (x < 0) x = 0;
-      if (x + w > GRID_COLS) x = GRID_COLS - w;
+      if (x + w > gridCols) x = gridCols - w;
 
       // Clamp y position - prevent going below grid
       if (y < 0) y = 0;
-      if (y + h > GRID_ROWS) y = GRID_ROWS - h;
+      if (y + h > gridRows) y = gridRows - h;
 
       // Clamp size if item would exceed bounds
-      if (w > GRID_COLS) w = GRID_COLS;
-      if (h > GRID_ROWS) h = GRID_ROWS;
+      if (w > gridCols) w = gridCols;
+      if (h > gridRows) h = gridRows;
 
       return { ...layoutItem, x, y, w, h };
     });
@@ -140,7 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
     });
     setItems(updatedItems);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(updatedItems));
-  }, [items]);
+  }, [items, gridCols, gridRows]);
 
   const handleDeleteItem = useCallback((id: string) => {
     setItems(prevItems => {
@@ -170,8 +288,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
         y: position.y,
         w: config.defaultSize.w,
         h: config.defaultSize.h,
-        minW: 2,
-        minH: 2,
+        minW: 1,
+        minH: 1,
       },
     };
 
@@ -180,10 +298,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(updatedItems));
     setShowAddMenu(false);
   };
-
-  const handleLongPress = useCallback(() => {
-    setEditMode(true);
-  }, []);
 
   const handleExitEditMode = useCallback(() => {
     setEditMode(false);
@@ -223,8 +337,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
             heading={sensorData.navigation.headingMagnetic}
           />
         );
-      case 'settings':
-        return <SettingsItem />;
       default:
         return null;
     }
@@ -292,50 +404,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
             <polygon points="3 11 22 2 13 21 11 13 3 11" />
           </svg>
         );
-      case 'settings':
-        return (
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={iconStyle}>
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        );
       default:
         return null;
     }
   };
 
-  // Build layout including the add item if there's space
+  // Build layout for grid items
   const layout: Layout[] = useMemo(() => {
-    const itemLayouts = items.map((item) => ({
+    return items.map((item) => ({
       ...item.layout,
       isDraggable: editMode,
       isResizable: editMode,
-      minW: 2,
-      minH: 2,
-      maxH: GRID_ROWS,
+      minW: 1,
+      minH: 1,
+      maxH: gridRows,
     }));
+  }, [items, editMode, gridRows]);
 
-    // Add the "+" item if in edit mode and there's space
-    if (editMode && addItemPosition) {
-      itemLayouts.push({
-        i: ADD_ITEM_ID,
-        x: addItemPosition.x,
-        y: addItemPosition.y,
-        w: 2,
-        h: 2,
-        minW: 2,
-        minH: 2,
-        maxH: GRID_ROWS,
-        isDraggable: false,
-        isResizable: false,
-      });
-    }
-
-    return itemLayouts;
-  }, [items, editMode, addItemPosition]);
+  const pullProgress = Math.min(1, pullDistance / PULL_THRESHOLD);
 
   return (
     <div
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         width: '100vw',
         height: '100vh',
@@ -343,104 +435,306 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
         position: 'relative',
       }}
     >
-      {/* Grid */}
-      <div style={{ padding: `${margin}px` }}>
-        <GridLayout
-          className="layout"
-          layout={layout}
-          cols={GRID_COLS}
-          rowHeight={rowHeight}
-          width={gridWidth}
-          onLayoutChange={handleLayoutChange}
-          isDraggable={editMode}
-          isResizable={editMode}
-          isBounded={true}
-          compactType={null}
-          preventCollision={true}
-          margin={[margin, margin]}
-          containerPadding={[0, 0]}
-          useCSSTransforms={true}
-          maxRows={GRID_ROWS}
-          resizeHandles={['se', 'sw', 'ne', 'nw']}
-          onResize={(_layout, _oldItem, newItem, _placeholder) => {
-            // Prevent resize beyond grid bounds
-            if (newItem.y + newItem.h > GRID_ROWS) {
-              newItem.h = GRID_ROWS - newItem.y;
-            }
-            if (newItem.x + newItem.w > GRID_COLS) {
-              newItem.w = GRID_COLS - newItem.x;
-            }
-          }}
-          onDrag={(_layout, _oldItem, newItem) => {
-            // Prevent drag beyond grid bounds
-            if (newItem.y + newItem.h > GRID_ROWS) {
-              newItem.y = GRID_ROWS - newItem.h;
-            }
-            if (newItem.x + newItem.w > GRID_COLS) {
-              newItem.x = GRID_COLS - newItem.w;
-            }
+      {/* Pull-down menu */}
+      {(isPulling || menuOpen || pullDistance > 0) && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: `${pullDistance}px`,
+            background: `linear-gradient(to bottom, ${theme.colors.bgSecondary}, ${theme.colors.bgTertiary})`,
+            borderBottom: menuOpen ? `1px solid ${theme.colors.border}` : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: theme.zIndex.modal,
+            transition: isPulling ? 'none' : `height ${theme.transition.slow}`,
           }}
         >
-          {items.map((item) => (
-            <div key={item.id}>
-              <DashboardItem
-                targetView={item.targetView}
-                onNavigate={onNavigate}
-                editMode={editMode}
-                onDelete={() => handleDeleteItem(item.id)}
-                onLongPress={handleLongPress}
-              >
-                {renderItemContent(item)}
-              </DashboardItem>
+          {/* Center group: Grid + Edit */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+            }}
+          >
+            {/* Grid size dropdowns */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.space.sm,
+                opacity: pullProgress,
+                transform: `scale(${0.5 + pullProgress * 0.5})`,
+                transition: isPulling ? 'none' : `all ${theme.transition.slow}`,
+                padding: theme.space.md,
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: theme.space.xs }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowColsPicker(true);
+                    setShowRowsPicker(false);
+                  }}
+                  style={{
+                    background: theme.colors.warningLight,
+                    border: 'none',
+                    borderRadius: theme.radius.lg,
+                    color: theme.colors.textPrimary,
+                    padding: '16px 24px',
+                    fontSize: theme.fontSize.xl,
+                    fontWeight: theme.fontWeight.bold,
+                    cursor: 'pointer',
+                    minWidth: '70px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {gridCols}
+                </button>
+                <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Width</span>
+              </div>
+              <span style={{ fontSize: theme.fontSize.xl, color: theme.colors.textSecondary, fontWeight: theme.fontWeight.bold, marginBottom: '20px' }}>×</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: theme.space.xs }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRowsPicker(true);
+                    setShowColsPicker(false);
+                  }}
+                  style={{
+                    background: theme.colors.warningLight,
+                    border: 'none',
+                    borderRadius: theme.radius.lg,
+                    color: theme.colors.textPrimary,
+                    padding: '16px 24px',
+                    fontSize: theme.fontSize.xl,
+                    fontWeight: theme.fontWeight.bold,
+                    cursor: 'pointer',
+                    minWidth: '70px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {gridRows}
+                </button>
+                <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Height</span>
+              </div>
             </div>
-          ))}
 
-          {/* Add Item Button - only in edit mode */}
-          {editMode && addItemPosition && (
-            <div key={ADD_ITEM_ID}>
+            {/* Edit button */}
+            <button
+              onClick={handleEditClick}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: theme.space.sm,
+                background: 'transparent',
+                border: 'none',
+                cursor: menuOpen ? 'pointer' : 'default',
+                opacity: pullProgress,
+                transform: `scale(${0.5 + pullProgress * 0.5})`,
+                transition: isPulling ? 'none' : `all ${theme.transition.slow}`,
+                padding: theme.space.md,
+              }}
+            >
               <div
-                onClick={() => setShowAddMenu(!showAddMenu)}
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '12px',
-                  border: '2px dashed rgba(255, 255, 255, 0.15)',
-                  cursor: 'pointer',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: theme.radius.lg,
+                  background: theme.colors.successLight,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                 }}
               >
                 <svg
-                  width="32"
-                  height="32"
+                  width="28"
+                  height="28"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="rgba(255, 255, 255, 0.4)"
+                  stroke="rgba(255, 255, 255, 0.9)"
                   strokeWidth="2"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </div>
+              <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Edit</span>
+            </button>
+          </div>
+
+          {/* Settings button - positioned on right */}
+          <button
+            onClick={handleSettingsClick}
+            style={{
+              position: 'absolute',
+              right: theme.space.xl,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: theme.space.sm,
+              background: 'transparent',
+              border: 'none',
+              cursor: menuOpen ? 'pointer' : 'default',
+              opacity: pullProgress,
+              transform: `scale(${0.5 + pullProgress * 0.5})`,
+              transition: isPulling ? 'none' : `all ${theme.transition.slow}`,
+              padding: theme.space.md,
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: theme.radius.lg,
+                background: theme.colors.primaryLight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.9)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
             </div>
-          )}
-        </GridLayout>
-      </div>
+            <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Settings</span>
+          </button>
+        </div>
+      )}
+
+      {/* Grid overlay for visualization when menu is open */}
+      {menuOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'none',
+            zIndex: theme.zIndex.base,
+          }}
+        >
+          {/* Container padding - edges */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: margin, background: theme.colors.primary, opacity: 0.7 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: margin, background: theme.colors.primary, opacity: 0.7 }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: margin, background: theme.colors.primary, opacity: 0.7 }} />
+          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: margin, background: theme.colors.primary, opacity: 0.7 }} />
+
+          {/* Vertical gaps between columns */}
+          {Array.from({ length: gridCols - 1 }, (_, i) => {
+            const availableWidth = gridWidth - margin * 2 - margin * (gridCols - 1);
+            const colWidth = availableWidth / gridCols;
+            // Gap starts after column i: margin + (i+1)*colWidth + i*margin
+            const x = margin + (i + 1) * colWidth + i * margin;
+            return (
+              <div
+                key={`vgap-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: `${x}px`,
+                  top: margin,
+                  bottom: margin,
+                  width: `${margin}px`,
+                  background: theme.colors.primary,
+                  opacity: 0.7,
+                }}
+              />
+            );
+          })}
+
+          {/* Horizontal gaps between rows */}
+          {Array.from({ length: gridRows - 1 }, (_, i) => {
+            // Gap starts after row i: margin + (i+1)*rowHeight + i*margin
+            const y = margin + (i + 1) * rowHeight + i * margin;
+            return (
+              <div
+                key={`hgap-${i}`}
+                style={{
+                  position: 'absolute',
+                  top: `${y}px`,
+                  left: margin,
+                  right: margin,
+                  height: `${margin}px`,
+                  background: theme.colors.primary,
+                  opacity: 0.7,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Grid */}
+      <GridLayout
+        className="layout"
+        layout={layout}
+        cols={gridCols}
+        rowHeight={rowHeight}
+        width={gridWidth}
+        onLayoutChange={handleLayoutChange}
+        isDraggable={editMode}
+        isResizable={editMode}
+        isBounded={true}
+        compactType={null}
+        preventCollision={true}
+        margin={[margin, margin]}
+        containerPadding={[margin, margin]}
+        useCSSTransforms={true}
+        maxRows={gridRows}
+        resizeHandles={['se', 'sw', 'ne', 'nw']}
+        onResize={(_layout, _oldItem, newItem, _placeholder) => {
+          // Prevent resize beyond grid bounds
+          if (newItem.y + newItem.h > gridRows) {
+            newItem.h = gridRows - newItem.y;
+          }
+          if (newItem.x + newItem.w > gridCols) {
+            newItem.w = gridCols - newItem.x;
+          }
+        }}
+        onDrag={(_layout, _oldItem, newItem) => {
+          // Prevent drag beyond grid bounds
+          if (newItem.y + newItem.h > gridRows) {
+            newItem.y = gridRows - newItem.h;
+          }
+          if (newItem.x + newItem.w > gridCols) {
+            newItem.x = gridCols - newItem.w;
+          }
+        }}
+      >
+        {items.map((item) => (
+          <div key={item.id}>
+            <DashboardItem
+              targetView={item.targetView}
+              onNavigate={onNavigate}
+              editMode={editMode}
+              onDelete={() => handleDeleteItem(item.id)}
+            >
+              {renderItemContent(item)}
+            </DashboardItem>
+          </div>
+        ))}
+      </GridLayout>
 
       {/* Add Item Menu - Grid of miniature items */}
-      {showAddMenu && addItemPosition && (
+      {showAddMenu && hasSpaceForNewItem && (
         <>
           {/* Backdrop to close menu */}
           <div
@@ -452,7 +746,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
               right: 0,
               bottom: 0,
               zIndex: 998,
-              background: 'rgba(0, 0, 0, 0.5)',
+              background: theme.colors.bgOverlay,
             }}
           />
           <div
@@ -461,61 +755,63 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
-              zIndex: 1000,
-              background: 'rgba(10, 25, 41, 0.98)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '16px',
-              padding: '16px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-              maxWidth: '90vw',
-              maxHeight: '80vh',
+              zIndex: theme.zIndex.modal,
+              background: theme.colors.bgSecondary,
+              border: `1px solid ${theme.colors.borderHover}`,
+              borderRadius: theme.radius.lg,
+              padding: '24px',
+              boxShadow: theme.shadow.lg,
+              width: '90vw',
+              maxWidth: '500px',
+              maxHeight: '85vh',
               overflowY: 'auto',
             }}
           >
             <div style={{
-              fontSize: '0.75rem',
-              opacity: 0.5,
+              fontSize: theme.fontSize.lg,
+              color: theme.colors.textMuted,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
-              marginBottom: '12px',
+              marginBottom: '20px',
               textAlign: 'center',
             }}>
               Add Widget
             </div>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 100px)',
-              gap: '10px',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '12px',
+              width: '100%',
             }}>
               {(Object.keys(ITEM_TYPE_CONFIG) as DashboardItemType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => handleAddItem(type)}
                   style={{
-                    width: '100px',
-                    height: '100px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    color: '#fff',
+                    width: '100%',
+                    aspectRatio: '1',
+                    minWidth: '90px',
+                    minHeight: '90px',
+                    background: theme.colors.bgCard,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.md,
+                    color: theme.colors.textPrimary,
                     cursor: 'pointer',
-                    padding: '8px',
+                    padding: '12px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'all 0.15s',
+                    transition: `all ${theme.transition.fast}`,
                     overflow: 'hidden',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.background = theme.colors.bgCardActive;
+                    e.currentTarget.style.borderColor = theme.colors.borderFocus;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.background = theme.colors.bgCard;
+                    e.currentTarget.style.borderColor = theme.colors.border;
                   }}
                 >
                   <div style={{
@@ -524,16 +820,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transform: 'scale(0.5)',
+                    transform: 'scale(0.85)',
                     transformOrigin: 'center center',
                   }}>
                     {renderMiniPreview(type)}
                   </div>
                   <div style={{
-                    fontSize: '0.65rem',
-                    opacity: 0.7,
+                    fontSize: theme.fontSize.md,
+                    color: theme.colors.textSecondary,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
+                    fontWeight: theme.fontWeight.medium,
                     marginTop: '4px',
                   }}>
                     {ITEM_TYPE_CONFIG[type].label}
@@ -545,49 +842,205 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
         </>
       )}
 
-      {/* Edit Mode Indicator & Done Button */}
+      {/* Grid Columns Picker */}
+      {showColsPicker && (
+        <>
+          <div
+            onClick={() => setShowColsPicker(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: theme.colors.bgOverlay,
+              zIndex: theme.zIndex.modal,
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: theme.colors.bgSecondary,
+              border: `1px solid ${theme.colors.borderHover}`,
+              borderRadius: theme.radius.lg,
+              padding: '24px',
+              zIndex: theme.zIndex.modal + 1,
+              maxHeight: '90vh',
+              maxWidth: '95vw',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ fontSize: theme.fontSize.lg, color: theme.colors.textMuted, textAlign: 'center', marginBottom: '20px' }}>
+              Select Columns
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px' }}>
+              {Array.from({ length: 32 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => {
+                    handleGridColsChange(n);
+                    setShowColsPicker(false);
+                  }}
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    background: n === gridCols ? theme.colors.warning : theme.colors.bgCard,
+                    border: n === gridCols ? `2px solid ${theme.colors.warning}` : `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.md,
+                    color: theme.colors.textPrimary,
+                    fontSize: theme.fontSize.xl,
+                    fontWeight: n === gridCols ? theme.fontWeight.bold : theme.fontWeight.normal,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Grid Rows Picker */}
+      {showRowsPicker && (
+        <>
+          <div
+            onClick={() => setShowRowsPicker(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: theme.colors.bgOverlay,
+              zIndex: theme.zIndex.modal,
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: theme.colors.bgSecondary,
+              border: `1px solid ${theme.colors.borderHover}`,
+              borderRadius: theme.radius.lg,
+              padding: '24px',
+              zIndex: theme.zIndex.modal + 1,
+              maxHeight: '90vh',
+              maxWidth: '95vw',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ fontSize: theme.fontSize.lg, color: theme.colors.textMuted, textAlign: 'center', marginBottom: '20px' }}>
+              Select Rows
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px' }}>
+              {Array.from({ length: 32 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => {
+                    handleGridRowsChange(n);
+                    setShowRowsPicker(false);
+                  }}
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    background: n === gridRows ? theme.colors.warning : theme.colors.bgCard,
+                    border: n === gridRows ? `2px solid ${theme.colors.warning}` : `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.md,
+                    color: theme.colors.textPrimary,
+                    fontSize: theme.fontSize.xl,
+                    fontWeight: n === gridRows ? theme.fontWeight.bold : theme.fontWeight.normal,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit Mode Indicator & Buttons */}
       {editMode && (
         <div
           style={{
             position: 'absolute',
-            bottom: '20px',
+            bottom: theme.space.xl,
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '16px',
           }}
         >
-          <div
+          {/* Add button */}
+          <button
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            disabled={!hasSpaceForNewItem}
             style={{
-              background: 'rgba(25, 118, 210, 0.9)',
-              padding: '8px 20px',
-              borderRadius: '20px',
-              fontSize: '0.875rem',
-              color: '#fff',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: theme.space.sm,
+              background: 'transparent',
+              border: 'none',
+              cursor: hasSpaceForNewItem ? 'pointer' : 'not-allowed',
+              opacity: hasSpaceForNewItem ? 1 : 0.5,
+              padding: theme.space.md,
             }}
           >
-            Edit Mode
-          </div>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: theme.radius.lg,
+                background: hasSpaceForNewItem ? 'rgba(255, 167, 38, 0.9)' : 'rgba(100, 100, 100, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.9)" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </div>
+          </button>
+          {/* Done button */}
           <button
             onClick={handleExitEditMode}
             style={{
-              background: 'rgba(102, 187, 106, 0.9)',
-              border: 'none',
-              padding: '8px 20px',
-              borderRadius: '20px',
-              fontSize: '0.875rem',
-              color: '#fff',
-              cursor: 'pointer',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '6px',
+              gap: theme.space.sm,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: theme.space.md,
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Done
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: theme.radius.lg,
+                background: 'rgba(102, 187, 106, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.9)" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
           </button>
         </div>
       )}

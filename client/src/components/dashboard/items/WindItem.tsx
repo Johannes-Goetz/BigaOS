@@ -1,4 +1,5 @@
 import React from 'react';
+import { theme } from '../../../styles/theme';
 
 interface WindItemProps {
   speedApparent: number;
@@ -20,27 +21,32 @@ export const WindItem: React.FC<WindItemProps> = ({ speedApparent, angleApparent
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      padding: '1rem',
+      padding: theme.space.lg,
       position: 'relative',
     }}>
-      <div style={{ fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      }}>
         Wind
       </div>
       <div style={{
-        fontSize: '2.5rem',
-        fontWeight: 'bold',
-        color: '#ffa726',
+        fontSize: theme.fontSize['2xl'],
+        fontWeight: theme.fontWeight.bold,
+        color: theme.colors.dataWind,
         lineHeight: 1,
-        marginTop: '0.25rem',
+        marginTop: theme.space.xs,
       }}>
         {speedApparent.toFixed(0)}
       </div>
-      <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>kts AWA</div>
+      <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>kts AWA</div>
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        marginTop: '0.5rem',
+        gap: theme.space.sm,
+        marginTop: theme.space.sm,
       }}>
         <svg
           width="20"
@@ -48,15 +54,15 @@ export const WindItem: React.FC<WindItemProps> = ({ speedApparent, angleApparent
           viewBox="0 0 24 24"
           style={{
             transform: `rotate(${angleApparent}deg)`,
-            transition: 'transform 0.3s ease',
+            transition: `transform ${theme.transition.slow}`,
           }}
         >
           <path
             d="M12 2L8 12h3v10l5-14h-3L12 2z"
-            fill="#ffa726"
+            fill={theme.colors.dataWind}
           />
         </svg>
-        <span style={{ fontSize: '0.875rem', color: '#ffa726' }}>
+        <span style={{ fontSize: theme.fontSize.md, color: theme.colors.dataWind }}>
           {angleApparent.toFixed(0)}° {getWindDirection(angleApparent)}
         </span>
       </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { theme } from '../../../styles/theme';
 
 interface BatteryItemProps {
   voltage: number;
@@ -7,9 +8,9 @@ interface BatteryItemProps {
 
 export const BatteryItem: React.FC<BatteryItemProps> = ({ voltage, stateOfCharge }) => {
   const getBatteryColor = (soc: number): string => {
-    if (soc < 20) return '#ef5350';
-    if (soc < 50) return '#ffa726';
-    return '#66bb6a';
+    if (soc < 20) return theme.colors.error;
+    if (soc < 50) return theme.colors.warning;
+    return theme.colors.success;
   };
 
   return (
@@ -19,21 +20,26 @@ export const BatteryItem: React.FC<BatteryItemProps> = ({ voltage, stateOfCharge
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      padding: '1rem',
+      padding: theme.space.lg,
     }}>
-      <div style={{ fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      }}>
         Battery
       </div>
       <div style={{
-        fontSize: '2.5rem',
-        fontWeight: 'bold',
+        fontSize: theme.fontSize['2xl'],
+        fontWeight: theme.fontWeight.bold,
         color: getBatteryColor(stateOfCharge),
         lineHeight: 1,
-        marginTop: '0.25rem',
+        marginTop: theme.space.xs,
       }}>
         {stateOfCharge.toFixed(0)}%
       </div>
-      <div style={{ fontSize: '0.875rem', opacity: 0.5 }}>{voltage.toFixed(1)}V</div>
+      <div style={{ fontSize: theme.fontSize.md, color: theme.colors.textMuted }}>{voltage.toFixed(1)}V</div>
     </div>
   );
 };

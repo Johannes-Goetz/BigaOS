@@ -1,5 +1,6 @@
-import React, { useRef, useCallback } from 'react';
+import React from 'react';
 import { ViewType } from '../../types/dashboard';
+import { theme } from '../../styles/theme';
 
 interface DashboardItemProps {
   children: React.ReactNode;
@@ -7,10 +8,7 @@ interface DashboardItemProps {
   onNavigate: (view: ViewType) => void;
   editMode?: boolean;
   onDelete?: () => void;
-  onLongPress?: () => void;
 }
-
-const LONG_PRESS_DURATION = 500; // ms
 
 export const DashboardItem: React.FC<DashboardItemProps> = ({
   children,
@@ -18,30 +16,9 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
   onNavigate,
   editMode = false,
   onDelete,
-  onLongPress,
 }) => {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isLongPress = useRef(false);
-
-  const handlePressStart = useCallback(() => {
-    isLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      if (onLongPress) {
-        onLongPress();
-      }
-    }, LONG_PRESS_DURATION);
-  }, [onLongPress]);
-
-  const handlePressEnd = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-
   const handleClick = () => {
-    if (editMode || isLongPress.current) {
+    if (editMode) {
       return;
     }
     onNavigate(targetView);
@@ -63,23 +40,20 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
   return (
     <div
       onClick={handleClick}
-      onMouseDown={handlePressStart}
-      onMouseUp={handlePressEnd}
-      onTouchStart={handlePressStart}
-      onTouchEnd={handlePressEnd}
-      onTouchCancel={handlePressEnd}
       style={{
         width: '100%',
         height: '100%',
-        background: editMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
+        background: editMode ? theme.colors.bgCardHover : theme.colors.bgCard,
         backdropFilter: 'blur(10px)',
-        borderRadius: '12px',
-        border: editMode ? '2px dashed rgba(25, 118, 210, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: theme.radius.md,
+        border: editMode
+          ? `2px dashed ${theme.colors.primaryMedium}`
+          : `1px solid ${theme.colors.border}`,
         cursor: editMode ? 'move' : 'pointer',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        transition: 'border 0.2s ease, background 0.2s ease',
+        transition: `border ${theme.transition.normal}, background ${theme.transition.normal}`,
         position: 'relative',
         userSelect: 'none',
         WebkitUserSelect: 'none',
@@ -87,16 +61,15 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
       }}
       onMouseEnter={(e) => {
         if (!editMode) {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.background = theme.colors.bgCardHover;
+          e.currentTarget.style.borderColor = theme.colors.borderHover;
         }
       }}
       onMouseLeave={(e) => {
         if (!editMode) {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.background = theme.colors.bgCard;
+          e.currentTarget.style.borderColor = theme.colors.border;
         }
-        handlePressEnd();
       }}
     >
       {/* Content */}
@@ -113,27 +86,27 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
           onTouchEnd={handleDeleteClick}
           style={{
             position: 'absolute',
-            top: '8px',
-            right: '8px',
+            top: theme.space.sm,
+            right: theme.space.sm,
             width: '36px',
             height: '36px',
-            borderRadius: '8px',
-            background: 'rgba(239, 83, 80, 1)',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: theme.radius.sm,
+            background: theme.colors.errorSolid,
+            border: `2px solid ${theme.colors.borderFocus}`,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 9999,
-            transition: 'all 0.15s',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
+            zIndex: theme.zIndex.tooltip,
+            transition: `all ${theme.transition.fast}`,
+            boxShadow: theme.shadow.md,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(244, 67, 54, 1)';
+            e.currentTarget.style.background = '#f44336';
             e.currentTarget.style.transform = 'scale(1.1)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(239, 83, 80, 1)';
+            e.currentTarget.style.background = theme.colors.errorSolid;
             e.currentTarget.style.transform = 'scale(1)';
           }}
           title="Delete widget"

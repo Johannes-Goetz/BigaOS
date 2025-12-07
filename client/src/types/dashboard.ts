@@ -17,8 +17,7 @@ export type DashboardItemType =
   | 'position'
   | 'battery'
   | 'cog'
-  | 'chart-mini'
-  | 'settings';
+  | 'chart-mini';
 
 export interface DashboardLayout {
   items: DashboardItemConfig[];
@@ -26,14 +25,14 @@ export interface DashboardLayout {
   rowHeight: number;
 }
 
-// 12 columns x 6 rows grid
+// 6 columns x 3 rows grid
 export const DEFAULT_DASHBOARD_ITEMS: DashboardItemConfig[] = [
-  { id: 'speed', type: 'speed', targetView: 'chart', layout: { i: 'speed', x: 0, y: 0, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'heading', type: 'heading', targetView: 'chart', layout: { i: 'heading', x: 2, y: 0, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'depth', type: 'depth', targetView: 'depth', layout: { i: 'depth', x: 4, y: 0, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'wind', type: 'wind', targetView: 'wind', layout: { i: 'wind', x: 0, y: 2, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'cog', type: 'cog', targetView: 'chart', layout: { i: 'cog', x: 2, y: 2, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'position', type: 'position', targetView: 'chart', layout: { i: 'position', x: 4, y: 2, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'battery', type: 'battery', targetView: 'electrical', layout: { i: 'battery', x: 0, y: 4, w: 2, h: 2, minW: 2, minH: 2 } },
-  { id: 'chart-mini', type: 'chart-mini', targetView: 'chart', layout: { i: 'chart-mini', x: 6, y: 0, w: 6, h: 4, minW: 2, minH: 2 } },
+  { id: 'speed', type: 'speed', targetView: 'chart', layout: { i: 'speed', x: 0, y: 0, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'heading', type: 'heading', targetView: 'chart', layout: { i: 'heading', x: 1, y: 0, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'depth', type: 'depth', targetView: 'depth', layout: { i: 'depth', x: 2, y: 0, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'wind', type: 'wind', targetView: 'wind', layout: { i: 'wind', x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'cog', type: 'cog', targetView: 'chart', layout: { i: 'cog', x: 1, y: 1, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'position', type: 'position', targetView: 'chart', layout: { i: 'position', x: 2, y: 1, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'battery', type: 'battery', targetView: 'electrical', layout: { i: 'battery', x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1 } },
+  { id: 'chart-mini', type: 'chart-mini', targetView: 'chart', layout: { i: 'chart-mini', x: 3, y: 0, w: 3, h: 2, minW: 1, minH: 1 } },
 ];

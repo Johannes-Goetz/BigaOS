@@ -1,3 +1,107 @@
+/* ========================================
+   BigaOS Design System
+   ======================================== */
+
+:root {
+  /* Colors - Background */
+  --color-bg-primary: #0a1929;
+  --color-bg-secondary: rgba(10, 25, 41, 0.98);
+  --color-bg-tertiary: rgba(10, 25, 41, 0.9);
+  --color-bg-card: rgba(255, 255, 255, 0.05);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.08);
+  --color-bg-card-active: rgba(255, 255, 255, 0.1);
+  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+  --color-bg-overlay-heavy: rgba(0, 0, 0, 0.85);
+
+  /* Colors - Text */
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --color-text-disabled: rgba(255, 255, 255, 0.3);
+
+  /* Colors - Brand */
+  --color-primary: #1976d2;
+  --color-primary-light: rgba(25, 118, 210, 0.3);
+  --color-primary-medium: rgba(25, 118, 210, 0.5);
+  --color-primary-dark: #1565c0;
+  --color-primary-solid: rgba(25, 118, 210, 0.9);
+
+  /* Colors - Semantic */
+  --color-success: #66bb6a;
+  --color-success-light: rgba(102, 187, 106, 0.3);
+  --color-success-solid: rgba(102, 187, 106, 0.9);
+  --color-warning: #ffa726;
+  --color-warning-light: rgba(255, 167, 38, 0.3);
+  --color-error: #ef5350;
+  --color-error-light: rgba(239, 83, 80, 0.3);
+  --color-error-solid: rgba(239, 83, 80, 1);
+  --color-info: #4fc3f7;
+  --color-info-light: rgba(79, 195, 247, 0.3);
+
+  /* Colors - Border */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
+  --color-border-focus: rgba(255, 255, 255, 0.3);
+  --color-border-dashed: rgba(255, 255, 255, 0.15);
+
+  /* Border Radius */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* Font Sizes */
+  --font-xs: 0.65rem;
+  --font-sm: 0.75rem;
+  --font-md: 0.875rem;
+  --font-base: 1rem;
+  --font-lg: 1.25rem;
+  --font-xl: 1.5rem;
+  --font-2xl: 2rem;
+  --font-3xl: 2.5rem;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease-out;
+
+  /* Z-Index Scale */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 500;
+  --z-modal: 1000;
+  --z-tooltip: 9999;
+
+  /* Component Specific */
+  --grid-margin: 8px;
+  --item-min-size: 1;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
 * {
   margin: 0;
   padding: 0;
@@ -10,14 +114,15 @@ html, body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0a1929;
-  color: #e0e0e0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   overflow: hidden;
   width: 100%;
   height: 100%;
   position: fixed;
   top: 0;
   left: 0;
+  font-size: var(--font-base);
 }
 
 #root {
@@ -26,52 +131,56 @@ html, body {
   overflow: hidden;
 }
 
+/* ========================================
+   Utility Classes
+   ======================================== */
+
 .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--space-lg);
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
   backdrop-filter: blur(10px);
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: var(--space-md) var(--space-xl);
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
   cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
+  transition: all var(--transition-normal);
+  font-weight: var(--font-medium);
 }
 
 .btn-primary {
-  background: #1976d2;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #1565c0;
+  background: var(--color-primary-dark);
   transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-card-active);
   color: white;
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-bg-card-hover);
 }
 
 .grid {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--space-xl);
 }
 
 .grid-2 {
@@ -92,13 +201,15 @@ html, body {
   }
 }
 
-/* Leaflet Map Styles */
+/* ========================================
+   Leaflet Map Styles
+   ======================================== */
+
 .boat-icon {
   background: transparent !important;
   border: none !important;
 }
 
-/* Fix Leaflet control styles for dark theme */
 .leaflet-control-zoom {
   position: fixed !important;
   top: 50% !important;
@@ -110,9 +221,9 @@ html, body {
 }
 
 .leaflet-control-zoom a {
-  background-color: rgba(10, 25, 41, 0.95) !important;
-  color: #e0e0e0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background-color: var(--color-bg-secondary) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border-hover) !important;
   width: 40px !important;
   height: 40px !important;
   line-height: 40px !important;
@@ -122,11 +233,11 @@ html, body {
 }
 
 .leaflet-control-zoom a:not(:active):not(:hover) {
-  background-color: rgba(10, 25, 41, 0.95) !important;
+  background-color: var(--color-bg-secondary) !important;
 }
 
 .leaflet-control-zoom a:hover:not(:active) {
-  background-color: rgba(25, 118, 210, 0.9) !important;
+  background-color: var(--color-primary-solid) !important;
 }
 
 .leaflet-control-zoom a:active {
@@ -137,7 +248,7 @@ html, body {
 .leaflet-control-zoom a.leaflet-disabled:hover,
 .leaflet-control-zoom a.leaflet-disabled:active {
   background-color: rgba(10, 25, 41, 0.5) !important;
-  color: rgba(255, 255, 255, 0.3) !important;
+  color: var(--color-text-disabled) !important;
   cursor: default !important;
 }
 
@@ -145,7 +256,10 @@ html, body {
   display: none !important;
 }
 
-/* Depth alarm pulse animation */
+/* ========================================
+   Animations
+   ======================================== */
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -157,7 +271,10 @@ html, body {
   }
 }
 
-/* React Grid Layout Styles */
+/* ========================================
+   React Grid Layout
+   ======================================== */
+
 .react-grid-layout {
   position: relative;
   transition: height 200ms ease;
@@ -184,9 +301,8 @@ html, body {
   will-change: transform;
 }
 
-/* Ensure delete buttons are always visible */
 .react-grid-item button[title="Delete widget"] {
-  z-index: 9999 !important;
+  z-index: var(--z-tooltip) !important;
 }
 
 .react-grid-item.dropping {
@@ -194,9 +310,9 @@ html, body {
 }
 
 .react-grid-item.react-grid-placeholder {
-  background: rgba(25, 118, 210, 0.3);
-  border: 2px dashed rgba(25, 118, 210, 0.6);
-  border-radius: 12px;
+  background: var(--color-primary-light);
+  border: 2px dashed var(--color-primary-medium);
+  border-radius: var(--radius-md);
   transition-duration: 100ms;
   z-index: 2;
   user-select: none;
@@ -215,12 +331,12 @@ html, body {
   bottom: 4px;
   width: 8px;
   height: 8px;
-  border-right: 2px solid rgba(255, 255, 255, 0.3);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  border-right: 2px solid var(--color-text-disabled);
+  border-bottom: 2px solid var(--color-text-disabled);
 }
 
 .react-grid-item:hover > .react-resizable-handle::after {
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: var(--color-text-secondary);
 }
 
 .react-resizable-handle-se {
@@ -277,7 +393,6 @@ html, body {
   bottom: 0;
 }
 
-/* Drag handle cursor */
 .drag-handle {
   cursor: grab;
   width: 100%;

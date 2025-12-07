@@ -1,5 +1,6 @@
 import React from 'react';
 import { GeoPosition } from '../../../types';
+import { theme } from '../../../styles/theme';
 
 interface PositionItemProps {
   position: GeoPosition;
@@ -21,19 +22,24 @@ export const PositionItem: React.FC<PositionItemProps> = ({ position }) => {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      padding: '1rem',
+      padding: theme.space.lg,
     }}>
-      <div style={{ fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      }}>
         Position
       </div>
       <div style={{
-        marginTop: '0.5rem',
+        marginTop: theme.space.sm,
         textAlign: 'center',
       }}>
-        <div style={{ fontSize: '1rem', color: '#4fc3f7', fontFamily: 'monospace' }}>
+        <div style={{ fontSize: theme.fontSize.base, color: theme.colors.dataPosition, fontFamily: 'monospace' }}>
           {formatCoord(position.latitude, true)}
         </div>
-        <div style={{ fontSize: '1rem', color: '#4fc3f7', fontFamily: 'monospace', marginTop: '0.25rem' }}>
+        <div style={{ fontSize: theme.fontSize.base, color: theme.colors.dataPosition, fontFamily: 'monospace', marginTop: theme.space.xs }}>
           {formatCoord(position.longitude, false)}
         </div>
       </div>

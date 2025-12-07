@@ -8,6 +8,7 @@ import {
   depthConversions,
   distanceConversions,
 } from '../../context/SettingsContext';
+import { theme } from '../../styles/theme';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -30,19 +31,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
     labels: Record<T, string>,
     onChange: (value: T) => void
   ) => (
-    <div style={{ marginBottom: '1.5rem' }}>
+    <div style={{ marginBottom: theme.space.xl }}>
       <div style={{
-        fontSize: '0.75rem',
-        opacity: 0.6,
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textMuted,
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
-        marginBottom: '0.75rem',
+        marginBottom: theme.space.md,
       }}>
         {label}
       </div>
       <div style={{
         display: 'flex',
-        gap: '0.5rem',
+        gap: theme.space.sm,
         flexWrap: 'wrap',
       }}>
         {options.map((option) => (
@@ -52,15 +53,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
             style={{
               flex: '1 1 auto',
               minWidth: '70px',
-              padding: '1rem',
-              background: currentValue === option ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
-              border: currentValue === option ? '2px solid rgba(25, 118, 210, 0.8)' : '2px solid transparent',
-              borderRadius: '8px',
-              color: '#fff',
+              padding: theme.space.lg,
+              background: currentValue === option ? theme.colors.primaryMedium : theme.colors.bgCardActive,
+              border: currentValue === option ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+              borderRadius: theme.radius.md,
+              color: theme.colors.textPrimary,
               cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: currentValue === option ? 'bold' : 'normal',
-              transition: 'all 0.2s',
+              fontSize: theme.fontSize.base,
+              fontWeight: currentValue === option ? theme.fontWeight.bold : theme.fontWeight.normal,
+              transition: `all ${theme.transition.normal}`,
             }}
           >
             {labels[option]}
@@ -74,7 +75,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
     <div style={{
       width: '100%',
       height: '100%',
-      background: '#0a1929',
+      background: theme.colors.bgPrimary,
       display: 'flex',
       flexDirection: 'column',
     }}>
@@ -82,20 +83,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '1rem',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        justifyContent: 'space-between',
+        padding: theme.space.lg,
+        borderBottom: `1px solid ${theme.colors.border}`,
       }}>
+        <h1 style={{ fontSize: theme.fontSize.lg, fontWeight: theme.fontWeight.bold, margin: 0 }}>Settings</h1>
         <button
           onClick={onClose}
           style={{
-            background: 'transparent',
+            background: theme.colors.bgCardActive,
             border: 'none',
-            color: '#fff',
+            color: theme.colors.textPrimary,
             cursor: 'pointer',
-            padding: '0.5rem',
-            marginRight: '1rem',
+            padding: theme.space.md,
+            borderRadius: theme.radius.md,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -103,26 +107,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </button>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>Settings</h1>
       </div>
 
       {/* Settings content */}
       <div style={{
         flex: 1,
-        padding: '1.5rem',
+        padding: theme.space.xl,
         overflowY: 'auto',
       }}>
         {/* Units section */}
         <div style={{
-          marginBottom: '2rem',
+          marginBottom: theme.space['2xl'],
         }}>
           <div style={{
-            fontSize: '1rem',
-            fontWeight: 'bold',
-            marginBottom: '1rem',
+            fontSize: theme.fontSize.base,
+            fontWeight: theme.fontWeight.bold,
+            marginBottom: theme.space.lg,
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
+            gap: theme.space.sm,
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="21" y1="10" x2="3" y2="10" />
@@ -172,13 +175,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
 
         {/* Info section */}
         <div style={{
-          padding: '1rem',
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '8px',
-          fontSize: '0.85rem',
-          opacity: 0.7,
+          padding: theme.space.lg,
+          background: theme.colors.bgCard,
+          borderRadius: theme.radius.md,
+          fontSize: theme.fontSize.md,
+          color: theme.colors.textSecondary,
         }}>
-          <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>About Units</div>
+          <div style={{ marginBottom: theme.space.sm, fontWeight: theme.fontWeight.bold, color: theme.colors.textPrimary }}>About Units</div>
           <p style={{ margin: 0, lineHeight: 1.5 }}>
             Changing units here will update all displays across the application.
             The depth alarm will be reset when changing depth units to avoid confusion.
@@ -188,11 +191,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
 
       {/* Footer */}
       <div style={{
-        padding: '1rem',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
+        padding: theme.space.lg,
+        borderTop: `1px solid ${theme.colors.border}`,
         textAlign: 'center',
-        fontSize: '0.75rem',
-        opacity: 0.5,
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textMuted,
       }}>
         BigaOS v1.0
       </div>

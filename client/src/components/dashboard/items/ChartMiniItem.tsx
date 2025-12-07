@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { GeoPosition } from '../../../types';
+import { theme } from '../../../styles/theme';
 
 interface ChartMiniItemProps {
   position: GeoPosition;
@@ -98,7 +99,7 @@ export const ChartMiniItem: React.FC<ChartMiniItemProps> = ({ position, heading 
       width: '100%',
       height: '100%',
       position: 'relative',
-      borderRadius: '12px',
+      borderRadius: theme.radius.md,
       overflow: 'hidden',
     }}>
       <div
@@ -111,15 +112,15 @@ export const ChartMiniItem: React.FC<ChartMiniItemProps> = ({ position, heading 
       />
       <div style={{
         position: 'absolute',
-        top: '8px',
-        left: '8px',
-        background: 'rgba(0, 0, 0, 0.7)',
-        padding: '4px 10px',
-        borderRadius: '4px',
-        fontSize: '0.75rem',
+        top: theme.space.sm,
+        left: theme.space.sm,
+        background: theme.colors.bgOverlayHeavy,
+        padding: `${theme.space.xs} ${theme.space.md}`,
+        borderRadius: theme.radius.sm,
+        fontSize: theme.fontSize.sm,
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
-        zIndex: 50,
+        zIndex: theme.zIndex.dropdown,
       }}>
         Chart
       </div>

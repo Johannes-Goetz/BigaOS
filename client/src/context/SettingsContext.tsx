@@ -4,6 +4,7 @@ import { wsService } from '../services/websocket';
 export type SpeedUnit = 'kt' | 'km/h' | 'mph' | 'm/s';
 export type DepthUnit = 'm' | 'ft';
 export type DistanceUnit = 'nm' | 'km' | 'mi';
+export type TimeFormat = '12h' | '24h';
 
 export const speedConversions: Record<SpeedUnit, { factor: number; label: string }> = {
   'kt': { factor: 1, label: 'kt' },
@@ -33,9 +34,11 @@ interface SettingsContextType {
   speedUnit: SpeedUnit;
   depthUnit: DepthUnit;
   distanceUnit: DistanceUnit;
+  timeFormat: TimeFormat;
   setSpeedUnit: (unit: SpeedUnit) => void;
   setDepthUnit: (unit: DepthUnit) => void;
   setDistanceUnit: (unit: DistanceUnit) => void;
+  setTimeFormat: (format: TimeFormat) => void;
 
   // Depth alarm
   depthAlarm: number | null; // Stored in current unit
@@ -62,13 +65,14 @@ interface SettingsContextType {
   isSynced: boolean;
 }
 
-const DEPTH_HISTORY_MAX_POINTS = 300; // 5 minutes at 1 reading/second
-const DEPTH_HISTORY_INTERVAL = 1000; // 1 second between readings
+const DEPTH_HISTORY_MAX_POINTS = 17280; // 24 hours at 1 reading per 5 seconds
+const DEPTH_HISTORY_INTERVAL = 5000; // 5 seconds between readings (for longer history)
 
 const defaultSettings = {
   speedUnit: 'kt' as SpeedUnit,
   depthUnit: 'm' as DepthUnit,
   distanceUnit: 'nm' as DistanceUnit,
+  timeFormat: '24h' as TimeFormat,
   depthAlarm: null as number | null,
   soundAlarmEnabled: false,
 };
@@ -79,6 +83,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [speedUnit, setSpeedUnitState] = useState<SpeedUnit>(defaultSettings.speedUnit);
   const [depthUnit, setDepthUnitState] = useState<DepthUnit>(defaultSettings.depthUnit);
   const [distanceUnit, setDistanceUnitState] = useState<DistanceUnit>(defaultSettings.distanceUnit);
+  const [timeFormat, setTimeFormatState] = useState<TimeFormat>(defaultSettings.timeFormat);
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
   const [depthHistory, setDepthHistory] = useState<DepthHistoryPoint[]>([]);
@@ -102,6 +107,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       if (data.settings.distanceUnit) {
         setDistanceUnitState(data.settings.distanceUnit);
+      }
+      if (data.settings.timeFormat) {
+        setTimeFormatState(data.settings.timeFormat);
       }
       if (data.settings.depthAlarm !== undefined) {
         setDepthAlarmState(data.settings.depthAlarm);
@@ -128,6 +136,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'distanceUnit':
           setDistanceUnitState(data.value);
+          break;
+        case 'timeFormat':
+          setTimeFormatState(data.value);
           break;
         case 'depthAlarm':
           setDepthAlarmState(data.value);
@@ -176,6 +187,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setDistanceUnit = useCallback((unit: DistanceUnit) => {
     setDistanceUnitState(unit);
     updateServerSetting('distanceUnit', unit);
+  }, [updateServerSetting]);
+
+  const setTimeFormat = useCallback((format: TimeFormat) => {
+    setTimeFormatState(format);
+    updateServerSetting('timeFormat', format);
   }, [updateServerSetting]);
 
   const setDepthAlarm = useCallback((depth: number | null) => {
@@ -229,9 +245,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     speedUnit,
     depthUnit,
     distanceUnit,
+    timeFormat,
     setSpeedUnit,
     setDepthUnit,
     setDistanceUnit,
+    setTimeFormat,
     depthAlarm,
     depthAlarmMeters,
     setDepthAlarm,

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useSettings, depthConversions } from '../../context/SettingsContext';
+import { SensorChart, DataPoint } from '../common/SensorChart';
 
 interface DepthViewProps {
   depth: number; // Current depth in meters
@@ -82,99 +83,16 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
     return '#4fc3f7';
   };
 
-  // Render depth history graph
-  const renderGraph = () => {
-    if (depthHistory.length < 2) {
-      return (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          opacity: 0.5,
-          fontSize: '0.9rem',
-        }}>
-          Collecting depth data...
-        </div>
-      );
-    }
+  // Convert depth history to chart data format (with unit conversion)
+  const chartData: DataPoint[] = useMemo(() => {
+    return depthHistory.map(point => ({
+      timestamp: point.timestamp,
+      value: convertDepth(point.depth),
+    }));
+  }, [depthHistory, convertDepth]);
 
-    const graphHeight = 200; // pixels
-
-    // Find max for scaling
-    const depths = depthHistory.map(p => p.depth);
-    const maxDepth = Math.max(...depths, 10) * 1.2; // Add 20% headroom
-
-    // Create path
-    const points = depthHistory.map((point, index) => {
-      const x = (index / (depthHistory.length - 1)) * 100;
-      const y = (point.depth / maxDepth) * graphHeight;
-      return `${x},${y}`;
-    });
-
-    // Alarm line position
-    const alarmLineY = depthAlarm !== null
-      ? ((depthUnit === 'ft' ? depthAlarm / depthConversions.ft.factor : depthAlarm) / maxDepth) * graphHeight
-      : null;
-
-    return (
-      <svg
-        viewBox={`0 0 100 ${graphHeight}`}
-        preserveAspectRatio="none"
-        style={{ width: '100%', height: `${graphHeight}px` }}
-      >
-        {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-          <line
-            key={i}
-            x1="0"
-            y1={ratio * graphHeight}
-            x2="100"
-            y2={ratio * graphHeight}
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth="0.3"
-          />
-        ))}
-
-        {/* Alarm threshold line */}
-        {alarmLineY !== null && (
-          <line
-            x1="0"
-            y1={alarmLineY}
-            x2="100"
-            y2={alarmLineY}
-            stroke="#ef5350"
-            strokeWidth="0.5"
-            strokeDasharray="2,2"
-          />
-        )}
-
-        {/* Area fill */}
-        <path
-          d={`M0,0 L${points.join(' L')} L100,0 Z`}
-          fill="url(#depthGradient)"
-          opacity="0.3"
-        />
-
-        {/* Depth line */}
-        <polyline
-          points={points.join(' ')}
-          fill="none"
-          stroke="#4fc3f7"
-          strokeWidth="0.8"
-          vectorEffect="non-scaling-stroke"
-        />
-
-        {/* Gradient definition */}
-        <defs>
-          <linearGradient id="depthGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4fc3f7" />
-            <stop offset="100%" stopColor="#0a1929" />
-          </linearGradient>
-        </defs>
-      </svg>
-    );
-  };
+  // Get alarm threshold in current display unit
+  const alarmThreshold = depthAlarm;
 
   const alarmOptions = depthUnit === 'm' ? [1, 2, 3, 5, 10] : [3, 6, 10, 15, 30];
 
@@ -258,7 +176,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
       <div style={{
         flex: '1 1 auto',
         padding: '1rem',
-        minHeight: '200px',
+        minHeight: '250px',
       }}>
         <div style={{
           fontSize: '0.75rem',
@@ -267,7 +185,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
         }}>
-          Recent Depth
+          Depth History
         </div>
         <div style={{
           background: 'rgba(255,255,255,0.03)',
@@ -275,7 +193,14 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
           padding: '1rem',
           height: 'calc(100% - 2rem)',
         }}>
-          {renderGraph()}
+          <SensorChart
+            data={chartData}
+            unit={depthConversions[depthUnit].label}
+            color="#4fc3f7"
+            thresholdLine={alarmThreshold}
+            thresholdColor="#ef5350"
+            minValue={0}
+          />
         </div>
       </div>
 

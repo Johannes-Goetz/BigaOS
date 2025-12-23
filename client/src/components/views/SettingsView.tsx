@@ -4,6 +4,7 @@ import {
   SpeedUnit,
   DepthUnit,
   DistanceUnit,
+  TimeFormat,
   speedConversions,
   depthConversions,
   distanceConversions,
@@ -19,9 +20,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
     speedUnit,
     depthUnit,
     distanceUnit,
+    timeFormat,
     setSpeedUnit,
     setDepthUnit,
     setDistanceUnit,
+    setTimeFormat,
   } = useSettings();
 
   const renderUnitSelector = <T extends string>(
@@ -170,6 +173,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
               'mi': distanceConversions['mi'].label,
             },
             setDistanceUnit
+          )}
+
+          {renderUnitSelector<TimeFormat>(
+            'Time Format',
+            timeFormat,
+            ['24h', '12h'],
+            {
+              '24h': '24h',
+              '12h': 'AM/PM',
+            },
+            setTimeFormat
           )}
         </div>
 

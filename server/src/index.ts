@@ -69,11 +69,12 @@ const httpServer = createServer(app);
 const wsServer = new WebSocketServer(httpServer);
 
 // Start server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('🚤 Biga OS Server Started');
   console.log(`📡 REST API: http://localhost:${PORT}`);
   console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
   console.log(`💚 Health: http://localhost:${PORT}/health`);
+  console.log(`🌐 Network access enabled on all interfaces`);
 });
 
 // Graceful shutdown

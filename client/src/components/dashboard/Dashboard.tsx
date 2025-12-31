@@ -353,6 +353,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
           <ChartMiniItem
             position={sensorData.navigation.position}
             heading={sensorData.navigation.headingMagnetic}
+            speed={sensorData.navigation.speedOverGround}
+            depth={sensorData.environment.depth.belowTransducer}
           />
         );
       default:

@@ -25,6 +25,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
     setDepthUnit,
     setDistanceUnit,
     setTimeFormat,
+    mapTileUrls,
+    setMapTileUrls,
+    apiUrls,
+    setApiUrls,
   } = useSettings();
 
   const renderUnitSelector = <T extends string>(
@@ -187,6 +191,214 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
           )}
         </div>
 
+        {/* Maps & Tiles section */}
+        <div style={{
+          marginBottom: theme.space['2xl'],
+        }}>
+          <div style={{
+            fontSize: theme.fontSize.base,
+            fontWeight: theme.fontWeight.bold,
+            marginBottom: theme.space.lg,
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.space.sm,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+              <line x1="8" y1="2" x2="8" y2="18" />
+              <line x1="16" y1="6" x2="16" y2="22" />
+            </svg>
+            Maps & Tiles
+          </div>
+
+          {/* Street Map Tile URL */}
+          <div style={{ marginBottom: theme.space.xl }}>
+            <div style={{
+              fontSize: theme.fontSize.sm,
+              color: theme.colors.textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginBottom: theme.space.md,
+            }}>
+              Street Map Tile URL
+            </div>
+            <input
+              type="text"
+              value={mapTileUrls.streetMap}
+              onChange={(e) => setMapTileUrls({ ...mapTileUrls, streetMap: e.target.value })}
+              style={{
+                width: '100%',
+                padding: theme.space.lg,
+                background: theme.colors.bgCardActive,
+                border: `2px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.md,
+                color: theme.colors.textPrimary,
+                fontSize: theme.fontSize.sm,
+                fontFamily: 'monospace',
+              }}
+              placeholder="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </div>
+
+          {/* Satellite Map Tile URL */}
+          <div style={{ marginBottom: theme.space.xl }}>
+            <div style={{
+              fontSize: theme.fontSize.sm,
+              color: theme.colors.textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginBottom: theme.space.md,
+            }}>
+              Satellite Map Tile URL
+            </div>
+            <input
+              type="text"
+              value={mapTileUrls.satelliteMap}
+              onChange={(e) => setMapTileUrls({ ...mapTileUrls, satelliteMap: e.target.value })}
+              style={{
+                width: '100%',
+                padding: theme.space.lg,
+                background: theme.colors.bgCardActive,
+                border: `2px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.md,
+                color: theme.colors.textPrimary,
+                fontSize: theme.fontSize.sm,
+                fontFamily: 'monospace',
+              }}
+              placeholder="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+          </div>
+
+          {/* Nautical Overlay Tile URL */}
+          <div style={{ marginBottom: theme.space.xl }}>
+            <div style={{
+              fontSize: theme.fontSize.sm,
+              color: theme.colors.textMuted,
+              textTransform: '0.1em',
+              letterSpacing: '0.1em',
+              marginBottom: theme.space.md,
+            }}>
+              Nautical Overlay Tile URL
+            </div>
+            <input
+              type="text"
+              value={mapTileUrls.nauticalOverlay}
+              onChange={(e) => setMapTileUrls({ ...mapTileUrls, nauticalOverlay: e.target.value })}
+              style={{
+                width: '100%',
+                padding: theme.space.lg,
+                background: theme.colors.bgCardActive,
+                border: `2px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.md,
+                color: theme.colors.textPrimary,
+                fontSize: theme.fontSize.sm,
+                fontFamily: 'monospace',
+              }}
+              placeholder="https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"
+            />
+          </div>
+
+          {/* Reset to defaults button */}
+          <button
+            onClick={() => setMapTileUrls({
+              streetMap: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              satelliteMap: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+              nauticalOverlay: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+            })}
+            style={{
+              padding: `${theme.space.md} ${theme.space.lg}`,
+              background: theme.colors.bgCardActive,
+              border: `2px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.md,
+              color: theme.colors.textPrimary,
+              cursor: 'pointer',
+              fontSize: theme.fontSize.sm,
+              fontWeight: theme.fontWeight.normal,
+              transition: `all ${theme.transition.normal}`,
+            }}
+          >
+            Reset to Defaults
+          </button>
+        </div>
+
+        {/* API URLs section */}
+        <div style={{
+          marginBottom: theme.space['2xl'],
+        }}>
+          <div style={{
+            fontSize: theme.fontSize.base,
+            fontWeight: theme.fontWeight.bold,
+            marginBottom: theme.space.lg,
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.space.sm,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            API Endpoints
+          </div>
+
+          {/* Photon/Geocoding URL */}
+          <div style={{ marginBottom: theme.space.xl }}>
+            <div style={{
+              fontSize: theme.fontSize.sm,
+              color: theme.colors.textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginBottom: theme.space.md,
+            }}>
+              Geocoding API URL
+            </div>
+            <input
+              type="text"
+              value={apiUrls.nominatimUrl}
+              onChange={(e) => setApiUrls({ ...apiUrls, nominatimUrl: e.target.value })}
+              style={{
+                width: '100%',
+                padding: theme.space.lg,
+                background: theme.colors.bgCardActive,
+                border: `2px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.md,
+                color: theme.colors.textPrimary,
+                fontSize: theme.fontSize.sm,
+                fontFamily: 'monospace',
+              }}
+              placeholder="https://photon.komoot.io"
+            />
+            <div style={{
+              fontSize: theme.fontSize.xs,
+              color: theme.colors.textMuted,
+              marginTop: theme.space.sm,
+              opacity: 0.7,
+            }}>
+              Used for location search (harbors, cities, POIs). Default uses Photon (free, CORS-enabled). Can be changed to Nominatim or other geocoding service.
+            </div>
+          </div>
+
+          {/* Reset to defaults button */}
+          <button
+            onClick={() => setApiUrls({
+              nominatimUrl: 'https://photon.komoot.io',
+            })}
+            style={{
+              padding: `${theme.space.md} ${theme.space.lg}`,
+              background: theme.colors.bgCardActive,
+              border: `2px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.md,
+              color: theme.colors.textPrimary,
+              cursor: 'pointer',
+              fontSize: theme.fontSize.sm,
+              fontWeight: theme.fontWeight.normal,
+              transition: `all ${theme.transition.normal}`,
+            }}
+          >
+            Reset to Defaults
+          </button>
+        </div>
+
         {/* Info section */}
         <div style={{
           padding: theme.space.lg,
@@ -195,10 +407,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
           fontSize: theme.fontSize.md,
           color: theme.colors.textSecondary,
         }}>
-          <div style={{ marginBottom: theme.space.sm, fontWeight: theme.fontWeight.bold, color: theme.colors.textPrimary }}>About Units</div>
-          <p style={{ margin: 0, lineHeight: 1.5 }}>
-            Changing units here will update all displays across the application.
+          <div style={{ marginBottom: theme.space.sm, fontWeight: theme.fontWeight.bold, color: theme.colors.textPrimary }}>About Settings</div>
+          <p style={{ margin: 0, lineHeight: 1.5, marginBottom: theme.space.md }}>
+            <strong>Units:</strong> Changing units here will update all displays across the application.
             The depth alarm will be reset when changing depth units to avoid confusion.
+          </p>
+          <p style={{ margin: 0, lineHeight: 1.5, marginBottom: theme.space.md }}>
+            <strong>Map Tiles:</strong> Configure custom tile server URLs for maps. Use standard XYZ tile format with placeholders:
+            {'{z}'} for zoom, {'{x}'}/{'{y}'} for coordinates, and {'{s}'} for subdomains (if applicable).
+          </p>
+          <p style={{ margin: 0, lineHeight: 1.5 }}>
+            <strong>API Endpoints:</strong> Customize external service endpoints. The geocoding URL is used for location search (harbors, cities, POIs).
+            Default uses Photon (free, CORS-enabled). You can change to Nominatim or your own geocoding server. All settings sync across connected devices.
           </p>
         </div>
       </div>

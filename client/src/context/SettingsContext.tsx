@@ -6,6 +6,16 @@ export type DepthUnit = 'm' | 'ft';
 export type DistanceUnit = 'nm' | 'km' | 'mi';
 export type TimeFormat = '12h' | '24h';
 
+export interface MapTileUrls {
+  streetMap: string;
+  satelliteMap: string;
+  nauticalOverlay: string;
+}
+
+export interface ApiUrls {
+  nominatimUrl: string;
+}
+
 export const speedConversions: Record<SpeedUnit, { factor: number; label: string }> = {
   'kt': { factor: 1, label: 'kt' },
   'km/h': { factor: 1.852, label: 'km/h' },
@@ -35,6 +45,14 @@ interface SettingsContextType {
   setDistanceUnit: (unit: DistanceUnit) => void;
   setTimeFormat: (format: TimeFormat) => void;
 
+  // Map Tile URLs
+  mapTileUrls: MapTileUrls;
+  setMapTileUrls: (urls: MapTileUrls) => void;
+
+  // API URLs
+  apiUrls: ApiUrls;
+  setApiUrls: (urls: ApiUrls) => void;
+
   // Depth alarm
   depthAlarm: number | null; // Stored in current unit
   depthAlarmMeters: number | null; // Computed in meters
@@ -63,6 +81,14 @@ const defaultSettings = {
   timeFormat: '24h' as TimeFormat,
   depthAlarm: null as number | null,
   soundAlarmEnabled: false,
+  mapTileUrls: {
+    streetMap: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    satelliteMap: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    nauticalOverlay: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+  } as MapTileUrls,
+  apiUrls: {
+    nominatimUrl: 'https://photon.komoot.io',
+  } as ApiUrls,
 };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -74,6 +100,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [timeFormat, setTimeFormatState] = useState<TimeFormat>(defaultSettings.timeFormat);
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
+  const [mapTileUrls, setMapTileUrlsState] = useState<MapTileUrls>(defaultSettings.mapTileUrls);
+  const [apiUrls, setApiUrlsState] = useState<ApiUrls>(defaultSettings.apiUrls);
   const [currentDepth, setCurrentDepth] = useState<number>(10);
   const [isSynced, setIsSynced] = useState<boolean>(false);
   const isApplyingServerSettings = React.useRef<boolean>(false);
@@ -103,6 +131,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (data.settings.soundAlarmEnabled !== undefined) {
         setSoundAlarmEnabledState(data.settings.soundAlarmEnabled);
       }
+      if (data.settings.mapTileUrls) {
+        setMapTileUrlsState(data.settings.mapTileUrls);
+      }
+      if (data.settings.apiUrls) {
+        setApiUrlsState(data.settings.apiUrls);
+      }
 
       isApplyingServerSettings.current = false;
       setIsSynced(true);
@@ -131,6 +165,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'soundAlarmEnabled':
           setSoundAlarmEnabledState(data.value);
+          break;
+        case 'mapTileUrls':
+          setMapTileUrlsState(data.value);
+          break;
+        case 'apiUrls':
+          setApiUrlsState(data.value);
           break;
       }
 
@@ -190,6 +230,16 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateServerSetting('soundAlarmEnabled', enabled);
   }, [updateServerSetting]);
 
+  const setMapTileUrls = useCallback((urls: MapTileUrls) => {
+    setMapTileUrlsState(urls);
+    updateServerSetting('mapTileUrls', urls);
+  }, [updateServerSetting]);
+
+  const setApiUrls = useCallback((urls: ApiUrls) => {
+    setApiUrlsState(urls);
+    updateServerSetting('apiUrls', urls);
+  }, [updateServerSetting]);
+
   // Convert alarm threshold to meters
   const depthAlarmMeters = depthAlarm !== null
     ? (depthUnit === 'ft' ? depthAlarm / depthConversions.ft.factor : depthAlarm)
@@ -220,6 +270,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDepthUnit,
     setDistanceUnit,
     setTimeFormat,
+    mapTileUrls,
+    setMapTileUrls,
+    apiUrls,
+    setApiUrls,
     depthAlarm,
     depthAlarmMeters,
     setDepthAlarm,

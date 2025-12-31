@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { GeoPosition } from '../../types';
 import { useSettings, speedConversions, depthConversions } from '../../context/SettingsContext';
+import { geocodingService, SearchResult } from '../../services/geocoding';
 
 interface ChartViewProps {
   position: GeoPosition;
@@ -11,6 +12,15 @@ interface ChartViewProps {
   speed: number;
   depth: number;
   onClose?: () => void;
+  hideSidebar?: boolean;
+}
+
+interface CustomMarker {
+  id: string;
+  lat: number;
+  lon: number;
+  name: string;
+  color: string;
 }
 
 // Custom boat icon that rotates with heading
@@ -29,6 +39,46 @@ const createBoatIcon = (heading: number) => {
     className: 'boat-icon',
     iconSize: [50, 50],
     iconAnchor: [25, 25],
+  });
+};
+
+// Create custom marker icon with better styling and label
+const createCustomMarkerIcon = (color: string, name: string) => {
+  const markerHtml = `
+    <div style="display: flex; flex-direction: column; align-items: center; width: max-content;">
+      <div style="
+        background: rgba(10, 25, 41, 0.95);
+        border: 1px solid ${color};
+        border-radius: 4px;
+        padding: 4px 8px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        margin-bottom: 4px;
+      ">${name}</div>
+      <svg width="40" height="52" viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+        <defs>
+          <filter id="shadow-${color.replace('#', '')}" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.4"/>
+          </filter>
+        </defs>
+        <g filter="url(#shadow-${color.replace('#', '')})">
+          <path d="M20 2C12.268 2 6 8.268 6 16c0 10.5 14 32 14 32s14-21.5 14-32c0-7.732-6.268-14-14-14z"
+                fill="${color}" stroke="#fff" stroke-width="2.5"/>
+          <circle cx="20" cy="16" r="6" fill="#fff" opacity="0.9"/>
+        </g>
+      </svg>
+    </div>
+  `;
+
+  return L.divIcon({
+    html: markerHtml,
+    className: 'custom-marker-icon-with-label',
+    iconSize: [40, 52],
+    iconAnchor: [20, 52],
+    popupAnchor: [0, -52],
   });
 };
 
@@ -68,6 +118,127 @@ const MapController: React.FC<{
       return () => zoomContainer.removeEventListener('click', handleClick);
     }
   }, []);
+
+  return null;
+};
+
+// Component to handle long press for adding markers
+const LongPressHandler: React.FC<{
+  onLongPress: (lat: number, lon: number, x: number, y: number) => void;
+}> = ({ onLongPress }) => {
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressPositionRef = useRef<{ lat: number; lon: number; latlng: L.LatLng } | null>(null);
+  const initialTouchRef = useRef<{ x: number; y: number } | null>(null);
+  const map = useMap();
+
+  useEffect(() => {
+    const mapContainer = map.getContainer();
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const rect = mapContainer.getBoundingClientRect();
+
+        // Calculate position relative to map container
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        initialTouchRef.current = { x: touch.clientX, y: touch.clientY };
+
+        // Convert touch position to lat/lng using container coordinates
+        const point = map.containerPointToLatLng([x, y]);
+        longPressPositionRef.current = {
+          lat: point.lat,
+          lon: point.lng,
+          latlng: point
+        };
+
+        longPressTimerRef.current = setTimeout(() => {
+          if (longPressPositionRef.current) {
+            onLongPress(
+              longPressPositionRef.current.lat,
+              longPressPositionRef.current.lon,
+              x,
+              y
+            );
+          }
+        }, 500); // Reduced to 500ms for faster response
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (initialTouchRef.current && e.touches[0]) {
+        const touch = e.touches[0];
+        const dx = touch.clientX - initialTouchRef.current.x;
+        const dy = touch.clientY - initialTouchRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > 10) { // Reduced threshold to 10px
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+          longPressPositionRef.current = null;
+          initialTouchRef.current = null;
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressPositionRef.current = null;
+      initialTouchRef.current = null;
+    };
+
+    // Add listeners to the map container
+    mapContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+    mapContainer.addEventListener('touchmove', handleTouchMove, { passive: true });
+    mapContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+    mapContainer.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+    return () => {
+      mapContainer.removeEventListener('touchstart', handleTouchStart);
+      mapContainer.removeEventListener('touchmove', handleTouchMove);
+      mapContainer.removeEventListener('touchend', handleTouchEnd);
+      mapContainer.removeEventListener('touchcancel', handleTouchEnd);
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, [map, onLongPress]);
+
+  // Still keep mouse events for desktop
+  useMapEvents({
+    mousedown: (e) => {
+      longPressPositionRef.current = { lat: e.latlng.lat, lon: e.latlng.lng, latlng: e.latlng };
+      longPressTimerRef.current = setTimeout(() => {
+        if (longPressPositionRef.current) {
+          const containerPoint = map.latLngToContainerPoint(e.latlng);
+          onLongPress(
+            longPressPositionRef.current.lat,
+            longPressPositionRef.current.lon,
+            containerPoint.x,
+            containerPoint.y
+          );
+        }
+      }, 700);
+    },
+    mouseup: () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressPositionRef.current = null;
+    },
+    mousemove: () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    },
+  });
 
   return null;
 };
@@ -193,9 +364,27 @@ const Compass: React.FC<{ heading: number }> = ({ heading }) => {
   );
 };
 
-export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, depth, onClose }) => {
+export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, depth, onClose, hideSidebar = false }) => {
   const [autoCenter, setAutoCenter] = useState(true);
   const [depthSettingsOpen, setDepthSettingsOpen] = useState(false);
+  const [useSatellite, setUseSatellite] = useState(() => {
+    // Load satellite view preference from localStorage
+    const saved = localStorage.getItem('chartUseSatellite');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [customMarkers, setCustomMarkers] = useState<CustomMarker[]>(() => {
+    // Load markers from localStorage on initial render
+    const saved = localStorage.getItem('chartMarkers');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [contextMenu, setContextMenu] = useState<{ lat: number; lon: number; x: number; y: number } | null>(null);
+  const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
+  const [markerName, setMarkerName] = useState('');
+  const [markerColor, setMarkerColor] = useState('#ef5350');
   const mapRef = useRef<L.Map>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -210,6 +399,8 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
     isDepthAlarmTriggered,
     convertSpeed,
     convertDepth,
+    mapTileUrls,
+    apiUrls,
   } = useSettings();
 
   const convertedSpeed = convertSpeed(speed);
@@ -244,6 +435,27 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
       osc2.stop(ctx.currentTime + 0.1);
     }, 120);
   };
+
+  // Save markers to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('chartMarkers', JSON.stringify(customMarkers));
+  }, [customMarkers]);
+
+  // Save satellite view preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('chartUseSatellite', JSON.stringify(useSatellite));
+  }, [useSatellite]);
+
+  // Disable map dragging when context menu or edit dialog is open
+  useEffect(() => {
+    if (mapRef.current) {
+      if (contextMenu || editingMarker) {
+        mapRef.current.dragging.disable();
+      } else {
+        mapRef.current.dragging.enable();
+      }
+    }
+  }, [contextMenu, editingMarker]);
 
   // Handle sound alarm
   useEffect(() => {
@@ -287,7 +499,92 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
     setAutoCenter(false);
   };
 
-  const sidebarWidth = 100;
+  // Update geocoding service URL when settings change
+  useEffect(() => {
+    geocodingService.setConfig({ nominatimUrl: apiUrls.nominatimUrl });
+  }, [apiUrls.nominatimUrl]);
+
+  // Search functionality with auto-search after 2 characters
+  const handleSearch = async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const results = await geocodingService.search(query, { limit: 5 });
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        handleSearch(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearchResultClick = (result: SearchResult) => {
+    const lat = parseFloat(result.lat);
+    const lon = parseFloat(result.lon);
+
+    if (mapRef.current) {
+      // Just fly to location, don't add marker
+      mapRef.current.flyTo([lat, lon], 14);
+      setAutoCenter(false);
+    }
+
+    // Close search panel
+    setSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // Marker management
+  const addMarker = (lat: number, lon: number, name: string, color: string) => {
+    const newMarker: CustomMarker = {
+      id: Date.now().toString(),
+      lat,
+      lon,
+      name,
+      color,
+    };
+    setCustomMarkers([...customMarkers, newMarker]);
+    setContextMenu(null);
+    setMarkerName('');
+    setMarkerColor('#ef5350');
+  };
+
+  const deleteMarker = (id: string) => {
+    setCustomMarkers(customMarkers.filter(m => m.id !== id));
+    setEditingMarker(null);
+  };
+
+  const updateMarker = (id: string, name: string, color: string) => {
+    setCustomMarkers(customMarkers.map(m =>
+      m.id === id ? { ...m, name, color } : m
+    ));
+    setEditingMarker(null);
+  };
+
+  // Callback for long press event from LongPressHandler component
+  const handleLongPress = (lat: number, lon: number, x: number, y: number) => {
+    setContextMenu({ lat, lon, x, y });
+  };
+
+  const sidebarWidth = hideSidebar ? 0 : 100;
   const settingsPanelWidth = 180;
 
   return (
@@ -298,14 +595,24 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
         zoom={14}
         style={{ width: '100%', height: '100%' }}
         ref={mapRef}
+        zoomControl={!hideSidebar}
       >
+        {/* Base layer - Street or Satellite */}
+        {useSatellite ? (
+          <TileLayer
+            attribution=""
+            url={mapTileUrls.satelliteMap}
+          />
+        ) : (
+          <TileLayer
+            attribution=""
+            url={mapTileUrls.streetMap}
+          />
+        )}
+        {/* OpenSeaMap overlay - always on top */}
         <TileLayer
           attribution=""
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <TileLayer
-          attribution=""
-          url="https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"
+          url={mapTileUrls.nauticalOverlay}
         />
         <Marker
           position={[position.latitude, position.longitude]}
@@ -325,10 +632,37 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
             </div>
           </Popup>
         </Marker>
+
+        {/* Custom markers */}
+        {customMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            position={[marker.lat, marker.lon]}
+            icon={createCustomMarkerIcon(marker.color, marker.name)}
+            eventHandlers={{
+              click: () => {
+                setEditingMarker(marker);
+                setMarkerName(marker.name);
+                setMarkerColor(marker.color);
+              },
+            }}
+          >
+            <Popup>
+              <div style={{ padding: '0.5rem', minWidth: '150px' }}>
+                <strong>{marker.name}</strong>
+                <br />
+                <small>{marker.lat.toFixed(5)}°, {marker.lon.toFixed(5)}°</small>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
         <MapController position={position} autoCenter={autoCenter} onDrag={handleMapDrag} />
+        <LongPressHandler onLongPress={handleLongPress} />
       </MapContainer>
 
       {/* Sidebar */}
+      {!hideSidebar && (
       <div
         style={{
           position: 'absolute',
@@ -424,6 +758,86 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
+        {/* Search button */}
+        <button
+          onClick={() => {
+            setSearchOpen(!searchOpen);
+            setDepthSettingsOpen(false);
+          }}
+          style={{
+            width: '100%',
+            height: '56px',
+            background: searchOpen ? 'rgba(25, 118, 210, 0.3)' : 'transparent',
+            border: 'none',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            transition: 'background 0.2s',
+            gap: '0.25rem'
+          }}
+          onMouseEnter={(e) => {
+            if (!searchOpen) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = searchOpen ? 'rgba(25, 118, 210, 0.3)' : 'transparent';
+          }}
+          title="Search locations"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={searchOpen ? '#4fc3f7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>
+            SEARCH
+          </span>
+        </button>
+
+        {/* Satellite/Street toggle button */}
+        <button
+          onClick={() => setUseSatellite(!useSatellite)}
+          style={{
+            width: '100%',
+            height: '56px',
+            background: 'transparent',
+            border: 'none',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            transition: 'background 0.2s',
+            gap: '0.25rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+          title={useSatellite ? 'Switch to Street View' : 'Switch to Satellite View'}
+        >
+          {useSatellite ? (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+          )}
+          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>
+            {useSatellite ? 'STREET' : 'SATELLITE'}
+          </span>
+        </button>
+
         {/* Recenter button */}
         <button
           onClick={handleRecenter}
@@ -459,6 +873,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
           </svg>
         </button>
       </div>
+      )}
 
       {/* Depth Alarm Notification */}
       {isDepthAlarmTriggered && (
@@ -579,6 +994,385 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
             zIndex: 999
           }}
         />
+      )}
+
+      {/* Search Panel */}
+      {searchOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            right: `${sidebarWidth + 8}px`,
+            width: '300px',
+            maxHeight: 'calc(100vh - 32px)',
+            background: 'rgba(10, 25, 41, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '4px',
+            padding: '1rem',
+            zIndex: 1001,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}
+        >
+          <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.25rem' }}>SEARCH LOCATIONS</div>
+
+          {/* Search input */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Type to search (min 2 chars)..."
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                paddingRight: searchLoading ? '2.5rem' : '0.75rem',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '3px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+              autoFocus
+            />
+            {searchLoading && (
+              <div style={{
+                position: 'absolute',
+                right: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '0.8rem',
+                opacity: 0.6,
+              }}>
+                ...
+              </div>
+            )}
+          </div>
+
+
+          {/* Search results */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}>
+            {searchResults.length === 0 && !searchLoading && searchQuery && (
+              <div style={{ opacity: 0.6, fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>
+                No results found
+              </div>
+            )}
+            {searchResults.map((result, index) => (
+              <button
+                key={`${result.lat}-${result.lon}-${index}`}
+                onClick={() => handleSearchResultClick(result)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '3px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '0.85rem',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                  {result.display_name.split(',')[0]}
+                </div>
+                <div style={{ opacity: 0.7, fontSize: '0.75rem' }}>
+                  {result.display_name.split(',').slice(1).join(',').trim()}
+                </div>
+                <div style={{ opacity: 0.5, fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                  {result.type}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Click outside to close search */}
+      {searchOpen && (
+        <div
+          onClick={() => {
+            setSearchOpen(false);
+            setSearchResults([]);
+          }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: sidebarWidth,
+            bottom: 0,
+            zIndex: 999
+          }}
+        />
+      )}
+
+      {/* Context menu for adding marker */}
+      {contextMenu && (
+        <>
+          <div
+            onClick={() => setContextMenu(null)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1100
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: `${contextMenu.y}px`,
+              left: `${contextMenu.x}px`,
+              background: 'rgba(10, 25, 41, 0.98)',
+              border: '2px solid rgba(79, 195, 247, 0.5)',
+              borderRadius: '8px',
+              padding: '0.75rem',
+              zIndex: 1101,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              minWidth: '200px',
+            }}
+          >
+            <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.75rem', textAlign: 'center' }}>
+              ADD MARKER
+            </div>
+            <input
+              type="text"
+              value={markerName}
+              onChange={(e) => setMarkerName(e.target.value)}
+              placeholder="Marker name..."
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                marginBottom: '0.5rem',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '4px',
+                color: '#fff',
+                fontSize: '0.85rem',
+                outline: 'none'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center' }}>
+              {['#ef5350', '#66bb6a', '#42a5f5', '#ffa726', '#ab47bc'].map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setMarkerColor(color)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: color,
+                    border: markerColor === color ? '3px solid #fff' : '2px solid rgba(255,255,255,0.3)',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                if (markerName.trim()) {
+                  addMarker(contextMenu.lat, contextMenu.lon, markerName, markerColor);
+                }
+              }}
+              disabled={!markerName.trim()}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: markerName.trim() ? 'rgba(79, 195, 247, 0.5)' : 'rgba(255, 255, 255, 0.05)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#fff',
+                cursor: markerName.trim() ? 'pointer' : 'not-allowed',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                opacity: markerName.trim() ? 1 : 0.5,
+              }}
+            >
+              Add Marker
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Edit marker dialog */}
+      {editingMarker && (
+        <>
+          <div
+            onClick={() => setEditingMarker(null)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1200
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'rgba(10, 25, 41, 0.98)',
+              border: '2px solid rgba(79, 195, 247, 0.5)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              zIndex: 1201,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+              minWidth: '300px',
+            }}
+          >
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
+              Edit Marker
+            </div>
+            <input
+              type="text"
+              value={markerName}
+              onChange={(e) => setMarkerName(e.target.value)}
+              placeholder="Marker name..."
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
+            <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>MARKER COLOR</div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
+              {['#ef5350', '#66bb6a', '#42a5f5', '#ffa726', '#ab47bc'].map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setMarkerColor(color)}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: color,
+                    border: markerColor === color ? '3px solid #fff' : '2px solid rgba(255,255,255,0.3)',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => deleteMarker(editingMarker.id)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'rgba(239, 83, 80, 0.5)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                }}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => {
+                  if (markerName.trim()) {
+                    updateMarker(editingMarker.id, markerName, markerColor);
+                  }
+                }}
+                disabled={!markerName.trim()}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: markerName.trim() ? 'rgba(79, 195, 247, 0.5)' : 'rgba(255, 255, 255, 0.05)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  cursor: markerName.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  opacity: markerName.trim() ? 1 : 0.5,
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Compact recenter button for dashboard widget */}
+      {hideSidebar && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRecenter();
+          }}
+          style={{
+            position: 'absolute',
+            bottom: '1rem',
+            right: '1rem',
+            width: '56px',
+            height: '56px',
+            background: autoCenter ? 'rgba(25, 118, 210, 0.3)' : 'transparent',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            zIndex: 1000,
+            transition: 'background 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            if (!autoCenter) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = autoCenter ? 'rgba(25, 118, 210, 0.3)' : 'transparent';
+          }}
+          title={autoCenter ? 'Auto-centering ON' : 'Click to recenter'}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={autoCenter ? '#4fc3f7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="8" />
+            <line x1="12" y1="2" x2="12" y2="6" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="6" y2="12" />
+            <line x1="18" y1="12" x2="22" y2="12" />
+            <circle cx="12" cy="12" r="3" fill={autoCenter ? '#4fc3f7' : 'currentColor'} />
+          </svg>
+        </button>
       )}
     </div>
   );

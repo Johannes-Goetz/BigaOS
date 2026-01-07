@@ -12,15 +12,24 @@ class WebSocketService {
     }
 
     this.socket = io(WS_URL, {
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
     });
 
     this.socket.on('connect', () => {
       console.log('🔌 WebSocket connected');
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('🔌 WebSocket disconnected');
+    this.socket.on('disconnect', (reason) => {
+      console.log('🔌 WebSocket disconnected:', reason);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.log('🔌 WebSocket connection error:', error.message);
     });
 
     // Forward all events to listeners

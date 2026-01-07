@@ -402,3 +402,31 @@ html, body {
 .drag-handle:active {
   cursor: grabbing;
 }
+
+/* ========================================
+   Custom Scrollbar
+   ======================================== */
+
+/* Chart search results scrollbar */
+.chart-search-results::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chart-search-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chart-search-results::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.chart-search-results::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox scrollbar */
+.chart-search-results {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}

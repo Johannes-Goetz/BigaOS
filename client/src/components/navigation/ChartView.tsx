@@ -30,11 +30,23 @@ const markerIcons: { [key: string]: string } = {
   anchor: 'M17 15l1.55 1.55c-.96 1.69-3.33 3.04-5.55 3.37V11h3V9h-3V7.82C14.16 7.4 15 6.3 15 5c0-1.65-1.35-3-3-3S9 3.35 9 5c0 1.3.84 2.4 2 2.82V9H8v2h3v8.92c-2.22-.33-4.59-1.68-5.55-3.37L7 15l-4-3v3c0 3.88 4.92 7 9 7s9-3.12 9-7v-3l-4 3zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z', // anchor
   buoy: 'M12 22c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7zm-1-14V5h2v3h-2zm1-5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z', // mooring buoy
   star: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z', // star
-  flag: 'M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z', // flag
   warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z', // warning triangle
   favorite: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z', // favorite/heart
   home: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z', // home
+  sailboat: 'M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z', // sailboat
 };
+
+// Marker color palette - muted, natural tones
+const markerColors = [
+  '#c0392b', // dark red
+  '#27ae60', // forest green
+  '#2980b9', // ocean blue
+  '#d35400', // burnt orange
+  '#8e44ad', // plum purple
+  '#16a085', // teal
+  '#f39c12', // amber/gold
+  '#7f8c8d', // slate gray
+];
 
 // Custom boat icon that rotates with heading
 const createBoatIcon = (heading: number) => {
@@ -280,24 +292,24 @@ const Compass: React.FC<{ heading: number }> = ({ heading }) => {
     <div style={{ width: '100%', textAlign: 'center' }}>
       {/* Large heading number with indicator arrow */}
       <div style={{ display: 'inline-block', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>
+        <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>
           {heading.toFixed(0)}°
         </div>
         {/* Small white arrow pointing down */}
         <div style={{
           width: '0',
           height: '0',
-          borderLeft: '4px solid transparent',
-          borderRight: '4px solid transparent',
-          borderTop: '5px solid #fff',
-          margin: '2px auto 6px auto'
+          borderLeft: '3px solid transparent',
+          borderRight: '3px solid transparent',
+          borderTop: '4px solid #fff',
+          margin: '1px auto 3px auto'
         }} />
       </div>
 
       {/* Animated cardinal line */}
       <div style={{
         position: 'relative',
-        height: '24px',
+        height: '20px',
         overflow: 'hidden',
         width: `${lineWidth}px`,
         margin: '0 auto'
@@ -389,7 +401,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
   const [contextMenu, setContextMenu] = useState<{ lat: number; lon: number; x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
   const [markerName, setMarkerName] = useState('');
-  const [markerColor, setMarkerColor] = useState('#ef5350');
+  const [markerColor, setMarkerColor] = useState(markerColors[0]);
   const [markerIcon, setMarkerIcon] = useState('pin');
   const mapRef = useRef<L.Map>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -591,7 +603,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
     setCustomMarkers([...customMarkers, newMarker]);
     setContextMenu(null);
     setMarkerName('');
-    setMarkerColor('#ef5350');
+    setMarkerColor(markerColors[0]);
     setMarkerIcon('pin');
   };
 
@@ -732,7 +744,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
 
         {/* Compass */}
         <div style={{
-          padding: '1rem 0.5rem',
+          padding: '0.5rem 0.5rem',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           <Compass heading={heading} />
@@ -741,21 +753,21 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
         {/* Speed */}
         <div
           style={{
-            padding: '1rem 0.5rem',
+            padding: '0.5rem 0.5rem',
             textAlign: 'center',
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.25rem' }}>SPEED</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{convertedSpeed.toFixed(1)}</div>
-          <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{speedConversions[speedUnit].label}</div>
+          <div style={{ fontSize: '0.6rem', opacity: 0.6, marginBottom: '0.15rem' }}>SPEED</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>{convertedSpeed.toFixed(1)}</div>
+          <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{speedConversions[speedUnit].label}</div>
         </div>
 
         {/* Depth - clickable to open alarm settings */}
         <div
           onClick={() => setDepthSettingsOpen(!depthSettingsOpen)}
           style={{
-            padding: '1rem 0.5rem',
+            padding: '0.5rem 0.5rem',
             textAlign: 'center',
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
             cursor: 'pointer',
@@ -763,17 +775,17 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
             transition: 'background 0.2s',
           }}
         >
-          <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+          <div style={{ fontSize: '0.6rem', opacity: 0.6, marginBottom: '0.15rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
             DEPTH
             {depthAlarm !== null && (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
             )}
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: getDepthColor(depth) }}>{convertedDepth.toFixed(1)}</div>
-          <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{depthConversions[depthUnit].label}</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: getDepthColor(depth) }}>{convertedDepth.toFixed(1)}</div>
+          <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{depthConversions[depthUnit].label}</div>
         </div>
 
         {/* Spacer */}
@@ -1076,13 +1088,18 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
 
 
           {/* Search results */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem'
-          }}>
+          <div
+            className="chart-search-results"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              paddingRight: '8px',
+              marginRight: '-4px',
+            }}
+          >
             {/* Custom markers section */}
             {searchQuery && getMatchingMarkers(searchQuery).length > 0 && (
               <>
@@ -1207,25 +1224,61 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
               left: 0,
               right: 0,
               bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
               zIndex: 1100
             }}
           />
           <div
             style={{
               position: 'absolute',
-              top: `${contextMenu.y}px`,
-              left: `${contextMenu.x}px`,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
               background: 'rgba(10, 25, 41, 0.98)',
-              border: '2px solid rgba(79, 195, 247, 0.5)',
-              borderRadius: '8px',
-              padding: '0.75rem',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '6px',
+              padding: '1.5rem',
               zIndex: 1101,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              minWidth: '280px',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+              minWidth: '300px',
             }}
           >
-            <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.75rem', textAlign: 'center' }}>
-              ADD MARKER
+            {/* Close X button */}
+            <button
+              onClick={() => setContextMenu(null)}
+              style={{
+                position: 'absolute',
+                top: '0.75rem',
+                right: '0.75rem',
+                width: '28px',
+                height: '28px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                color: 'rgba(255, 255, 255, 0.6)',
+                transition: 'color 0.2s, background 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
+              Add Marker
             </div>
             <input
               type="text"
@@ -1235,55 +1288,55 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
               autoFocus
               style={{
                 width: '100%',
-                padding: '0.5rem',
-                marginBottom: '0.5rem',
+                padding: '0.75rem',
+                marginBottom: '1rem',
                 background: 'rgba(255, 255, 255, 0.1)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 color: '#fff',
-                fontSize: '0.85rem',
+                fontSize: '0.9rem',
                 outline: 'none'
               }}
             />
-            <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.35rem' }}>ICON</div>
-            <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>ICON</div>
+            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               {Object.keys(markerIcons).map((iconKey) => (
                 <button
                   key={iconKey}
                   onClick={() => setMarkerIcon(iconKey)}
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '4px',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
                     background: markerIcon === iconKey ? 'rgba(79, 195, 247, 0.3)' : 'rgba(255, 255, 255, 0.1)',
                     border: markerIcon === iconKey ? '2px solid #4fc3f7' : '1px solid rgba(255,255,255,0.2)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'transform 0.2s',
+                    transition: 'transform 0.2s, background 0.2s',
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={markerColor} stroke="#fff" strokeWidth="1.5">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill={markerColor} stroke="#fff" strokeWidth="1">
                     <path d={markerIcons[iconKey]} />
                   </svg>
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.35rem' }}>COLOR</div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center' }}>
-              {['#ef5350', '#66bb6a', '#42a5f5', '#ffa726', '#ab47bc'].map((color) => (
+            <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>COLOR</div>
+            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {markerColors.map((color) => (
                 <button
                   key={color}
                   onClick={() => setMarkerColor(color)}
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
                     background: color,
-                    border: markerColor === color ? '3px solid #fff' : '2px solid rgba(255,255,255,0.3)',
+                    border: markerColor === color ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)',
                     cursor: 'pointer',
                     transition: 'transform 0.2s',
                   }}
@@ -1304,10 +1357,10 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
                 padding: '0.75rem',
                 background: markerName.trim() ? 'rgba(79, 195, 247, 0.5)' : 'rgba(255, 255, 255, 0.05)',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 color: '#fff',
                 cursor: markerName.trim() ? 'pointer' : 'not-allowed',
-                fontSize: '0.85rem',
+                fontSize: '0.9rem',
                 fontWeight: 'bold',
                 opacity: markerName.trim() ? 1 : 0.5,
               }}
@@ -1340,8 +1393,8 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
               left: '50%',
               transform: 'translate(-50%, -50%)',
               background: 'rgba(10, 25, 41, 0.98)',
-              border: '2px solid rgba(79, 195, 247, 0.5)',
-              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '6px',
               padding: '1.5rem',
               zIndex: 1201,
               boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
@@ -1405,14 +1458,14 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
             />
 
             <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>ICON</div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               {Object.keys(markerIcons).map((iconKey) => (
                 <button
                   key={iconKey}
                   onClick={() => setMarkerIcon(iconKey)}
                   style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '36px',
+                    height: '36px',
                     borderRadius: '6px',
                     background: markerIcon === iconKey ? 'rgba(79, 195, 247, 0.3)' : 'rgba(255, 255, 255, 0.1)',
                     border: markerIcon === iconKey ? '2px solid #4fc3f7' : '1px solid rgba(255,255,255,0.2)',
@@ -1425,7 +1478,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill={markerColor} stroke="#fff" strokeWidth="1.5">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill={markerColor} stroke="#fff" strokeWidth="1.5">
                     <path d={markerIcons[iconKey]} />
                   </svg>
                 </button>
@@ -1433,21 +1486,21 @@ export const ChartView: React.FC<ChartViewProps> = ({ position, heading, speed, 
             </div>
 
             <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>COLOR</div>
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
-              {['#ef5350', '#66bb6a', '#42a5f5', '#ffa726', '#ab47bc'].map((color) => (
+            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {markerColors.map((color) => (
                 <button
                   key={color}
                   onClick={() => setMarkerColor(color)}
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
                     background: color,
-                    border: markerColor === color ? '3px solid #fff' : '2px solid rgba(255,255,255,0.3)',
+                    border: markerColor === color ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)',
                     cursor: 'pointer',
                     transition: 'transform 0.2s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15)'}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 />
               ))}

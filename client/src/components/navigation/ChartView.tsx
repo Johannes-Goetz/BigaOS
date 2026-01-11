@@ -33,11 +33,14 @@ import {
   MapController,
   LongPressHandler,
   ContextMenu,
-  ContextMenuOption,
   MarkerDialog,
   ChartSidebar,
   DepthSettingsPanel,
   SearchPanel,
+  WaterDebugOverlay,
+  DebugInfoPanel,
+  DebugMode,
+  useWaterDebugGrid,
 } from './chart';
 
 // Component to refresh tiles when connectivity changes from offline to online
@@ -120,6 +123,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [debugMode, setDebugMode] = useState<DebugMode>('off');
 
   // Marker state
   const [customMarkers, setCustomMarkers] = useState<CustomMarker[]>(() => {
@@ -171,6 +175,9 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const mapRef = useRef<L.Map>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Water debug grid hook
+  const { gridPoints, loading: debugLoading, generateGrid, clearGrid, currentResolution } = useWaterDebugGrid(mapRef);
 
   // Settings
   const {
@@ -443,6 +450,19 @@ export const ChartView: React.FC<ChartViewProps> = ({
     return () => {
       wsService.off('connectivity_change', handleConnectivityChange);
     };
+  }, []);
+
+  // Ctrl+D keyboard shortcut for debug mode toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault(); // Prevent browser bookmark dialog
+        setDebugMode((prev) => (prev === 'off' ? 'grid' : 'off'));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Debounced search - only search when online
@@ -771,6 +791,11 @@ export const ChartView: React.FC<ChartViewProps> = ({
           onDrag={handleMapDrag}
         />
         <LongPressHandler onLongPress={handleLongPress} />
+
+        {/* Water debug overlay */}
+        {debugMode !== 'off' && (
+          <WaterDebugOverlay mode={debugMode} gridPoints={gridPoints} onClear={clearGrid} />
+        )}
       </MapContainer>
 
       {/* Route calculation loading overlay */}
@@ -847,6 +872,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 )
               : null
           }
+          debugMode={debugMode !== 'off'}
           onClose={onClose}
           onDepthClick={() => setDepthSettingsOpen(!depthSettingsOpen)}
           onSearchClick={() => {
@@ -855,6 +881,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           }}
           onSatelliteToggle={() => setUseSatellite(!useSatellite)}
           onRecenter={handleRecenter}
+          onDebugToggle={() => setDebugMode(debugMode === 'off' ? 'grid' : 'off')}
         />
       )}
 
@@ -1002,6 +1029,19 @@ export const ChartView: React.FC<ChartViewProps> = ({
             setSearchOpen(false);
             setSearchResults([]);
           }}
+        />
+      )}
+
+      {/* Water Debug Info Panel */}
+      {debugMode !== 'off' && !hideSidebar && (
+        <DebugInfoPanel
+          onClose={() => setDebugMode('off')}
+          sidebarWidth={sidebarWidth}
+          gridPoints={gridPoints}
+          onGenerate={generateGrid}
+          onClear={clearGrid}
+          loading={debugLoading}
+          currentResolution={currentResolution}
         />
       )}
 

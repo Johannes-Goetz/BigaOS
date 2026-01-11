@@ -171,6 +171,66 @@ class NavigationController {
       res.status(500).json({ error: 'Failed to get demo navigation' });
     }
   }
+
+  /**
+   * Get water classification grid for debug overlay
+   * GET /api/navigation/debug/water-grid?minLat=X&maxLat=X&minLon=X&maxLon=X&gridSize=X
+   */
+  async getWaterGrid(req: Request, res: Response) {
+    try {
+      const minLat = parseFloat(req.query.minLat as string);
+      const maxLat = parseFloat(req.query.maxLat as string);
+      const minLon = parseFloat(req.query.minLon as string);
+      const maxLon = parseFloat(req.query.maxLon as string);
+      const gridSize = req.query.gridSize ? parseFloat(req.query.gridSize as string) : 0.005;
+
+      if (!waterDetectionService.isInitialized()) {
+        return res.status(503).json({
+          error: 'Water detection service not initialized'
+        });
+      }
+
+      if (isNaN(minLat) || isNaN(maxLat) || isNaN(minLon) || isNaN(maxLon)) {
+        return res.status(400).json({
+          error: 'Invalid parameters. Required: minLat, maxLat, minLon, maxLon (numbers)'
+        });
+      }
+
+      const grid = waterDetectionService.getWaterGrid(minLat, maxLat, minLon, maxLon, gridSize);
+
+      res.json({
+        grid,
+        count: grid.length,
+        bounds: { minLat, maxLat, minLon, maxLon },
+        gridSize
+      });
+    } catch (error) {
+      console.error('Water grid error:', error);
+      res.status(500).json({ error: 'Failed to get water grid' });
+    }
+  }
+
+  /**
+   * Get debug info about water detection service
+   * GET /api/navigation/debug/info
+   */
+  async getDebugInfo(req: Request, res: Response) {
+    try {
+      const cacheStats = waterDetectionService.getCacheStats();
+      const initialized = waterDetectionService.isInitialized();
+      const usingSpatialIndex = waterDetectionService.isUsingSpatialIndex();
+
+      res.json({
+        initialized,
+        usingSpatialIndex,
+        cacheStats,
+        polygonsAvailable: !usingSpatialIndex
+      });
+    } catch (error) {
+      console.error('Debug info error:', error);
+      res.status(500).json({ error: 'Failed to get debug info' });
+    }
+  }
 }
 
 export const navigationController = new NavigationController();

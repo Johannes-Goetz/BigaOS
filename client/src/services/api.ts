@@ -80,7 +80,28 @@ export const navigationAPI = {
     api.get<{
       demoMode: boolean;
       navigation: { latitude: number; longitude: number; heading: number; speed: number };
-    }>('/navigation/demo')
+    }>('/navigation/demo'),
+
+  /**
+   * Get water classification grid for debug overlay
+   */
+  getWaterGrid: (minLat: number, maxLat: number, minLon: number, maxLon: number, gridSize?: number) =>
+    api.get<{
+      grid: Array<{ lat: number; lon: number; type: 'ocean' | 'lake' | 'land' }>;
+      count: number;
+      bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number };
+      gridSize: number;
+    }>('/navigation/debug/water-grid', { params: { minLat, maxLat, minLon, maxLon, gridSize } }),
+
+  /**
+   * Get debug info about water detection service
+   */
+  getDebugInfo: () =>
+    api.get<{
+      initialized: boolean;
+      usingSpatialIndex: boolean;
+      cacheStats: { size: number; maxSize: number };
+    }>('/navigation/debug/info')
 };
 
 // Data Management API

@@ -40,6 +40,9 @@ router.post('/navigation/check-route', navigationController.checkRoute.bind(navi
 router.get('/navigation/water-type', navigationController.getWaterType.bind(navigationController));
 router.get('/navigation/demo', navigationController.getDemoNavigation.bind(navigationController));
 router.post('/navigation/demo', navigationController.updateDemoNavigation.bind(navigationController));
+// Navigation debug routes
+router.get('/navigation/debug/water-grid', navigationController.getWaterGrid.bind(navigationController));
+router.get('/navigation/debug/info', navigationController.getDebugInfo.bind(navigationController));
 
 // Data management routes
 router.get('/data/status', dataManagementController.getStatus.bind(dataManagementController));

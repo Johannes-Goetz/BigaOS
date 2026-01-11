@@ -23,3 +23,7 @@ export { ChartSidebar } from './ChartSidebar';
 
 // Panels
 export { DepthSettingsPanel, SearchPanel } from './ChartPanels';
+
+// Debug overlay
+export { WaterDebugOverlay, DebugInfoPanel, useWaterDebugGrid } from './WaterDebugOverlay';
+export type { DebugMode } from './WaterDebugOverlay';

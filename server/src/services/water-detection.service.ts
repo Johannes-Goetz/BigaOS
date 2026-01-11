@@ -44,7 +44,7 @@ class WaterDetectionService {
   private waterSpatialIndex: ShapefileSpatialIndex | null = null; // OSM oceans/seas (large files)
   private lakePolygons: GeoJSONFeatureCollection | null = null;  // OSM lakes/rivers
   private cache = new Map<string, WaterType>();
-  private readonly CACHE_SIZE = 10000;
+  private readonly CACHE_SIZE = 100000; // Increased for high-resolution route checking
   private initialized = false;
   private useSpatialIndex = false; // True if using spatial index for water polygons
 
@@ -335,6 +335,56 @@ class WaterDetectionService {
   }
 
   /**
+   * Get water classification grid for a bounding box (for debug overlay)
+   * Returns a grid of points with their water classification
+   */
+  getWaterGrid(
+    minLat: number,
+    maxLat: number,
+    minLon: number,
+    maxLon: number,
+    gridSize: number = 0.005 // ~500m default resolution
+  ): Array<{ lat: number; lon: number; type: WaterType }> {
+    if (!this.initialized) {
+      return [];
+    }
+
+    const points: Array<{ lat: number; lon: number; type: WaterType }> = [];
+
+    // Limit grid to prevent excessive computation
+    const maxPoints = 2500; // 50x50 max grid
+    const latRange = maxLat - minLat;
+    const lonRange = maxLon - minLon;
+
+    // Adjust grid size if needed to stay within limits
+    const latSteps = Math.ceil(latRange / gridSize);
+    const lonSteps = Math.ceil(lonRange / gridSize);
+    const totalPoints = latSteps * lonSteps;
+
+    let effectiveGridSize = gridSize;
+    if (totalPoints > maxPoints) {
+      // Increase grid size to stay within limits
+      effectiveGridSize = Math.sqrt((latRange * lonRange) / maxPoints);
+    }
+
+    for (let lat = minLat; lat <= maxLat; lat += effectiveGridSize) {
+      for (let lon = minLon; lon <= maxLon; lon += effectiveGridSize) {
+        const type = this.getWaterType(lat, lon);
+        points.push({ lat, lon, type });
+      }
+    }
+
+    return points;
+  }
+
+  /**
+   * Check if using spatial index mode
+   */
+  isUsingSpatialIndex(): boolean {
+    return this.useSpatialIndex;
+  }
+
+  /**
    * Calculate distance between two points in nautical miles (Haversine formula)
    */
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -351,17 +401,30 @@ class WaterDetectionService {
 
   /**
    * Check if a straight line between two points crosses land
-   * Uses sampling along the line
+   * Uses high-resolution sampling (~11m, matching cache precision) to detect small islands
+   *
+   * @param startLat Starting latitude
+   * @param startLon Starting longitude
+   * @param endLat Ending latitude
+   * @param endLon Ending longitude
+   * @param collectAllPoints If true, collects all land points; if false, returns early on first land
    */
   checkRouteForLand(
     startLat: number,
     startLon: number,
     endLat: number,
     endLon: number,
-    sampleDistance: number = 0.5 // Sample every 0.5 nautical miles
+    collectAllPoints: boolean = false
   ): { crossesLand: boolean; landPoints: Array<{ lat: number; lon: number }> } {
-    const distance = this.calculateDistance(startLat, startLon, endLat, endLon);
-    const numSamples = Math.max(Math.ceil(distance / sampleDistance), 10);
+    // Calculate distance in meters
+    const distanceNm = this.calculateDistance(startLat, startLon, endLat, endLon);
+    const distanceMeters = distanceNm * 1852;
+
+    // Sample at ~11m intervals (matching cache precision of 0.0001°)
+    // This ensures we don't miss small islands
+    const sampleIntervalMeters = 11;
+    const numSamples = Math.max(Math.ceil(distanceMeters / sampleIntervalMeters), 2);
+
     const landPoints: Array<{ lat: number; lon: number }> = [];
 
     for (let i = 0; i <= numSamples; i++) {
@@ -371,6 +434,10 @@ class WaterDetectionService {
 
       if (!this.isWater(lat, lon)) {
         landPoints.push({ lat, lon });
+        // Early termination if we only need to know if it crosses land
+        if (!collectAllPoints) {
+          return { crossesLand: true, landPoints };
+        }
       }
     }
 
@@ -418,15 +485,22 @@ class WaterDetectionService {
   }
 
   /**
-   * Find a water-only route between two points using A* pathfinding
-   * Returns waypoints that avoid land obstacles using ocean polygon data
+   * Find a water-only route between two points using multi-resolution A* pathfinding
+   *
+   * Strategy:
+   * 1. First try direct route with high-resolution (~11m) land detection
+   * 2. If blocked, use coarse A* (~100m) to find general path around obstacles
+   * 3. Validate and refine path segments with high-resolution checks
+   * 4. If coarse path fails, retry with finer grid
+   *
+   * This ensures we never miss small islands while keeping computation tractable
    */
   findWaterRoute(
     startLat: number,
     startLon: number,
     endLat: number,
     endLon: number,
-    maxIterations: number = 10000
+    maxIterations: number = 50000
   ): { success: boolean; waypoints: Array<{ lat: number; lon: number }>; distance: number } {
     // Log input coordinates for debugging
     const startWater = this.isWater(startLat, startLon);
@@ -434,10 +508,10 @@ class WaterDetectionService {
     console.log(`Route request: (${startLat.toFixed(5)}, ${startLon.toFixed(5)}) -> (${endLat.toFixed(5)}, ${endLon.toFixed(5)})`);
     console.log(`  Start on water: ${startWater}, End on water: ${endWater}`);
 
-    // First check if direct route is possible
-    const directCheck = this.checkRouteForLand(startLat, startLon, endLat, endLon, 0.1);
+    // First check if direct route is possible with high-resolution (~11m) checking
+    const directCheck = this.checkRouteForLand(startLat, startLon, endLat, endLon, false);
     if (!directCheck.crossesLand) {
-      console.log(`  Direct route is clear`);
+      console.log(`  Direct route is clear (verified at ~11m resolution)`);
       return {
         success: true,
         waypoints: [
@@ -448,21 +522,66 @@ class WaterDetectionService {
       };
     }
 
-    console.log(`  Direct route crosses land at ${directCheck.landPoints.length} points`);
+    console.log(`  Direct route crosses land, starting multi-resolution pathfinding`);
 
-    // Calculate appropriate grid size based on distance
-    const totalDistance = this.calculateDistance(startLat, startLon, endLat, endLon);
-    // Use smaller grid for short distances, larger for long distances
-    // Minimum ~50m grid for finer resolution near coastlines
-    const gridSize = Math.max(0.0005, Math.min(0.02, totalDistance / 500));
-    console.log(`  Distance: ${totalDistance.toFixed(2)} NM, Grid size: ${gridSize.toFixed(5)}° (~${(gridSize * 111000).toFixed(0)}m)`);
+    // Try progressively finer grids until we find a valid route
+    // Start with coarse grid for efficiency, fall back to finer grids if needed
+    const gridSizes = [
+      0.001,   // ~111m - coarse, fast initial search
+      0.0005,  // ~55m - medium resolution
+      0.0002,  // ~22m - fine resolution
+      0.0001   // ~11m - maximum resolution (matches cache precision)
+    ];
 
+    for (const gridSize of gridSizes) {
+      console.log(`  Trying grid size: ${gridSize.toFixed(5)}° (~${(gridSize * 111000).toFixed(0)}m)`);
+
+      const result = this.runAStar(
+        startLat, startLon, endLat, endLon,
+        gridSize, maxIterations
+      );
+
+      if (result.success) {
+        // Validate the found path at high resolution (~11m)
+        const validatedPath = this.validateAndRefinePath(result.waypoints);
+        if (validatedPath.success) {
+          console.log(`Water route found: ${validatedPath.waypoints.length} waypoints, ${validatedPath.distance.toFixed(1)} NM`);
+          return validatedPath;
+        }
+        console.log(`  Path found but failed high-resolution validation, trying finer grid`);
+      } else {
+        console.log(`  No path found at this resolution, trying finer grid`);
+      }
+    }
+
+    // All grid sizes failed
+    console.warn(`Water route pathfinding failed at all resolutions`);
+    return {
+      success: false,
+      waypoints: [
+        { lat: startLat, lon: startLon },
+        { lat: endLat, lon: endLon }
+      ],
+      distance: this.calculateDistance(startLat, startLon, endLat, endLon)
+    };
+  }
+
+  /**
+   * Run A* pathfinding at a specific grid resolution
+   */
+  private runAStar(
+    startLat: number,
+    startLon: number,
+    endLat: number,
+    endLon: number,
+    gridSize: number,
+    maxIterations: number
+  ): { success: boolean; waypoints: Array<{ lat: number; lon: number }>; distance: number } {
     // Find valid water cells near start and end points
     const startNode = this.findNearbyWaterCell(startLat, startLon, gridSize);
     const endNode = this.findNearbyWaterCell(endLat, endLon, gridSize);
 
     if (!startNode) {
-      console.warn(`  Cannot find water cell near start point`);
       return {
         success: false,
         waypoints: [{ lat: startLat, lon: startLon }, { lat: endLat, lon: endLon }],
@@ -471,16 +590,12 @@ class WaterDetectionService {
     }
 
     if (!endNode) {
-      console.warn(`  Cannot find water cell near end point`);
       return {
         success: false,
         waypoints: [{ lat: startLat, lon: startLon }, { lat: endLat, lon: endLon }],
         distance: this.calculateDistance(startLat, startLon, endLat, endLon)
       };
     }
-
-    console.log(`  Start node: (${startNode.lat.toFixed(5)}, ${startNode.lon.toFixed(5)})`);
-    console.log(`  End node: (${endNode.lat.toFixed(5)}, ${endNode.lon.toFixed(5)})`);
 
     // Store all visited nodes with their data for path reconstruction
     const allNodes = new Map<string, {
@@ -494,7 +609,7 @@ class WaterDetectionService {
     const openSet = new Set<string>();
     const closedSet = new Set<string>();
 
-    const getKey = (lat: number, lon: number) => `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    const getKey = (lat: number, lon: number) => `${lat.toFixed(6)},${lon.toFixed(6)}`;
     const heuristic = (lat: number, lon: number) =>
       this.calculateDistance(lat, lon, endNode.lat, endNode.lon);
 
@@ -552,22 +667,6 @@ class WaterDetectionService {
         if (closedSet.has(newKey)) continue;
         if (!this.isWater(newLat, newLon)) continue;
 
-        // Always check intermediate points along the edge to avoid crossing small islands
-        // Check every ~15m for island avoidance (balances accuracy vs performance)
-        const gridMeters = gridSize * 111000;
-        const checkPoints = Math.max(2, Math.ceil(gridMeters / 15)); // Check every ~15m
-        let edgeClear = true;
-        for (let i = 1; i < checkPoints; i++) {
-          const t = i / checkPoints;
-          const checkLat = current.lat + t * (newLat - current.lat);
-          const checkLon = current.lon + t * (newLon - current.lon);
-          if (!this.isWater(checkLat, checkLon)) {
-            edgeClear = false;
-            break;
-          }
-        }
-        if (!edgeClear) continue;
-
         const tentativeG = current.g + this.calculateDistance(current.lat, current.lon, newLat, newLon);
 
         const existing = allNodes.get(newKey);
@@ -603,36 +702,97 @@ class WaterDetectionService {
       path.unshift({ lat: startLat, lon: startLon });
       path.push({ lat: endLat, lon: endLon });
 
-      // Simplify path - remove unnecessary waypoints where direct route is possible
-      const simplified = this.simplifyPath(path);
-
       // Calculate total distance
       let totalDist = 0;
-      for (let i = 1; i < simplified.length; i++) {
+      for (let i = 1; i < path.length; i++) {
         totalDist += this.calculateDistance(
-          simplified[i - 1].lat, simplified[i - 1].lon,
-          simplified[i].lat, simplified[i].lon
+          path[i - 1].lat, path[i - 1].lon,
+          path[i].lat, path[i].lon
         );
       }
 
-      console.log(`Water route found: ${simplified.length} waypoints, ${totalDist.toFixed(1)} NM, ${iterations} iterations`);
-      return { success: true, waypoints: simplified, distance: totalDist };
+      return { success: true, waypoints: path, distance: totalDist };
     }
-
-    // Pathfinding failed - log debug info
-    console.warn(`Water route pathfinding failed after ${iterations} iterations`);
-    console.warn(`  Grid: ${gridSize.toFixed(5)}° (~${(gridSize * 111000).toFixed(0)}m)`);
-    console.warn(`  Open set exhausted: ${openSet.size === 0}`);
-    console.warn(`  Nodes explored: ${closedSet.size}`);
 
     return {
       success: false,
-      waypoints: [
-        { lat: startLat, lon: startLon },
-        { lat: endLat, lon: endLon }
-      ],
+      waypoints: [{ lat: startLat, lon: startLon }, { lat: endLat, lon: endLon }],
       distance: this.calculateDistance(startLat, startLon, endLat, endLon)
     };
+  }
+
+  /**
+   * Validate a path at high resolution (~11m) and refine if needed
+   * This ensures no small islands are missed between waypoints
+   */
+  private validateAndRefinePath(
+    path: Array<{ lat: number; lon: number }>
+  ): { success: boolean; waypoints: Array<{ lat: number; lon: number }>; distance: number } {
+    if (path.length < 2) {
+      return { success: false, waypoints: path, distance: 0 };
+    }
+
+    const refinedPath: Array<{ lat: number; lon: number }> = [path[0]];
+
+    // Check each segment at high resolution
+    for (let i = 1; i < path.length; i++) {
+      const prev = refinedPath[refinedPath.length - 1];
+      const curr = path[i];
+
+      // Check segment with high-resolution land detection
+      const check = this.checkRouteForLand(prev.lat, prev.lon, curr.lat, curr.lon, false);
+
+      if (check.crossesLand) {
+        // Segment crosses land - this means the coarse path missed something
+        // Try to find a micro-route around the obstacle
+        const microRoute = this.runAStar(
+          prev.lat, prev.lon, curr.lat, curr.lon,
+          0.0001, // ~11m resolution
+          10000   // Limited iterations for micro-routing
+        );
+
+        if (microRoute.success && !this.pathCrossesLand(microRoute.waypoints)) {
+          // Add micro-route waypoints (skip first as it's already in refinedPath)
+          for (let j = 1; j < microRoute.waypoints.length; j++) {
+            refinedPath.push(microRoute.waypoints[j]);
+          }
+        } else {
+          // Cannot find valid micro-route - path validation failed
+          return { success: false, waypoints: path, distance: 0 };
+        }
+      } else {
+        refinedPath.push(curr);
+      }
+    }
+
+    // Simplify the refined path
+    const simplified = this.simplifyPath(refinedPath);
+
+    // Calculate total distance
+    let totalDist = 0;
+    for (let i = 1; i < simplified.length; i++) {
+      totalDist += this.calculateDistance(
+        simplified[i - 1].lat, simplified[i - 1].lon,
+        simplified[i].lat, simplified[i].lon
+      );
+    }
+
+    return { success: true, waypoints: simplified, distance: totalDist };
+  }
+
+  /**
+   * Check if any segment of a path crosses land at high resolution
+   */
+  private pathCrossesLand(path: Array<{ lat: number; lon: number }>): boolean {
+    for (let i = 1; i < path.length; i++) {
+      const check = this.checkRouteForLand(
+        path[i - 1].lat, path[i - 1].lon,
+        path[i].lat, path[i].lon,
+        false
+      );
+      if (check.crossesLand) return true;
+    }
+    return false;
   }
 
   /**

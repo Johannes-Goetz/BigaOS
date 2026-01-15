@@ -116,6 +116,16 @@ export class WebSocketServer {
         });
       });
 
+      // Handle anchor alarm updates - broadcast to all clients for global state
+      socket.on('anchor_alarm_update', (data) => {
+        console.log('Anchor alarm update:', data);
+        // Broadcast to ALL clients (including sender) so everyone stays in sync
+        this.io.emit('anchor_alarm_changed', {
+          ...data,
+          timestamp: new Date()
+        });
+      });
+
       socket.on('disconnect', () => {
         console.log(`Client disconnected: ${socket.id}`);
       });

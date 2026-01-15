@@ -119,6 +119,50 @@ export const createWaypointIcon = (): L.DivIcon => {
 };
 
 /**
+ * Create an anchor icon for anchor alarm display
+ */
+export const createAnchorIcon = (isDragging: boolean = false): L.DivIcon => {
+  const color = isDragging ? '#ffa726' : '#4fc3f7';
+  const svgIcon = `
+    <svg width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
+      <path d="M17 15l1.55 1.55c-.96 1.69-3.33 3.04-5.55 3.37V11h3V9h-3V7.82C14.16 7.4 15 6.3 15 5c0-1.65-1.35-3-3-3S9 3.35 9 5c0 1.3.84 2.4 2 2.82V9H8v2h3v8.92c-2.22-.33-4.59-1.68-5.55-3.37L7 15l-4-3v3c0 3.88 4.92 7 9 7s9-3.12 9-7v-3l-4 3zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z" fill="${color}" stroke="#fff" stroke-width="1"/>
+    </svg>
+  `;
+
+  return L.divIcon({
+    html: svgIcon,
+    className: 'anchor-icon',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+};
+
+/**
+ * Create a crosshair (X) icon for anchor placement mode
+ */
+export const createCrosshairIcon = (): L.DivIcon => {
+  const svgIcon = `
+    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <!-- Diagonal line 1 - white outline -->
+      <line x1="4" y1="4" x2="20" y2="20" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <!-- Diagonal line 2 - white outline -->
+      <line x1="20" y1="4" x2="4" y2="20" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <!-- Diagonal line 1 - black -->
+      <line x1="4" y1="4" x2="20" y2="20" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+      <!-- Diagonal line 2 - black -->
+      <line x1="20" y1="4" x2="4" y2="20" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  `;
+
+  return L.divIcon({
+    html: svgIcon,
+    className: 'crosshair-icon',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
+/**
  * Create a finish flag icon for navigation destination
  */
 export const createFinishFlagIcon = (): L.DivIcon => {

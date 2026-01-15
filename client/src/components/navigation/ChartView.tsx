@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { GeoPosition } from '../../types';
@@ -23,6 +23,7 @@ const TILE_URLS = {
 // Import extracted components
 import {
   calculateDistanceNm,
+  calculateDistanceMeters,
   calculateRouteDistanceNm,
   calculateBearing,
   formatETA,
@@ -32,10 +33,14 @@ import {
   createCustomMarkerIcon,
   createWaypointIcon,
   createFinishFlagIcon,
+  createAnchorIcon,
+  createCrosshairIcon,
   MapController,
   LongPressHandler,
   ContextMenu,
+  AnchorPlacementController,
   MarkerDialog,
+  AnchorAlarmDialog,
   ChartSidebar,
   DepthSettingsPanel,
   SearchPanel,
@@ -152,6 +157,29 @@ export const ChartView: React.FC<ChartViewProps> = ({
     x: number;
     y: number;
   } | null>(null);
+  const [boatContextMenu, setBoatContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Anchor alarm state
+  const [anchorAlarmDialogOpen, setAnchorAlarmDialogOpen] = useState(false);
+  const [anchorAlarm, setAnchorAlarm] = useState<{
+    active: boolean;
+    anchorPosition: { lat: number; lon: number };
+    chainLength: number;
+    depth: number;
+    swingRadius: number;
+  } | null>(null);
+  const [anchorPositionOverride, setAnchorPositionOverride] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+  const [placingAnchor, setPlacingAnchor] = useState(false);
+  // Chain/depth state lifted from dialog for preview during placement
+  const [anchorChainLength, setAnchorChainLength] = useState(30);
+  const [anchorDepth, setAnchorDepth] = useState(depth);
+
   const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
   const [markerName, setMarkerName] = useState('');
   const [markerColor, setMarkerColor] = useState(markerColors[0]);
@@ -730,7 +758,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
     const map = mapRef.current;
     if (map && map.getContainer()) {
       try {
-        if (contextMenu || markerContextMenu || showMarkerDialog) {
+        if (contextMenu || markerContextMenu || boatContextMenu || showMarkerDialog) {
           map.dragging.disable();
         } else {
           map.dragging.enable();
@@ -739,11 +767,31 @@ export const ChartView: React.FC<ChartViewProps> = ({
         // Ignore errors if map is in transition state
       }
     }
-  }, [contextMenu, markerContextMenu, showMarkerDialog]);
+  }, [contextMenu, markerContextMenu, boatContextMenu, showMarkerDialog]);
 
-  // Handle sound alarm
+  // Check if anchor is dragging
+  const isAnchorDragging = useMemo(() => {
+    if (!anchorAlarm?.active) return false;
+    const distanceToAnchor = calculateDistanceMeters(
+      position.latitude,
+      position.longitude,
+      anchorAlarm.anchorPosition.lat,
+      anchorAlarm.anchorPosition.lon
+    );
+    return distanceToAnchor > anchorAlarm.swingRadius;
+  }, [anchorAlarm, position.latitude, position.longitude]);
+
+  // Calculate swing radius for placement preview
+  const placementSwingRadius = useMemo(() => {
+    if (!placingAnchor || anchorChainLength <= anchorDepth) return 0;
+    const horizontalDistance = Math.sqrt(anchorChainLength ** 2 - anchorDepth ** 2);
+    return horizontalDistance * 1.2; // 20% safety margin
+  }, [placingAnchor, anchorChainLength, anchorDepth]);
+
+  // Handle sound alarm for both depth and anchor alarms
   useEffect(() => {
-    if (isDepthAlarmTriggered && soundAlarmEnabled) {
+    const shouldAlarm = (isDepthAlarmTriggered || isAnchorDragging) && soundAlarmEnabled;
+    if (shouldAlarm) {
       if (!beepIntervalRef.current) {
         playBeep();
         beepIntervalRef.current = setInterval(playBeep, 500);
@@ -760,7 +808,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
         beepIntervalRef.current = null;
       }
     };
-  }, [isDepthAlarmTriggered, soundAlarmEnabled, playBeep]);
+  }, [isDepthAlarmTriggered, isAnchorDragging, soundAlarmEnabled, playBeep]);
 
   // Track offline state for search panel
   useEffect(() => {
@@ -772,6 +820,36 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
     return () => {
       wsService.off('connectivity_change', handleConnectivityChange);
+    };
+  }, []);
+
+  // Sync anchor alarm state across all clients via websocket
+  const isLocalAnchorChange = useRef(false);
+
+  // Helper to update anchor alarm and broadcast to other clients
+  const updateAnchorAlarm = useCallback((newAlarm: typeof anchorAlarm) => {
+    isLocalAnchorChange.current = true;
+    setAnchorAlarm(newAlarm);
+    wsService.emit('anchor_alarm_update', { anchorAlarm: newAlarm });
+  }, []);
+
+  // Listen for anchor alarm changes from other clients
+  useEffect(() => {
+    const handleAnchorAlarmChanged = (data: {
+      anchorAlarm: typeof anchorAlarm;
+      timestamp: Date;
+    }) => {
+      // Update local state with received anchor alarm
+      if (!isLocalAnchorChange.current) {
+        setAnchorAlarm(data.anchorAlarm);
+      }
+      isLocalAnchorChange.current = false;
+    };
+
+    wsService.on('anchor_alarm_changed', handleAnchorAlarmChanged);
+
+    return () => {
+      wsService.off('anchor_alarm_changed', handleAnchorAlarmChanged);
     };
   }, []);
 
@@ -851,6 +929,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const handleMapDrag = () => setAutoCenter(false);
 
   const handleLongPress = (lat: number, lon: number, x: number, y: number) => {
+    // Don't show context menu during anchor placement mode
+    if (placingAnchor) return;
     setContextMenu({ lat, lon, x, y });
   };
 
@@ -993,29 +1073,132 @@ export const ChartView: React.FC<ChartViewProps> = ({
         {/* Auto-refresh tiles when coming back online */}
         <ConnectivityRefresher />
 
+        {/* Anchor alarm swing radius circle */}
+        {anchorAlarm?.active && (
+          <>
+            <Circle
+              center={[anchorAlarm.anchorPosition.lat, anchorAlarm.anchorPosition.lon]}
+              radius={anchorAlarm.swingRadius}
+              pathOptions={{
+                color: calculateDistanceMeters(
+                  position.latitude,
+                  position.longitude,
+                  anchorAlarm.anchorPosition.lat,
+                  anchorAlarm.anchorPosition.lon
+                ) > anchorAlarm.swingRadius
+                  ? '#ef5350'
+                  : '#66bb6a',
+                fillColor: calculateDistanceMeters(
+                  position.latitude,
+                  position.longitude,
+                  anchorAlarm.anchorPosition.lat,
+                  anchorAlarm.anchorPosition.lon
+                ) > anchorAlarm.swingRadius
+                  ? '#ef5350'
+                  : '#66bb6a',
+                fillOpacity: 0.15,
+                weight: 3,
+                dashArray: '8, 4',
+              }}
+            />
+            <Marker
+              position={[anchorAlarm.anchorPosition.lat, anchorAlarm.anchorPosition.lon]}
+              icon={createAnchorIcon()}
+              eventHandlers={{
+                click: () => {
+                  // Pre-fill the dialog with current anchor alarm settings
+                  setAnchorChainLength(anchorAlarm.chainLength);
+                  setAnchorDepth(anchorAlarm.depth);
+                  setAnchorPositionOverride(anchorAlarm.anchorPosition);
+                  setAnchorAlarmDialogOpen(true);
+                },
+              }}
+            />
+          </>
+        )}
+
+        {/* Anchor position placement mode - viewport centered */}
+        {placingAnchor && (
+          <>
+            <AnchorPlacementController
+              sidebarWidth={sidebarWidth}
+              boatPosition={{ lat: position.latitude, lon: position.longitude }}
+              maxRadius={placementSwingRadius}
+              initialAnchorPosition={anchorPositionOverride || undefined}
+              onCenterChange={(lat, lon) => {
+                setAnchorPositionOverride({ lat, lon });
+              }}
+            />
+            {anchorPositionOverride && (
+              <>
+                {/* Swing radius circle centered on ANCHOR - boat must stay inside */}
+                {placementSwingRadius > 0 && (
+                  <Circle
+                    center={[anchorPositionOverride.lat, anchorPositionOverride.lon]}
+                    radius={placementSwingRadius}
+                    pathOptions={{
+                      color: '#4fc3f7',
+                      fillColor: '#4fc3f7',
+                      fillOpacity: 0.1,
+                      weight: 2,
+                      dashArray: '6, 4',
+                    }}
+                  />
+                )}
+                {/* Crosshair marker at anchor position */}
+                <Marker
+                  position={[anchorPositionOverride.lat, anchorPositionOverride.lon]}
+                  icon={createCrosshairIcon()}
+                />
+                {/* White outline */}
+                <Polyline
+                  positions={[
+                    [position.latitude, position.longitude],
+                    [anchorPositionOverride.lat, anchorPositionOverride.lon],
+                  ]}
+                  pathOptions={{
+                    color: '#fff',
+                    weight: 4,
+                    dashArray: '8, 8',
+                    opacity: 1,
+                  }}
+                />
+                {/* Black line on top */}
+                <Polyline
+                  positions={[
+                    [position.latitude, position.longitude],
+                    [anchorPositionOverride.lat, anchorPositionOverride.lon],
+                  ]}
+                  pathOptions={{
+                    color: '#000',
+                    weight: 2,
+                    dashArray: '8, 8',
+                    opacity: 1,
+                  }}
+                />
+              </>
+            )}
+          </>
+        )}
+
         {/* Boat marker */}
         <Marker
           position={[position.latitude, position.longitude]}
           icon={createBoatIcon(heading)}
-        >
-          <Popup>
-            <div style={{ padding: '0.5rem' }}>
-              <strong>Your Boat</strong>
-              <br />
-              <strong>Position:</strong> {position.latitude.toFixed(5)}°,{' '}
-              {position.longitude.toFixed(5)}°
-              <br />
-              <strong>Heading:</strong> {heading.toFixed(0)}°
-              <br />
-              <strong>Speed:</strong> {speed.toFixed(1)} kt
-              <br />
-              <strong>Depth:</strong>{' '}
-              <span style={{ color: getDepthColor(depth) }}>
-                {depth.toFixed(1)}m
-              </span>
-            </div>
-          </Popup>
-        </Marker>
+          eventHandlers={{
+            click: (e) => {
+              // Don't show context menu during anchor placement mode
+              if (placingAnchor) return;
+              const containerPoint = mapRef.current?.latLngToContainerPoint(e.latlng);
+              if (containerPoint) {
+                setBoatContextMenu({
+                  x: containerPoint.x,
+                  y: containerPoint.y,
+                });
+              }
+            },
+          }}
+        />
 
         {/* Custom markers */}
         {customMarkers.map((marker) => (
@@ -1025,6 +1208,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
             icon={markerIcons[marker.id]}
             eventHandlers={{
               click: (e) => {
+                // Don't show context menu during anchor placement mode
+                if (placingAnchor) return;
                 const containerPoint = mapRef.current?.latLngToContainerPoint(e.latlng);
                 if (containerPoint) {
                   setMarkerContextMenu({
@@ -1660,6 +1845,126 @@ export const ChartView: React.FC<ChartViewProps> = ({
         </button>
       )}
 
+      {/* Anchor Placement Mode - Info panel */}
+      {placingAnchor && (
+        <>
+          {/* Bottom info panel */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '2rem',
+              left: `calc(50% - ${sidebarWidth / 2}px)`,
+              transform: 'translateX(-50%)',
+              background: 'rgba(10, 25, 41, 0.95)',
+              border: '1px solid rgba(79, 195, 247, 0.5)',
+              borderRadius: '8px',
+              padding: '0.75rem 1rem',
+              color: '#fff',
+              zIndex: 1002,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+              Pan map to set anchor position
+            </div>
+            {anchorPositionOverride && (
+              <div style={{ fontSize: '0.9rem', color: '#4fc3f7', width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Distance from Boat:</span>
+                  <span>{calculateDistanceMeters(
+                    position.latitude,
+                    position.longitude,
+                    anchorPositionOverride.lat,
+                    anchorPositionOverride.lon
+                  ).toFixed(0)}m</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Bearing:</span>
+                  <span>{calculateBearing(
+                    position.latitude,
+                    position.longitude,
+                    anchorPositionOverride.lat,
+                    anchorPositionOverride.lon
+                  ).toFixed(0)}°</span>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setAnchorDepth(depth); // Use current sensor depth
+                setAnchorAlarmDialogOpen(true);
+                setPlacingAnchor(false);
+              }}
+              className="touch-btn"
+              style={{
+                padding: '0.5rem 1.5rem',
+                background: 'rgba(79, 195, 247, 0.5)',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              Confirm Position
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Anchor Alarm Alert */}
+      {anchorAlarm?.active && (() => {
+        const distanceToAnchor = calculateDistanceMeters(
+          position.latitude,
+          position.longitude,
+          anchorAlarm.anchorPosition.lat,
+          anchorAlarm.anchorPosition.lon
+        );
+        const isDragging = distanceToAnchor > anchorAlarm.swingRadius;
+
+        if (isDragging) {
+          return (
+            <button
+              onClick={() => updateAnchorAlarm(null)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(239, 83, 80, 0.95)',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '0.75rem 1.5rem',
+                color: '#fff',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                zIndex: 1002,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                animation: 'pulse 1s infinite',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17 15l1.55 1.55c-.96 1.69-3.33 3.04-5.55 3.37V11h3V9h-3V7.82C14.16 7.4 15 6.3 15 5c0-1.65-1.35-3-3-3S9 3.35 9 5c0 1.3.84 2.4 2 2.82V9H8v2h3v8.92c-2.22-.33-4.59-1.68-5.55-3.37L7 15l-4-3v3c0 3.88 4.92 7 9 7s9-3.12 9-7v-3l-4 3zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+              </svg>
+              <span>ANCHOR DRAGGING!</span>
+              <span style={{ opacity: 0.8, fontWeight: 'normal' }}>
+                +{(distanceToAnchor - anchorAlarm.swingRadius).toFixed(0)}m
+              </span>
+            </button>
+          );
+        }
+        return null;
+      })()}
+
       {/* Depth Settings Panel */}
       {depthSettingsOpen && (
         <DepthSettingsPanel
@@ -1818,6 +2123,34 @@ export const ChartView: React.FC<ChartViewProps> = ({
         />
       )}
 
+      {/* Context Menu for boat */}
+      {boatContextMenu && (
+        <ContextMenu
+          x={boatContextMenu.x}
+          y={boatContextMenu.y}
+          sidebarWidth={sidebarWidth}
+          header="Your Boat"
+          options={[
+            {
+              label: 'Anchor Alarm',
+              icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="5" r="3" />
+                  <line x1="12" y1="8" x2="12" y2="21" />
+                  <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
+                </svg>
+              ),
+              onClick: () => {
+                setAnchorDepth(depth); // Use current sensor depth
+                setAnchorAlarmDialogOpen(true);
+                setBoatContextMenu(null);
+              },
+            },
+          ]}
+          onClose={() => setBoatContextMenu(null)}
+        />
+      )}
+
       {/* Marker Dialog (Add/Edit) */}
       {showMarkerDialog && (
         <MarkerDialog
@@ -1839,6 +2172,82 @@ export const ChartView: React.FC<ChartViewProps> = ({
             setMarkerIcon('pin');
           }}
           onSave={saveMarker}
+        />
+      )}
+
+      {/* Anchor Alarm Dialog */}
+      {anchorAlarmDialogOpen && (
+        <AnchorAlarmDialog
+          anchorPosition={anchorPositionOverride}
+          chainLength={anchorChainLength}
+          onChainLengthChange={(value) => {
+            setAnchorChainLength(value);
+            // Reset position to boat when NOT editing an existing alarm
+            if (!anchorAlarm?.active) {
+              setAnchorPositionOverride({
+                lat: position.latitude,
+                lon: position.longitude,
+              });
+            }
+          }}
+          anchorDepth={anchorDepth}
+          onAnchorDepthChange={(value) => {
+            setAnchorDepth(value);
+            // Reset position to boat when NOT editing an existing alarm
+            if (!anchorAlarm?.active) {
+              setAnchorPositionOverride({
+                lat: position.latitude,
+                lon: position.longitude,
+              });
+            }
+          }}
+          isEditing={!!anchorAlarm?.active}
+          onSetAnchorPosition={() => {
+            // Start anchor placement mode
+            if (!anchorPositionOverride) {
+              // Initialize at current boat position
+              setAnchorPositionOverride({
+                lat: position.latitude,
+                lon: position.longitude,
+              });
+            }
+            setPlacingAnchor(true);
+            setAnchorAlarmDialogOpen(false);
+          }}
+          onActivate={(chainLength, depth) => {
+            // Calculate swing radius using Pythagorean theorem + safety margin
+            const horizontalDistance = Math.sqrt(chainLength ** 2 - depth ** 2);
+            const swingRadius = horizontalDistance * 1.2; // 20% safety margin
+
+            const anchorPos = anchorPositionOverride || {
+              lat: position.latitude,
+              lon: position.longitude,
+            };
+
+            updateAnchorAlarm({
+              active: true,
+              anchorPosition: anchorPos,
+              chainLength,
+              depth,
+              swingRadius,
+            });
+            setAnchorAlarmDialogOpen(false);
+            setAnchorPositionOverride(null);
+            setPlacingAnchor(false);
+          }}
+          onDelete={() => {
+            updateAnchorAlarm(null);
+            setAnchorAlarmDialogOpen(false);
+            setAnchorPositionOverride(null);
+            setPlacingAnchor(false);
+          }}
+          onClose={() => {
+            setAnchorAlarmDialogOpen(false);
+            // If we were placing anchor, keep the position but stop placement mode
+            if (placingAnchor) {
+              setPlacingAnchor(false);
+            }
+          }}
         />
       )}
 

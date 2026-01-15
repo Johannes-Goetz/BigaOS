@@ -1,5 +1,5 @@
 // Navigation utilities
-export { calculateDistanceNm, calculateRouteDistanceNm, formatETA, calculateBearing } from './navigation-utils';
+export { calculateDistanceNm, calculateDistanceMeters, calculateRouteDistanceNm, formatETA, calculateBearing } from './navigation-utils';
 
 // Map icons and types
 export {
@@ -9,15 +9,17 @@ export {
   createCustomMarkerIcon,
   createWaypointIcon,
   createFinishFlagIcon,
+  createAnchorIcon,
+  createCrosshairIcon,
 } from './map-icons';
 export type { CustomMarker } from './map-icons';
 
 // Map components
-export { MapController, LongPressHandler, ContextMenu, Compass } from './MapComponents';
+export { MapController, LongPressHandler, ContextMenu, Compass, AnchorPlacementController } from './MapComponents';
 export type { ContextMenuOption } from './MapComponents';
 
 // Dialogs
-export { MarkerDialog } from './MarkerDialogs';
+export { MarkerDialog, AnchorAlarmDialog } from './MarkerDialogs';
 
 // Sidebar
 export { ChartSidebar } from './ChartSidebar';

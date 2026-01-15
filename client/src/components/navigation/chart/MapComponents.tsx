@@ -50,6 +50,135 @@ export const MapController: React.FC<MapControllerProps> = ({
   return null;
 };
 
+interface AnchorPlacementControllerProps {
+  onCenterChange: (lat: number, lon: number) => void;
+  sidebarWidth: number;
+  boatPosition?: { lat: number; lon: number };
+  maxRadius?: number; // Maximum distance boat can be from anchor in meters
+  initialAnchorPosition?: { lat: number; lon: number }; // Existing anchor position to center on
+}
+
+/**
+ * Component to track map center during anchor placement mode
+ * The crosshair (anchor position) is at the visual center of the map
+ * When dragging beyond the radius, the anchor slides along the circle edge
+ */
+export const AnchorPlacementController: React.FC<AnchorPlacementControllerProps> = ({
+  onCenterChange,
+  sidebarWidth,
+  boatPosition,
+  maxRadius,
+  initialAnchorPosition,
+}) => {
+  const map = useMap();
+  const previousZoom = React.useRef<number | null>(null);
+  const previousCenter = React.useRef<L.LatLng | null>(null);
+  const hasInitialPosition = React.useRef(!!initialAnchorPosition);
+  const isInitializing = React.useRef(true);
+
+  // Zoom to max level on mount, restore on unmount
+  useEffect(() => {
+    // Determine center position: use existing anchor position if available, otherwise boat position
+    const centerPosition = initialAnchorPosition || boatPosition;
+
+    if (centerPosition) {
+      // Save current state before changing
+      previousZoom.current = map.getZoom();
+      previousCenter.current = map.getCenter();
+
+      // Calculate offset to center the position in the visual center (accounting for sidebar)
+      const mapSize = map.getSize();
+      const visualCenterX = (mapSize.x - sidebarWidth) / 2;
+      const offsetX = mapSize.x / 2 - visualCenterX;
+
+      // Zoom to max and center on the target position
+      const maxZoom = map.getMaxZoom() || 18;
+      map.setView([centerPosition.lat, centerPosition.lon], maxZoom, { animate: true });
+
+      // After zoom completes, adjust for sidebar offset
+      setTimeout(() => {
+        map.panBy([offsetX, 0], { animate: false });
+        // Mark initialization complete after viewport is properly positioned
+        setTimeout(() => {
+          isInitializing.current = false;
+        }, 100);
+      }, 300);
+    } else {
+      isInitializing.current = false;
+    }
+
+    return () => {
+      // Restore previous state when exiting placement mode
+      if (previousZoom.current !== null && previousCenter.current !== null) {
+        map.setView(previousCenter.current, previousZoom.current, { animate: true });
+      }
+    };
+  }, []);
+
+  // Track anchor position - clamp to circle edge when outside radius
+  useEffect(() => {
+    const updateCenter = () => {
+      // Skip updates during initialization if we have an initial position
+      // This prevents the saved position from being overwritten by viewport calculations
+      if (isInitializing.current && hasInitialPosition.current) {
+        return;
+      }
+
+      // Get the map container size
+      const mapSize = map.getSize();
+      // Calculate the visual center point (accounting for sidebar) - this is anchor position
+      const visualCenterX = (mapSize.x - sidebarWidth) / 2;
+      const visualCenterY = mapSize.y / 2;
+      // Convert this pixel point to lat/lng - this is where the anchor/crosshair would be
+      const anchorPosition = map.containerPointToLatLng(L.point(visualCenterX, visualCenterY));
+
+      // Check if boat is outside the anchor's swing radius
+      if (boatPosition && maxRadius && maxRadius > 0) {
+        const boatLatLng = L.latLng(boatPosition.lat, boatPosition.lon);
+        const anchorLatLng = L.latLng(anchorPosition.lat, anchorPosition.lng);
+        const distance = anchorLatLng.distanceTo(boatLatLng);
+
+        if (distance > maxRadius) {
+          // Boat is outside the radius - clamp anchor to circle edge
+          // Calculate the direction from boat to where anchor would be
+          const bearing = Math.atan2(
+            anchorPosition.lng - boatPosition.lon,
+            anchorPosition.lat - boatPosition.lat
+          );
+
+          // Place anchor at maxRadius distance from boat in that direction
+          const latOffset = (maxRadius / 111320) * Math.cos(bearing);
+          const lonOffset = (maxRadius / (111320 * Math.cos(boatPosition.lat * Math.PI / 180))) * Math.sin(bearing);
+
+          const clampedLat = boatPosition.lat + latOffset;
+          const clampedLon = boatPosition.lon + lonOffset;
+
+          onCenterChange(clampedLat, clampedLon);
+          return;
+        }
+      }
+
+      // Position is valid - use actual anchor position
+      onCenterChange(anchorPosition.lat, anchorPosition.lng);
+    };
+
+    // Update on move (includes pan and zoom)
+    map.on('move', updateCenter);
+
+    // Only call updateCenter on mount if we DON'T have an initial position
+    // If we have an initial position, trust it and don't recalculate
+    if (!hasInitialPosition.current) {
+      updateCenter();
+    }
+
+    return () => {
+      map.off('move', updateCenter);
+    };
+  }, [map, onCenterChange, sidebarWidth, boatPosition, maxRadius]);
+
+  return null;
+};
+
 interface LongPressHandlerProps {
   onLongPress: (lat: number, lon: number, x: number, y: number) => void;
 }

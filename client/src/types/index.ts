@@ -17,6 +17,13 @@ export interface SensorData {
   environment: EnvironmentData;
   electrical: ElectricalData;
   propulsion: PropulsionData;
+  weather?: WeatherSensorData;
+}
+
+export interface WeatherSensorData {
+  current: WeatherPoint;
+  forecast: WeatherPoint[];
+  lastUpdated: string;
 }
 
 export interface NavigationData {
@@ -77,12 +84,71 @@ export interface BoatStateData {
   inputs: any;
 }
 
+// Legacy WeatherData - kept for backwards compatibility
 export interface WeatherData {
   temperature: number;
   windSpeed: number;
   windDirection: number;
   pressure: number;
   humidity: number;
+}
+
+// New weather types for Open-Meteo integration
+export interface WindData {
+  speed: number; // knots
+  direction: number; // degrees (direction wind is coming FROM, 0 = North)
+  gusts: number; // knots
+}
+
+export interface WaveData {
+  height: number; // meters
+  direction: number; // degrees
+  period: number; // seconds
+}
+
+export interface WeatherPoint {
+  timestamp: string; // ISO date
+  location: { lat: number; lon: number };
+  wind: WindData;
+  waves?: WaveData;
+  swell?: WaveData;
+  pressure?: number; // hPa
+  seaTemperature?: number; // celsius
+}
+
+export interface WeatherForecast {
+  location: { lat: number; lon: number };
+  current: WeatherPoint;
+  hourly: WeatherPoint[];
+  fetchedAt: string;
+  expiresAt: string;
+}
+
+export interface WeatherGridBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface WeatherGridPoint extends WeatherPoint {
+  // No additional fields - just a typed alias for grid points
+}
+
+export interface WeatherGrid {
+  bounds: WeatherGridBounds;
+  resolution: number;
+  forecastHour: number;
+  points: WeatherGridPoint[];
+  fetchedAt: string;
+}
+
+export interface WeatherSettings {
+  enabled: boolean;
+  provider: 'open-meteo' | 'custom';
+  weatherApiUrl: string;
+  marineApiUrl: string;
+  refreshIntervalMinutes: number;
 }
 
 export interface Camera {

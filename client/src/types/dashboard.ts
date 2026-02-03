@@ -1,6 +1,6 @@
 import { Layout } from 'react-grid-layout';
 
-export type ViewType = 'chart' | 'wind' | 'engine' | 'electrical' | 'anchor' | 'depth' | 'settings' | 'speed' | 'heading' | 'cog' | 'position' | 'battery';
+export type ViewType = 'chart' | 'wind' | 'engine' | 'electrical' | 'anchor' | 'depth' | 'settings' | 'speed' | 'heading' | 'cog' | 'position' | 'battery' | 'weather';
 
 export interface DashboardItemConfig {
   id: string;
@@ -17,7 +17,8 @@ export type DashboardItemType =
   | 'position'
   | 'battery'
   | 'cog'
-  | 'chart-mini';
+  | 'chart-mini'
+  | 'weather-forecast';
 
 export interface DashboardLayout {
   items: DashboardItemConfig[];

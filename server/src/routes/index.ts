@@ -6,6 +6,7 @@ import { navigationController } from '../controllers/navigation.controller';
 import { navigationDataController } from '../controllers/navigation-data.controller';
 import { tilesController } from '../controllers/tiles.controller';
 import { autopilotController } from '../controllers/autopilot.controller';
+import { weatherController } from '../controllers/weather.controller';
 
 const router = Router();
 
@@ -69,6 +70,13 @@ router.post('/tiles/estimate', tilesController.getEstimate.bind(tilesController)
 router.get('/tiles/storage', tilesController.getStorageStats.bind(tilesController));
 // Tile serving (must be last due to wildcard params)
 router.get('/tiles/:source/:z/:x/:y', tilesController.serveTile.bind(tilesController));
+
+// Weather routes
+router.get('/weather/current', weatherController.getCurrent.bind(weatherController));
+router.get('/weather/forecast', weatherController.getForecast.bind(weatherController));
+router.get('/weather/grid', weatherController.getGrid.bind(weatherController));
+router.get('/weather/settings', weatherController.getSettings.bind(weatherController));
+router.put('/weather/settings', weatherController.updateSettings.bind(weatherController));
 
 // Geocoding routes (proxied through server for offline awareness)
 router.get('/geocoding/search', tilesController.searchLocations.bind(tilesController));

@@ -265,6 +265,59 @@ export const geocodingAPI = {
     }),
 };
 
+// Weather API
+import type { WeatherGrid, WeatherGridBounds, WeatherSettings, WeatherPoint } from '../types';
+
+export interface WeatherCurrentResponse {
+  current: WeatherPoint;
+  location: { lat: number; lon: number };
+  fetchedAt: string;
+  expiresAt: string;
+}
+
+export interface WeatherForecastResponse {
+  location: { lat: number; lon: number };
+  current: WeatherPoint;
+  hourly: WeatherPoint[];
+  fetchedAt: string;
+  expiresAt: string;
+}
+
+export const weatherAPI = {
+  /**
+   * Get current weather for a location
+   */
+  getCurrent: (lat: number, lon: number) =>
+    api.get<WeatherCurrentResponse>('/weather/current', { params: { lat, lon } }),
+
+  /**
+   * Get hourly forecast for a location
+   */
+  getForecast: (lat: number, lon: number, hours: number = 168) =>
+    api.get<WeatherForecastResponse>('/weather/forecast', { params: { lat, lon, hours } }),
+
+  /**
+   * Get weather grid for map overlay
+   */
+  getGrid: (bounds: WeatherGridBounds, resolution: number = 0.5, hour: number = 0, config?: { signal?: AbortSignal }) =>
+    api.get<WeatherGrid>('/weather/grid', {
+      params: { ...bounds, resolution, hour },
+      signal: config?.signal,
+    }),
+
+  /**
+   * Get current weather settings
+   */
+  getSettings: () =>
+    api.get<WeatherSettings>('/weather/settings'),
+
+  /**
+   * Update weather settings
+   */
+  updateSettings: (settings: Partial<WeatherSettings>) =>
+    api.put<{ success: boolean; settings: WeatherSettings }>('/weather/settings', settings),
+};
+
 export const offlineMapsAPI = {
   /**
    * Get server connectivity status

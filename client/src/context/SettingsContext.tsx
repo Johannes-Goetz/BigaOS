@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { wsService } from '../services/websocket';
+import type { WeatherSettings } from '../types';
 
 export type SpeedUnit = 'kt' | 'km/h' | 'mph' | 'm/s';
 export type WindUnit = 'kt' | 'km/h' | 'm/s' | 'bft';
@@ -322,6 +323,10 @@ interface SettingsContextType {
   vesselSettings: VesselSettings;
   setVesselSettings: (settings: VesselSettings) => void;
 
+  // Weather settings
+  weatherSettings: WeatherSettings;
+  setWeatherSettings: (settings: WeatherSettings) => void;
+
   // Depth alarm
   depthAlarm: number | null; // Stored in current unit
   depthAlarmMeters: number | null; // Computed in meters
@@ -379,6 +384,14 @@ const defaultVesselSettings: VesselSettings = {
   useWindLoaFormula: true,
 };
 
+const defaultWeatherSettings: WeatherSettings = {
+  enabled: true,
+  provider: 'open-meteo',
+  weatherApiUrl: 'https://api.open-meteo.com/v1/forecast',
+  marineApiUrl: 'https://marine-api.open-meteo.com/v1/marine',
+  refreshIntervalMinutes: 15,
+};
+
 const defaultSettings = {
   speedUnit: 'kt' as SpeedUnit,
   windUnit: 'kt' as WindUnit,
@@ -390,6 +403,7 @@ const defaultSettings = {
   soundAlarmEnabled: false,
   demoMode: true,
   vesselSettings: defaultVesselSettings,
+  weatherSettings: defaultWeatherSettings,
   mapTileUrls: {
     // All tiles go through server proxy for offline support
     streetMap: `${API_BASE_URL}/tiles/street/{z}/{x}/{y}`,
@@ -416,6 +430,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [mapTileUrls, setMapTileUrlsState] = useState<MapTileUrls>(defaultSettings.mapTileUrls);
   const [apiUrls, setApiUrlsState] = useState<ApiUrls>(defaultSettings.apiUrls);
   const [vesselSettings, setVesselSettingsState] = useState<VesselSettings>(defaultSettings.vesselSettings);
+  const [weatherSettings, setWeatherSettingsState] = useState<WeatherSettings>(defaultSettings.weatherSettings);
   const [currentDepth, setCurrentDepth] = useState<number>(10);
   const [isSynced, setIsSynced] = useState<boolean>(false);
   const isApplyingServerSettings = React.useRef<boolean>(false);
@@ -463,6 +478,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (data.settings.vesselSettings) {
         setVesselSettingsState(data.settings.vesselSettings);
       }
+      if (data.settings.weatherSettings) {
+        setWeatherSettingsState(data.settings.weatherSettings);
+      }
 
       isApplyingServerSettings.current = false;
       setIsSynced(true);
@@ -509,6 +527,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'vesselSettings':
           setVesselSettingsState(data.value);
+          break;
+        case 'weatherSettings':
+          setWeatherSettingsState(data.value);
           break;
       }
 
@@ -598,6 +619,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateServerSetting('vesselSettings', settings);
   }, [updateServerSetting]);
 
+  const setWeatherSettings = useCallback((settings: WeatherSettings) => {
+    setWeatherSettingsState(settings);
+    updateServerSetting('weatherSettings', settings);
+  }, [updateServerSetting]);
+
   // Convert alarm threshold to meters
   const depthAlarmMeters = depthAlarm !== null
     ? (depthUnit === 'ft' ? depthAlarm / depthConversions.ft.factor : depthAlarm)
@@ -662,6 +688,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setApiUrls,
     vesselSettings,
     setVesselSettings,
+    weatherSettings,
+    setWeatherSettings,
     depthAlarm,
     depthAlarmMeters,
     setDepthAlarm,

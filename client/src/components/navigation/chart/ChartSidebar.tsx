@@ -23,6 +23,8 @@ interface ChartSidebarProps {
   autopilotOpen: boolean;
   autopilotActive: boolean;
   debugMode?: boolean;
+  weatherOverlayEnabled?: boolean;
+  weatherPanelOpen?: boolean;
   onClose?: () => void;
   onDepthClick: () => void;
   onSearchClick: () => void;
@@ -30,6 +32,7 @@ interface ChartSidebarProps {
   onRecenter: () => void;
   onCompassClick: () => void;
   onDebugToggle?: () => void;
+  onWeatherClick?: () => void;
 }
 
 export const ChartSidebar: React.FC<ChartSidebarProps> = ({
@@ -48,6 +51,8 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
   autopilotOpen,
   autopilotActive: _autopilotActive,
   debugMode: _debugMode,
+  weatherOverlayEnabled,
+  weatherPanelOpen,
   onClose,
   onDepthClick,
   onSearchClick,
@@ -55,6 +60,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
   onRecenter,
   onCompassClick,
   onDebugToggle: _onDebugToggle,
+  onWeatherClick,
 }) => {
   const sidebarWidth = 100;
 
@@ -182,6 +188,34 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
+
+      {/* Weather overlay toggle */}
+      {onWeatherClick && (
+        <button
+          onClick={onWeatherClick}
+          className={`chart-sidebar-btn with-label ${weatherPanelOpen || weatherOverlayEnabled ? 'active' : ''}`}
+          style={{
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            background: weatherPanelOpen ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+          }}
+          title="Wind forecast settings"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={weatherOverlayEnabled ? '#4fc3f7' : 'currentColor'}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {/* Wind icon */}
+            <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+          </svg>
+          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>WIND</span>
+        </button>
+      )}
 
       {/* Search button */}
       <button

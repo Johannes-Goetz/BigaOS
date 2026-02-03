@@ -26,8 +26,11 @@ export { VesselDetailsDialog } from './VesselDetailsDialog';
 export { ChartSidebar } from './ChartSidebar';
 
 // Panels
-export { DepthSettingsPanel, SearchPanel, AutopilotPanel } from './ChartPanels';
+export { DepthSettingsPanel, SearchPanel, AutopilotPanel, WeatherPanel } from './ChartPanels';
 
 // Debug overlay
 export { WaterDebugOverlay, DebugInfoPanel, useWaterDebugGrid } from './WaterDebugOverlay';
 export type { DebugMode } from './WaterDebugOverlay';
+
+// Weather overlay
+export { WeatherOverlay, useWeatherOverlay } from './WeatherOverlay';

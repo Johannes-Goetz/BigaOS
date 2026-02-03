@@ -376,6 +376,278 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
   );
 };
 
+// Weather forecast panel
+interface WeatherPanelProps {
+  sidebarWidth: number;
+  enabled: boolean;
+  forecastHour: number;
+  loading?: boolean;
+  error?: string | null;
+  onToggleEnabled: () => void;
+  onSetForecastHour: (hour: number) => void;
+  onClose: () => void;
+}
+
+// Slider stops: Off (-1), Now (0), then hourly to +6h, then larger steps
+const SLIDER_STOPS = [
+  { value: -1, hour: -1, label: 'Off' },
+  { value: 0, hour: 0, label: 'Now' },
+  { value: 1, hour: 1, label: '+1h' },
+  { value: 2, hour: 2, label: '+2h' },
+  { value: 3, hour: 3, label: '+3h' },
+  { value: 4, hour: 4, label: '+4h' },
+  { value: 5, hour: 5, label: '+5h' },
+  { value: 6, hour: 6, label: '+6h' },
+  { value: 7, hour: 12, label: '+12h' },
+  { value: 8, hour: 24, label: '+24h' },
+  { value: 9, hour: 48, label: '+2d' },
+  { value: 10, hour: 72, label: '+3d' },
+  { value: 11, hour: 168, label: '+7d' },
+];
+
+function getSliderValueFromHour(hour: number, enabled: boolean): number {
+  if (!enabled) return -1;
+  const stop = SLIDER_STOPS.find(s => s.hour === hour);
+  return stop ? stop.value : 0;
+}
+
+function getHourFromSliderValue(value: number): { hour: number; enabled: boolean } {
+  const stop = SLIDER_STOPS.find(s => s.value === value);
+  if (!stop || stop.hour === -1) return { hour: 0, enabled: false };
+  return { hour: stop.hour, enabled: true };
+}
+
+export const WeatherPanel: React.FC<WeatherPanelProps> = ({
+  sidebarWidth,
+  enabled,
+  forecastHour,
+  loading = false,
+  error = null,
+  onToggleEnabled,
+  onSetForecastHour,
+  onClose,
+}) => {
+  const settingsPanelWidth = 200;
+  const sliderValue = getSliderValueFromHour(forecastHour, enabled);
+
+  // Format the current forecast time for display
+  const formatForecastTime = (hours: number): string => {
+    if (hours === 0) return 'Now';
+    const date = new Date();
+    date.setHours(date.getHours() + hours);
+    return date.toLocaleString([], {
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getCurrentLabel = (): string => {
+    if (!enabled) return 'Off';
+    const stop = SLIDER_STOPS.find(s => s.hour === forecastHour);
+    return stop ? stop.label : 'Now';
+  };
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    const { hour, enabled: shouldBeEnabled } = getHourFromSliderValue(value);
+
+    if (!shouldBeEnabled && enabled) {
+      onToggleEnabled();
+    } else if (shouldBeEnabled && !enabled) {
+      onToggleEnabled();
+      onSetForecastHour(hour);
+    } else if (shouldBeEnabled) {
+      onSetForecastHour(hour);
+    }
+  };
+
+  return (
+    <>
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          right: `${sidebarWidth + 8}px`,
+          width: `${settingsPanelWidth}px`,
+          maxHeight: 'calc(100vh - 32px)',
+          overflowY: 'auto',
+          background: 'rgba(10, 25, 41, 0.95)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: '4px',
+          padding: '1rem',
+          zIndex: 1001,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        }}
+      >
+        <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.75rem' }}>
+          WIND FORECAST
+        </div>
+
+        {/* Status indicator */}
+        {loading && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.75rem',
+            padding: '0.4rem 0.6rem',
+            background: 'rgba(79, 195, 247, 0.15)',
+            borderRadius: '4px',
+            fontSize: '0.7rem',
+            color: '#4FC3F7',
+          }}>
+            <div
+              style={{
+                width: '10px',
+                height: '10px',
+                border: '2px solid rgba(79, 195, 247, 0.3)',
+                borderTopColor: '#4FC3F7',
+                borderRadius: '50%',
+                animation: 'weather-spin 1s linear infinite',
+              }}
+            />
+            Loading...
+          </div>
+        )}
+        {error && !loading && (
+          <div style={{
+            marginBottom: '0.75rem',
+            padding: '0.4rem 0.6rem',
+            background: 'rgba(255, 152, 0, 0.15)',
+            borderRadius: '4px',
+            fontSize: '0.65rem',
+            color: '#FF9800',
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Current selection display */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '1rem',
+          padding: '0.75rem',
+          background: enabled ? 'rgba(79, 195, 247, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '4px',
+        }}>
+          <div style={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
+            color: enabled ? '#4FC3F7' : 'rgba(255,255,255,0.5)',
+          }}>
+            {getCurrentLabel()}
+          </div>
+          {enabled && forecastHour > 0 && (
+            <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: '0.25rem' }}>
+              {formatForecastTime(forecastHour)}
+            </div>
+          )}
+        </div>
+
+        {/* Slider */}
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="range"
+            min={-1}
+            max={11}
+            step={1}
+            value={sliderValue}
+            onChange={handleSliderChange}
+            style={{
+              width: '100%',
+              height: '8px',
+              borderRadius: '4px',
+              background: `linear-gradient(to right,
+                rgba(255,255,255,0.2) 0%,
+                rgba(255,255,255,0.2) ${((sliderValue + 1) / 12) * 100}%,
+                rgba(79, 195, 247, 0.5) ${((sliderValue + 1) / 12) * 100}%,
+                rgba(79, 195, 247, 0.5) 100%)`,
+              appearance: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          />
+          {/* Slider labels */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '0.5rem',
+            fontSize: '0.55rem',
+            opacity: 0.5,
+          }}>
+            <span>Off</span>
+            <span>Now</span>
+            <span>+6h</span>
+            <span>+7d</span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{
+          paddingTop: '0.75rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        }}>
+          <div style={{ fontSize: '0.65rem', opacity: 0.5, marginBottom: '0.5rem' }}>
+            WIND SPEED
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '0.25rem',
+            fontSize: '0.6rem',
+          }}>
+            <span><span style={{ color: '#4FC3F7' }}>●</span> &lt;10kt</span>
+            <span><span style={{ color: '#4CAF50' }}>●</span> 10-20</span>
+            <span><span style={{ color: '#FFEB3B' }}>●</span> 20-30</span>
+            <span><span style={{ color: '#FF9800' }}>●</span> 30-40</span>
+            <span><span style={{ color: '#F44336' }}>●</span> 40+kt</span>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes weather-spin {
+            to { transform: rotate(360deg); }
+          }
+          input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4FC3F7;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          }
+          input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4FC3F7;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          }
+        `}</style>
+      </div>
+
+      {/* Click outside to close */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: sidebarWidth,
+          bottom: 0,
+          zIndex: 999,
+        }}
+      />
+    </>
+  );
+};
+
 export const SearchPanel: React.FC<SearchPanelProps> = ({
   sidebarWidth,
   searchQuery,

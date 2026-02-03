@@ -247,6 +247,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     setApiUrls,
     vesselSettings,
     setVesselSettings,
+    weatherSettings,
+    setWeatherSettings,
     demoMode,
     setDemoMode,
   } = useSettings();
@@ -1525,6 +1527,175 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         Reset API Endpoints to Defaults
       </button>
 
+      {/* Weather subsection */}
+      <div style={{
+        fontSize: theme.fontSize.sm,
+        fontWeight: theme.fontWeight.bold,
+        marginBottom: theme.space.md,
+        marginTop: theme.space.xl,
+        color: theme.colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+      }}>
+        Weather Data
+      </div>
+
+      {/* Weather enabled toggle */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: theme.space.md,
+        background: theme.colors.bgCard,
+        borderRadius: theme.radius.md,
+        border: `1px solid ${theme.colors.border}`,
+        marginBottom: theme.space.md,
+      }}>
+        <div>
+          <div style={{ fontWeight: theme.fontWeight.medium, marginBottom: theme.space.xs, fontSize: theme.fontSize.sm }}>
+            Weather Service
+          </div>
+          <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted }}>
+            Wind and wave forecasts from Open-Meteo
+          </div>
+        </div>
+        <button
+          onClick={() => setWeatherSettings({ ...weatherSettings, enabled: !weatherSettings.enabled })}
+          style={{
+            width: '56px',
+            height: '32px',
+            borderRadius: '16px',
+            background: weatherSettings.enabled ? theme.colors.primary : theme.colors.bgCardActive,
+            border: 'none',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'background 0.2s',
+          }}
+        >
+          <div style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: '#fff',
+            position: 'absolute',
+            top: '4px',
+            left: weatherSettings.enabled ? '28px' : '4px',
+            transition: 'left 0.2s',
+          }} />
+        </button>
+      </div>
+
+      {weatherSettings.enabled && (
+        <>
+          {/* Refresh interval */}
+          <div style={{ marginBottom: theme.space.md }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.space.xs,
+            }}>
+              <div style={{
+                fontSize: theme.fontSize.xs,
+                color: theme.colors.textMuted,
+              }}>
+                Refresh Interval
+              </div>
+              <div style={{
+                fontSize: theme.fontSize.xs,
+                color: theme.colors.textPrimary,
+              }}>
+                {weatherSettings.refreshIntervalMinutes} min
+              </div>
+            </div>
+            <input
+              type="range"
+              min="5"
+              max="60"
+              step="5"
+              value={weatherSettings.refreshIntervalMinutes}
+              onChange={(e) => setWeatherSettings({ ...weatherSettings, refreshIntervalMinutes: parseInt(e.target.value) })}
+              style={{
+                width: '100%',
+                accentColor: theme.colors.primary,
+              }}
+            />
+          </div>
+
+          {/* Weather API URL */}
+          <div style={{ marginBottom: theme.space.md }}>
+            <div style={{
+              fontSize: theme.fontSize.xs,
+              color: theme.colors.textMuted,
+              marginBottom: theme.space.sm,
+            }}>
+              Weather API (wind, pressure)
+            </div>
+            <input
+              type="text"
+              value={weatherSettings.weatherApiUrl}
+              onChange={(e) => setWeatherSettings({ ...weatherSettings, weatherApiUrl: e.target.value })}
+              style={{
+                width: '100%',
+                padding: theme.space.md,
+                background: theme.colors.bgCardActive,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.sm,
+                color: theme.colors.textPrimary,
+                fontSize: theme.fontSize.xs,
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          {/* Marine API URL */}
+          <div style={{ marginBottom: theme.space.md }}>
+            <div style={{
+              fontSize: theme.fontSize.xs,
+              color: theme.colors.textMuted,
+              marginBottom: theme.space.sm,
+            }}>
+              Marine API (waves, swell)
+            </div>
+            <input
+              type="text"
+              value={weatherSettings.marineApiUrl}
+              onChange={(e) => setWeatherSettings({ ...weatherSettings, marineApiUrl: e.target.value })}
+              style={{
+                width: '100%',
+                padding: theme.space.md,
+                background: theme.colors.bgCardActive,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.sm,
+                color: theme.colors.textPrimary,
+                fontSize: theme.fontSize.xs,
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          <button
+            onClick={() => setWeatherSettings({
+              ...weatherSettings,
+              weatherApiUrl: 'https://api.open-meteo.com/v1/forecast',
+              marineApiUrl: 'https://marine-api.open-meteo.com/v1/marine',
+              refreshIntervalMinutes: 15,
+            })}
+            style={{
+              padding: `${theme.space.sm} ${theme.space.md}`,
+              background: theme.colors.bgCardActive,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.sm,
+              color: theme.colors.textMuted,
+              cursor: 'pointer',
+              fontSize: theme.fontSize.xs,
+            }}
+          >
+            Reset Weather Settings to Defaults
+          </button>
+        </>
+      )}
+
       <div style={{
         padding: theme.space.md,
         background: theme.colors.bgCard,
@@ -1537,6 +1708,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         <strong>Map Tiles:</strong> Use standard XYZ tile format with placeholders: {'{z}'} for zoom, {'{x}'}/{'{y}'} for coordinates, {'{s}'} for subdomains.
         <br /><br />
         <strong>Geocoding:</strong> Used for location search. Default uses Photon (free, CORS-enabled).
+        <br /><br />
+        <strong>Weather:</strong> Uses Open-Meteo (free, no API key). Wind and marine data fetched automatically based on boat position.
       </div>
     </div>
   );

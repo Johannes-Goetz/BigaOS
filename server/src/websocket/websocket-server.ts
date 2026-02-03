@@ -2,6 +2,8 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { dummyDataService } from '../services/dummy-data.service';
 import { dbWorker } from '../services/database-worker.service';
+import { weatherService } from '../services/weather.service';
+import { WeatherUpdateEvent } from '../types/weather.types';
 
 export class WebSocketServer {
   private io: SocketIOServer;
@@ -25,6 +27,28 @@ export class WebSocketServer {
 
     this.setupEventHandlers();
     this.startDataBroadcast();
+
+    // Initialize weather service with boat position callback
+    this.initializeWeatherService();
+  }
+
+  private initializeWeatherService() {
+    // Set up weather update callback
+    weatherService.setUpdateCallback((event: WeatherUpdateEvent) => {
+      this.broadcastWeatherUpdate(event);
+    });
+
+    // Start auto-fetching weather based on boat position
+    weatherService.startAutoFetch(() => {
+      const sensorData = dummyDataService.generateSensorData();
+      if (sensorData.navigation?.position) {
+        return {
+          lat: sensorData.navigation.position.latitude,
+          lon: sensorData.navigation.position.longitude,
+        };
+      }
+      return null;
+    });
   }
 
   private async initializeDemoMode() {
@@ -59,6 +83,9 @@ export class WebSocketServer {
 
       // Send current settings
       this.sendSettings(socket);
+
+      // Send current weather if available
+      this.sendWeather(socket);
 
       // Handle client subscriptions
       socket.on('subscribe', (data) => {
@@ -151,6 +178,20 @@ export class WebSocketServer {
       });
     } catch (error) {
       console.error('Error sending settings:', error);
+    }
+  }
+
+  private sendWeather(socket: any) {
+    const current = weatherService.getCachedCurrent();
+    const forecast = weatherService.getCachedForecast();
+
+    if (current) {
+      socket.emit('weather_update', {
+        current,
+        forecast: forecast.slice(0, 48),
+        lastUpdated: new Date().toISOString(),
+        timestamp: new Date()
+      });
     }
   }
 
@@ -297,6 +338,7 @@ export class WebSocketServer {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
     }
+    weatherService.stopAutoFetch();
     this.io.close();
   }
 
@@ -323,6 +365,16 @@ export class WebSocketServer {
   }): void {
     this.io.emit('download_progress', {
       ...progress,
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Broadcast weather update to all clients
+   */
+  public broadcastWeatherUpdate(event: WeatherUpdateEvent): void {
+    this.io.emit('weather_update', {
+      ...event,
       timestamp: new Date()
     });
   }

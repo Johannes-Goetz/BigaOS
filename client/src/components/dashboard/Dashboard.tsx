@@ -18,6 +18,7 @@ import {
   BatteryItem,
   COGItem,
   ChartMiniItem,
+  WeatherForecastItem,
 } from './items';
 import { theme } from '../../styles/theme';
 
@@ -40,6 +41,7 @@ const ITEM_TYPE_CONFIG: Record<DashboardItemType, { label: string; targetView: V
   'battery': { label: 'Battery', targetView: 'battery', defaultSize: { w: 1, h: 1 } },
   'cog': { label: 'COG', targetView: 'cog', defaultSize: { w: 1, h: 1 } },
   'chart-mini': { label: 'Chart', targetView: 'chart', defaultSize: { w: 2, h: 2 } },
+  'weather-forecast': { label: 'Weather', targetView: 'weather', defaultSize: { w: 2, h: 1 } },
 };
 
 // Migrate old items to use new targetView values
@@ -387,6 +389,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
             depth={sensorData.environment.depth.belowTransducer}
           />
         );
+      case 'weather-forecast':
+        return (
+          <WeatherForecastItem
+            latitude={sensorData.navigation.position.latitude}
+            longitude={sensorData.navigation.position.longitude}
+          />
+        );
       default:
         return null;
     }
@@ -453,6 +462,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={iconStyle}>
             <polygon points="3 11 22 2 13 21 11 13 3 11" />
           </svg>
+        );
+      case 'weather-forecast':
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4FC3F7" strokeWidth="1.5" style={iconStyle}>
+              <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '2px' }}>15kt</div>
+          </div>
         );
       default:
         return null;

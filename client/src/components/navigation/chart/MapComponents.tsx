@@ -25,6 +25,20 @@ export const MapController: React.FC<MapControllerProps> = ({
     }
   }, [position.latitude, position.longitude, map, autoCenter]);
 
+  // Re-center on boat after zoom completes when autoCenter is enabled
+  useEffect(() => {
+    if (!autoCenter) return;
+
+    const handleZoomEnd = () => {
+      map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
+    };
+
+    map.on('zoomend', handleZoomEnd);
+    return () => {
+      map.off('zoomend', handleZoomEnd);
+    };
+  }, [map, autoCenter, position.latitude, position.longitude]);
+
   useEffect(() => {
     map.on('dragstart', onDrag);
     return () => {

@@ -51,6 +51,9 @@ import {
   DebugInfoPanel,
   DebugMode,
   useWaterDebugGrid,
+  WeatherOverlay,
+  WeatherPanel,
+  useWeatherOverlay,
 } from './chart';
 
 // Component to refresh tiles when connectivity changes from offline to online
@@ -124,6 +127,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   // UI State
   const [autoCenter, setAutoCenter] = useState(true);
   const [depthSettingsOpen, setDepthSettingsOpen] = useState(false);
+  const [weatherPanelOpen, setWeatherPanelOpen] = useState(false);
   const [useSatellite, setUseSatellite] = useState(() => {
     const saved = localStorage.getItem('chartUseSatellite');
     return saved ? JSON.parse(saved) : false;
@@ -134,6 +138,10 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [debugMode, setDebugMode] = useState<DebugMode>('off');
+  const [weatherOverlayEnabled, setWeatherOverlayEnabled] = useState(() => {
+    const saved = localStorage.getItem('chartWeatherOverlay');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [navDataError, setNavDataError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<{
     reason: string;
@@ -237,6 +245,9 @@ export const ChartView: React.FC<ChartViewProps> = ({
   // Water debug grid hook
   const { gridPoints, loading: debugLoading, generateGrid, clearGrid, currentResolution } = useWaterDebugGrid(mapRef);
 
+  // Weather overlay hook
+  const weatherOverlay = useWeatherOverlay();
+
   // Navigation context for navigating to other views
   const { navigate } = useNavigation();
 
@@ -255,6 +266,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
     convertDistance,
     vesselSettings,
     setVesselSettings,
+    weatherSettings,
   } = useSettings();
 
   const convertedSpeed = convertSpeed(speed);
@@ -733,6 +745,11 @@ export const ChartView: React.FC<ChartViewProps> = ({
   useEffect(() => {
     localStorage.setItem('chartUseSatellite', JSON.stringify(useSatellite));
   }, [useSatellite]);
+
+  // Save weather overlay preference
+  useEffect(() => {
+    localStorage.setItem('chartWeatherOverlay', JSON.stringify(weatherOverlayEnabled));
+  }, [weatherOverlayEnabled]);
 
   // Force map to recalculate size on mount and visibility changes
   useEffect(() => {
@@ -1420,6 +1437,16 @@ export const ChartView: React.FC<ChartViewProps> = ({
         {debugMode !== 'off' && (
           <WaterDebugOverlay mode={debugMode} gridPoints={gridPoints} onClear={clearGrid} />
         )}
+
+        {/* Weather overlay */}
+        {weatherOverlayEnabled && (
+          <WeatherOverlay
+            enabled={weatherOverlayEnabled}
+            forecastHour={weatherOverlay.forecastHour}
+            onLoadingChange={weatherOverlay.setLoading}
+            onError={weatherOverlay.setError}
+          />
+        )}
       </MapContainer>
 
       {/* Scale bar - Google Maps style */}
@@ -1500,6 +1527,20 @@ export const ChartView: React.FC<ChartViewProps> = ({
           </div>
         );
       })()}
+
+      {/* Weather panel */}
+      {weatherPanelOpen && !hideSidebar && (
+        <WeatherPanel
+          sidebarWidth={sidebarWidth}
+          enabled={weatherOverlayEnabled}
+          forecastHour={weatherOverlay.forecastHour}
+          loading={weatherOverlay.loading}
+          error={weatherOverlay.error}
+          onToggleEnabled={() => setWeatherOverlayEnabled(!weatherOverlayEnabled)}
+          onSetForecastHour={weatherOverlay.setForecastHour}
+          onClose={() => setWeatherPanelOpen(false)}
+        />
+      )}
 
       {/* Route calculation loading overlay */}
       {routeLoading && (
@@ -1730,16 +1771,20 @@ export const ChartView: React.FC<ChartViewProps> = ({
           autopilotOpen={autopilotOpen}
           autopilotActive={autopilotActive}
           debugMode={debugMode !== 'off'}
+          weatherOverlayEnabled={weatherOverlayEnabled}
+          weatherPanelOpen={weatherPanelOpen}
           onClose={onClose}
           onDepthClick={() => {
             setDepthSettingsOpen(!depthSettingsOpen);
             setSearchOpen(false);
             setAutopilotOpen(false);
+            setWeatherPanelOpen(false);
           }}
           onSearchClick={() => {
             setSearchOpen(!searchOpen);
             setDepthSettingsOpen(false);
             setAutopilotOpen(false);
+            setWeatherPanelOpen(false);
           }}
           onSatelliteToggle={() => setUseSatellite(!useSatellite)}
           onRecenter={handleRecenter}
@@ -1747,8 +1792,15 @@ export const ChartView: React.FC<ChartViewProps> = ({
             setAutopilotOpen(!autopilotOpen);
             setDepthSettingsOpen(false);
             setSearchOpen(false);
+            setWeatherPanelOpen(false);
           }}
           onDebugToggle={() => setDebugMode(debugMode === 'off' ? 'grid' : 'off')}
+          onWeatherClick={() => {
+            setWeatherPanelOpen(!weatherPanelOpen);
+            setDepthSettingsOpen(false);
+            setSearchOpen(false);
+            setAutopilotOpen(false);
+          }}
         />
       )}
 
@@ -2452,6 +2504,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           boatPosition={{ lat: position.latitude, lon: position.longitude }}
           boatHeading={heading}
           onAnchorPositionChange={setAnchorPositionOverride}
+          weatherEnabled={weatherSettings?.enabled}
           onSetAnchorPosition={() => {
             // Start anchor placement mode
             if (!anchorPositionOverride) {

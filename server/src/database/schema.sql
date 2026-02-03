@@ -95,6 +95,20 @@ CREATE TABLE IF NOT EXISTS trip_log (
 
 CREATE INDEX IF NOT EXISTS idx_trip_start ON trip_log(start_time DESC);
 
+-- Weather Cache
+-- Stores fetched weather data for offline use
+CREATE TABLE IF NOT EXISTS weather_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
+    data TEXT NOT NULL, -- JSON blob with full forecast
+    fetched_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_weather_location ON weather_cache(lat, lon);
+CREATE INDEX IF NOT EXISTS idx_weather_expires ON weather_cache(expires_at);
+
 -- Database Metadata
 -- Track schema version and migrations
 CREATE TABLE IF NOT EXISTS db_metadata (

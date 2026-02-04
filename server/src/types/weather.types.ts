@@ -70,7 +70,6 @@ export const DEFAULT_WEATHER_SETTINGS: WeatherSettings = {
 
 // Forecast day limits
 export const UPFRONT_FORECAST_DAYS = 3; // Auto-fetch for boat position (72 hours)
-export const MAX_FORECAST_DAYS = 7; // On-demand maximum (168 hours)
 
 // Open-Meteo API response types
 export interface OpenMeteoWeatherResponse {

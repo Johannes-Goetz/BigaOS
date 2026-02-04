@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { GeoPosition } from '../../../types';
@@ -18,11 +18,19 @@ export const MapController: React.FC<MapControllerProps> = ({
   onDrag,
 }) => {
   const map = useMap();
+  const prevAutoCenterRef = useRef(autoCenter);
 
   useEffect(() => {
     if (autoCenter) {
-      map.setView([position.latitude, position.longitude], map.getZoom());
+      // If transitioning from false to true (user clicked recenter), animate with flyTo
+      if (!prevAutoCenterRef.current) {
+        map.flyTo([position.latitude, position.longitude], map.getZoom());
+      } else {
+        // Already centered, just update position silently as boat moves
+        map.setView([position.latitude, position.longitude], map.getZoom());
+      }
     }
+    prevAutoCenterRef.current = autoCenter;
   }, [position.latitude, position.longitude, map, autoCenter]);
 
   // Re-center on boat after zoom completes when autoCenter is enabled

@@ -16,12 +16,10 @@ import {
   WeatherGridPoint,
   WeatherSettings,
   WeatherUpdateEvent,
-  WeatherCacheEntry,
   OpenMeteoWeatherResponse,
   OpenMeteoMarineResponse,
   DEFAULT_WEATHER_SETTINGS,
   UPFRONT_FORECAST_DAYS,
-  MAX_FORECAST_DAYS,
 } from '../types/weather.types';
 
 // Round coordinates to ~11km precision for cache keys (0.1 degrees)
@@ -31,13 +29,8 @@ function roundCoord(coord: number): number {
   return Math.round(coord * Math.pow(10, COORD_PRECISION)) / Math.pow(10, COORD_PRECISION);
 }
 
-function getCacheKey(lat: number, lon: number): string {
-  return `${roundCoord(lat)},${roundCoord(lon)}`;
-}
-
 class WeatherService {
   private settings: WeatherSettings = DEFAULT_WEATHER_SETTINGS;
-  private cache: Map<string, WeatherCacheEntry> = new Map();
   private autoFetchInterval: ReturnType<typeof setInterval> | null = null;
   private getBoatPosition: (() => { lat: number; lon: number } | null) | null = null;
   private lastFetchedPosition: { lat: number; lon: number } | null = null;
@@ -114,13 +107,12 @@ class WeatherService {
     if (!position) return;
 
     // Check if we've moved significantly (> 0.1 degrees ~ 11km)
-    const needsFetch =
+    const hasMoved =
       !this.lastFetchedPosition ||
       Math.abs(position.lat - this.lastFetchedPosition.lat) > 0.1 ||
-      Math.abs(position.lon - this.lastFetchedPosition.lon) > 0.1 ||
-      this.isCacheExpired(position.lat, position.lon);
+      Math.abs(position.lon - this.lastFetchedPosition.lon) > 0.1;
 
-    if (!needsFetch) return;
+    if (!hasMoved) return; // getWeather will check cache expiry internally
 
     try {
       const forecast = await this.getWeather(position.lat, position.lon);
@@ -140,29 +132,19 @@ class WeatherService {
   }
 
   /**
-   * Check if cache entry is expired
-   */
-  private isCacheExpired(lat: number, lon: number): boolean {
-    const key = getCacheKey(lat, lon);
-    const entry = this.cache.get(key);
-    if (!entry) return true;
-    return new Date() > entry.expiresAt;
-  }
-
-  /**
    * Get weather forecast for a location
+   * Uses database cache only - no in-memory caching to conserve RAM
    * @param requiredDays - Minimum number of forecast days needed (defaults to UPFRONT_FORECAST_DAYS)
    */
   async getWeather(lat: number, lon: number, requiredDays: number = UPFRONT_FORECAST_DAYS): Promise<WeatherForecast | null> {
-    const key = getCacheKey(lat, lon);
     const requiredHours = requiredDays * 24;
 
-    // Check in-memory cache first
-    const cached = this.cache.get(key);
-    if (cached && new Date() < cached.expiresAt) {
+    // Check database cache first
+    const cached = await this.loadFromDatabase(lat, lon);
+    if (cached && new Date() < new Date(cached.expiresAt)) {
       // Check if cached data has enough hours
-      if (cached.forecast.hourly.length >= requiredHours) {
-        return cached.forecast;
+      if (cached.hourly.length >= requiredHours) {
+        return cached;
       }
     }
 
@@ -173,7 +155,6 @@ class WeatherService {
       try {
         const forecast = await this.fetchFromApi(lat, lon, requiredDays);
         if (forecast) {
-          this.cacheWeather(key, forecast);
           await this.saveToDatabase(lat, lon, forecast);
           return forecast;
         }
@@ -182,38 +163,26 @@ class WeatherService {
       }
     }
 
-    // Fall back to database cache (even if it doesn't have enough hours)
-    const dbCached = await this.loadFromDatabase(lat, lon);
-    if (dbCached) {
-      this.cache.set(key, {
-        forecast: dbCached,
-        fetchedAt: new Date(dbCached.fetchedAt),
-        expiresAt: new Date(dbCached.expiresAt),
-      });
-      return dbCached;
-    }
-
-    return null;
+    // Return cached data even if expired/insufficient (better than nothing when offline)
+    return cached;
   }
 
   /**
    * Get cached current weather (for WebSocket broadcasts)
    */
-  getCachedCurrent(): WeatherPoint | null {
+  async getCachedCurrent(): Promise<WeatherPoint | null> {
     if (!this.lastFetchedPosition) return null;
-    const key = getCacheKey(this.lastFetchedPosition.lat, this.lastFetchedPosition.lon);
-    const cached = this.cache.get(key);
-    return cached?.forecast.current || null;
+    const cached = await this.loadFromDatabase(this.lastFetchedPosition.lat, this.lastFetchedPosition.lon);
+    return cached?.current || null;
   }
 
   /**
    * Get cached forecast (for WebSocket broadcasts)
    */
-  getCachedForecast(): WeatherPoint[] {
+  async getCachedForecast(): Promise<WeatherPoint[]> {
     if (!this.lastFetchedPosition) return [];
-    const key = getCacheKey(this.lastFetchedPosition.lat, this.lastFetchedPosition.lon);
-    const cached = this.cache.get(key);
-    return cached?.forecast.hourly || [];
+    const cached = await this.loadFromDatabase(this.lastFetchedPosition.lat, this.lastFetchedPosition.lon);
+    return cached?.hourly || [];
   }
 
   /**
@@ -227,9 +196,10 @@ class WeatherService {
   ): Promise<WeatherGrid> {
     const fetchedAt = new Date().toISOString();
 
-    // Calculate required days based on forecast hour (with buffer)
-    // forecastHour is 0-indexed, so hour 72 = end of day 3
-    const requiredDays = Math.min(Math.ceil((forecastHour + 1) / 24) + 1, MAX_FORECAST_DAYS);
+    // Calculate required days based on forecast hour
+    // Add 24h buffer since current time could be up to 23 hours into today
+    // e.g., at 11pm + 1h forecast = need index 24, so 2 days minimum
+    const requiredDays = Math.ceil((forecastHour + 24) / 24);
 
     // Generate grid coordinates
     const latStep = resolution;
@@ -245,6 +215,7 @@ class WeatherService {
     // Fetch all points in parallel with concurrency limit
     const BATCH_SIZE = 10; // Limit concurrent requests to avoid overwhelming the API
     const points: WeatherGridPoint[] = [];
+    const now = new Date();
 
     for (let i = 0; i < coordinates.length; i += BATCH_SIZE) {
       const batch = coordinates.slice(i, i + BATCH_SIZE);
@@ -252,8 +223,15 @@ class WeatherService {
         batch.map(async (coord) => {
           try {
             const weather = await this.getWeather(coord.lat, coord.lon, requiredDays);
-            if (weather) {
-              const hourData = forecastHour === 0 ? weather.current : weather.hourly[forecastHour];
+            if (weather && weather.hourly.length > 0) {
+              // Find the current hour index in the hourly array
+              const currentIndex = weather.hourly.findIndex((p) => new Date(p.timestamp) >= now);
+              const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+
+              // Offset from current time by forecastHour
+              const targetIndex = baseIndex + forecastHour;
+              const hourData = weather.hourly[targetIndex];
+
               if (hourData) {
                 return hourData as WeatherGridPoint;
               }
@@ -279,17 +257,14 @@ class WeatherService {
 
   /**
    * Fetch from Open-Meteo APIs
-   * @param days - Number of forecast days to fetch (capped at MAX_FORECAST_DAYS)
+   * @param days - Number of forecast days to fetch
    */
   private async fetchFromApi(lat: number, lon: number, days: number = UPFRONT_FORECAST_DAYS): Promise<WeatherForecast | null> {
-    // Cap at maximum
-    const forecastDays = Math.min(days, MAX_FORECAST_DAYS);
-
     try {
       // Fetch weather and marine data in parallel
       const [weatherData, marineData] = await Promise.all([
-        this.fetchWeatherApi(lat, lon, forecastDays),
-        this.fetchMarineApi(lat, lon, forecastDays),
+        this.fetchWeatherApi(lat, lon, days),
+        this.fetchMarineApi(lat, lon, days),
       ]);
 
       if (!weatherData) return null;
@@ -415,17 +390,6 @@ class WeatherService {
       console.warn('[Weather] Marine API fetch failed:', error);
       return null;
     }
-  }
-
-  /**
-   * Cache weather data in memory
-   */
-  private cacheWeather(key: string, forecast: WeatherForecast): void {
-    this.cache.set(key, {
-      forecast,
-      fetchedAt: new Date(forecast.fetchedAt),
-      expiresAt: new Date(forecast.expiresAt),
-    });
   }
 
   /**

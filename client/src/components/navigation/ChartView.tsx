@@ -1031,12 +1031,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   // Event handlers
   const handleRecenter = () => {
     setAutoCenter(true);
-    if (mapRef.current) {
-      mapRef.current.setView(
-        [position.latitude, position.longitude],
-        mapRef.current.getZoom()
-      );
-    }
+    // Animation is handled by MapController when autoCenter transitions to true
   };
 
   const handleMapDrag = () => setAutoCenter(false);

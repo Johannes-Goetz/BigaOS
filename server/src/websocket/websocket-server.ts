@@ -181,9 +181,9 @@ export class WebSocketServer {
     }
   }
 
-  private sendWeather(socket: any) {
-    const current = weatherService.getCachedCurrent();
-    const forecast = weatherService.getCachedForecast();
+  private async sendWeather(socket: any) {
+    const current = await weatherService.getCachedCurrent();
+    const forecast = await weatherService.getCachedForecast();
 
     if (current) {
       socket.emit('weather_update', {

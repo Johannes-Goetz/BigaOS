@@ -252,6 +252,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
         title={useSatellite ? 'Switch to Street View' : 'Switch to Satellite View'}
       >
         {useSatellite ? (
+          // Map icon - shown when in satellite mode (click to switch to street/map)
           <svg
             width="24"
             height="24"
@@ -262,10 +263,12 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" />
+            <line x1="9" y1="3" x2="9" y2="18" />
+            <line x1="15" y1="6" x2="15" y2="21" />
           </svg>
         ) : (
+          // Globe icon - shown when in street mode (click to switch to satellite)
           <svg
             width="24"
             height="24"
@@ -277,11 +280,12 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
             strokeLinejoin="round"
           >
             <circle cx="12" cy="12" r="10" />
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+            <path d="M2 12h20" />
           </svg>
         )}
         <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>
-          {useSatellite ? 'STREET' : 'SATELLITE'}
+          {useSatellite ? 'MAP' : 'SATELLITE'}
         </span>
       </button>
 

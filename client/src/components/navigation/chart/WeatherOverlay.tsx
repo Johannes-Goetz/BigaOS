@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { weatherAPI } from '../../../services/api';
 import { WeatherGridPoint } from '../../../types';
 import { getWindColor } from '../../../utils/weather.utils';
+import { useSettings } from '../../../context/SettingsContext';
 
 interface WeatherOverlayProps {
   enabled: boolean;
@@ -96,6 +97,7 @@ class WeatherCanvasLayer extends L.Layer {
   private ctx: CanvasRenderingContext2D | null = null;
   private frame: number | null = null;
   private dataPoints: DataPoint[] = [];
+  private windConverter: (knots: number) => number = (knots) => knots;
 
   onAdd(map: L.Map): this {
     const pane = map.getPane('overlayPane');
@@ -123,6 +125,11 @@ class WeatherCanvasLayer extends L.Layer {
 
   setDataPoints(dataPoints: DataPoint[]): void {
     this.dataPoints = dataPoints;
+    this.redraw();
+  }
+
+  setWindConverter(converter: (knots: number) => number): void {
+    this.windConverter = converter;
     this.redraw();
   }
 
@@ -253,7 +260,7 @@ class WeatherCanvasLayer extends L.Layer {
     ctx.fill();
     ctx.stroke();
 
-    // Draw speed text
+    // Draw speed text (converted to user's preferred unit)
     ctx.restore();
     ctx.fillStyle = color;
     ctx.strokeStyle = '#000';
@@ -262,7 +269,8 @@ class WeatherCanvasLayer extends L.Layer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
-    const text = Math.round(speed).toString();
+    const convertedSpeed = this.windConverter(speed);
+    const text = Math.round(convertedSpeed).toString();
     ctx.strokeText(text, x, y + 10);
     ctx.fillText(text, x, y + 10);
   }
@@ -283,6 +291,7 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
   const dataPointsRef = useRef<DataPoint[]>([]);
   const lastFetchKey = useRef<string>('');
   const [debugPointCount, setDebugPointCount] = React.useState(0);
+  const { convertWind } = useSettings();
 
   // Fetch weather data for current bounds
   const fetchWeatherData = useCallback(async () => {
@@ -408,6 +417,7 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
 
     const layer = new WeatherCanvasLayer();
     layer.addTo(map);
+    layer.setWindConverter(convertWind);
     layerRef.current = layer;
 
     if (dataPointsRef.current.length > 0) {
@@ -421,7 +431,14 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
         layerRef.current = null;
       }
     };
-  }, [enabled, map, fetchWeatherData]);
+  }, [enabled, map, fetchWeatherData, convertWind]);
+
+  // Update wind converter when unit changes
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.setWindConverter(convertWind);
+    }
+  }, [convertWind]);
 
   // Helper to count visible data points
   const updateVisibleCount = useCallback(() => {

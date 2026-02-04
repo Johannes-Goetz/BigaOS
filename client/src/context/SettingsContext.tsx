@@ -3,10 +3,11 @@ import { wsService } from '../services/websocket';
 import type { WeatherSettings } from '../types';
 
 export type SpeedUnit = 'kt' | 'km/h' | 'mph' | 'm/s';
-export type WindUnit = 'kt' | 'km/h' | 'm/s' | 'bft';
+export type WindUnit = 'kt' | 'km/h' | 'mph' | 'm/s' | 'bft';
 export type DepthUnit = 'm' | 'ft';
 export type DistanceUnit = 'nm' | 'km' | 'mi';
 export type WeightUnit = 'kg' | 'lbs';
+export type TemperatureUnit = '°C' | '°F';
 export type TimeFormat = '12h' | '24h';
 
 export interface MapTileUrls {
@@ -287,6 +288,7 @@ export const distanceConversions: Record<DistanceUnit, { factor: number; label: 
 export const windConversions: Record<WindUnit, { factor: number; label: string }> = {
   'kt': { factor: 1, label: 'kt' },
   'km/h': { factor: 1.852, label: 'km/h' },
+  'mph': { factor: 1.15078, label: 'mph' },
   'm/s': { factor: 0.514444, label: 'm/s' },
   'bft': { factor: 1, label: 'bft' } // Beaufort is special - handled separately
 };
@@ -296,6 +298,11 @@ export const weightConversions: Record<WeightUnit, { factor: number; label: stri
   'lbs': { factor: 2.20462, label: 'lbs' }
 };
 
+export const temperatureConversions: Record<TemperatureUnit, { label: string }> = {
+  '°C': { label: '°C' },
+  '°F': { label: '°F' }
+};
+
 interface SettingsContextType {
   // Units
   speedUnit: SpeedUnit;
@@ -303,12 +310,14 @@ interface SettingsContextType {
   depthUnit: DepthUnit;
   distanceUnit: DistanceUnit;
   weightUnit: WeightUnit;
+  temperatureUnit: TemperatureUnit;
   timeFormat: TimeFormat;
   setSpeedUnit: (unit: SpeedUnit) => void;
   setWindUnit: (unit: WindUnit) => void;
   setDepthUnit: (unit: DepthUnit) => void;
   setDistanceUnit: (unit: DistanceUnit) => void;
   setWeightUnit: (unit: WeightUnit) => void;
+  setTemperatureUnit: (unit: TemperatureUnit) => void;
   setTimeFormat: (format: TimeFormat) => void;
 
   // Map Tile URLs
@@ -341,6 +350,7 @@ interface SettingsContextType {
   convertDepth: (depthInMeters: number) => number;
   convertDistance: (distanceInNm: number) => number;
   convertWeight: (weightInKg: number) => number;
+  convertTemperature: (tempInCelsius: number) => number;
 
   // Current depth for alarm checking
   currentDepth: number;
@@ -398,6 +408,7 @@ const defaultSettings = {
   depthUnit: 'm' as DepthUnit,
   distanceUnit: 'nm' as DistanceUnit,
   weightUnit: 'kg' as WeightUnit,
+  temperatureUnit: '°C' as TemperatureUnit,
   timeFormat: '24h' as TimeFormat,
   depthAlarm: null as number | null,
   soundAlarmEnabled: false,
@@ -423,6 +434,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [depthUnit, setDepthUnitState] = useState<DepthUnit>(defaultSettings.depthUnit);
   const [distanceUnit, setDistanceUnitState] = useState<DistanceUnit>(defaultSettings.distanceUnit);
   const [weightUnit, setWeightUnitState] = useState<WeightUnit>(defaultSettings.weightUnit);
+  const [temperatureUnit, setTemperatureUnitState] = useState<TemperatureUnit>(defaultSettings.temperatureUnit);
   const [timeFormat, setTimeFormatState] = useState<TimeFormat>(defaultSettings.timeFormat);
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
@@ -456,6 +468,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       if (data.settings.weightUnit) {
         setWeightUnitState(data.settings.weightUnit);
+      }
+      if (data.settings.temperatureUnit) {
+        setTemperatureUnitState(data.settings.temperatureUnit);
       }
       if (data.settings.timeFormat) {
         setTimeFormatState(data.settings.timeFormat);
@@ -506,6 +521,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'weightUnit':
           setWeightUnitState(data.value);
+          break;
+        case 'temperatureUnit':
+          setTemperatureUnitState(data.value);
           break;
         case 'timeFormat':
           setTimeFormatState(data.value);
@@ -582,6 +600,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setWeightUnit = useCallback((unit: WeightUnit) => {
     setWeightUnitState(unit);
     updateServerSetting('weightUnit', unit);
+  }, [updateServerSetting]);
+
+  const setTemperatureUnit = useCallback((unit: TemperatureUnit) => {
+    setTemperatureUnitState(unit);
+    updateServerSetting('temperatureUnit', unit);
   }, [updateServerSetting]);
 
   const setTimeFormat = useCallback((format: TimeFormat) => {
@@ -669,18 +692,27 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return weightInKg * weightConversions[weightUnit].factor;
   }, [weightUnit]);
 
+  const convertTemperature = useCallback((tempInCelsius: number) => {
+    if (temperatureUnit === '°F') {
+      return (tempInCelsius * 9/5) + 32;
+    }
+    return tempInCelsius;
+  }, [temperatureUnit]);
+
   const value: SettingsContextType = {
     speedUnit,
     windUnit,
     depthUnit,
     distanceUnit,
     weightUnit,
+    temperatureUnit,
     timeFormat,
     setSpeedUnit,
     setWindUnit,
     setDepthUnit,
     setDistanceUnit,
     setWeightUnit,
+    setTemperatureUnit,
     setTimeFormat,
     mapTileUrls,
     setMapTileUrls,
@@ -703,6 +735,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     convertDepth,
     convertDistance,
     convertWeight,
+    convertTemperature,
     currentDepth,
     setCurrentDepth,
     isSynced,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { SearchResult } from '../../../services/geocoding';
 import { CustomMarker, markerIcons } from './map-icons';
+import { useSettings, windConversions } from '../../../context/SettingsContext';
 
 interface DepthSettingsPanelProps {
   sidebarWidth: number;
@@ -35,7 +36,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
           width: `${settingsPanelWidth}px`,
           maxHeight: 'calc(100vh - 32px)',
           overflowY: 'auto',
-          background: 'rgba(10, 25, 41, 0.95)',
+          background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: '4px',
           padding: '1rem',
@@ -196,7 +197,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
           width: `${settingsPanelWidth}px`,
           maxHeight: 'calc(100vh - 32px)',
           overflowY: 'auto',
-          background: 'rgba(10, 25, 41, 0.95)',
+          background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: '4px',
           padding: '1rem',
@@ -388,34 +389,19 @@ interface WeatherPanelProps {
   onClose: () => void;
 }
 
-// Slider stops: Off (-1), Now (0), then hourly to +6h, then larger steps
-const SLIDER_STOPS = [
-  { value: -1, hour: -1, label: 'Off' },
-  { value: 0, hour: 0, label: 'Now' },
-  { value: 1, hour: 1, label: '+1h' },
-  { value: 2, hour: 2, label: '+2h' },
-  { value: 3, hour: 3, label: '+3h' },
-  { value: 4, hour: 4, label: '+4h' },
-  { value: 5, hour: 5, label: '+5h' },
-  { value: 6, hour: 6, label: '+6h' },
-  { value: 7, hour: 12, label: '+12h' },
-  { value: 8, hour: 24, label: '+24h' },
-  { value: 9, hour: 48, label: '+2d' },
-  { value: 10, hour: 72, label: '+3d' },
-  { value: 11, hour: 168, label: '+7d' },
+// Forecast time options (2x5 grid = 10 buttons)
+const FORECAST_OPTIONS = [
+  { hour: -1, label: 'Off' },
+  { hour: 0, label: 'Now' },
+  { hour: 1, label: '+1h' },
+  { hour: 3, label: '+3h' },
+  { hour: 6, label: '+6h' },
+  { hour: 12, label: '+12h' },
+  { hour: 24, label: '+1d' },
+  { hour: 48, label: '+2d' },
+  { hour: 72, label: '+3d' },
+  { hour: 168, label: '+7d' },
 ];
-
-function getSliderValueFromHour(hour: number, enabled: boolean): number {
-  if (!enabled) return -1;
-  const stop = SLIDER_STOPS.find(s => s.hour === hour);
-  return stop ? stop.value : 0;
-}
-
-function getHourFromSliderValue(value: number): { hour: number; enabled: boolean } {
-  const stop = SLIDER_STOPS.find(s => s.value === value);
-  if (!stop || stop.hour === -1) return { hour: 0, enabled: false };
-  return { hour: stop.hour, enabled: true };
-}
 
 export const WeatherPanel: React.FC<WeatherPanelProps> = ({
   sidebarWidth,
@@ -427,40 +413,36 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
   onSetForecastHour,
   onClose,
 }) => {
-  const settingsPanelWidth = 200;
-  const sliderValue = getSliderValueFromHour(forecastHour, enabled);
+  const settingsPanelWidth = 280;
+  const { windUnit } = useSettings();
 
-  // Format the current forecast time for display
-  const formatForecastTime = (hours: number): string => {
-    if (hours === 0) return 'Now';
-    const date = new Date();
-    date.setHours(date.getHours() + hours);
-    return date.toLocaleString([], {
-      weekday: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getCurrentLabel = (): string => {
-    if (!enabled) return 'Off';
-    const stop = SLIDER_STOPS.find(s => s.hour === forecastHour);
-    return stop ? stop.label : 'Now';
-  };
-
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    const { hour, enabled: shouldBeEnabled } = getHourFromSliderValue(value);
-
-    if (!shouldBeEnabled && enabled) {
-      onToggleEnabled();
-    } else if (shouldBeEnabled && !enabled) {
-      onToggleEnabled();
-      onSetForecastHour(hour);
-    } else if (shouldBeEnabled) {
+  const handleSelect = (hour: number) => {
+    if (hour === -1) {
+      // Turn off
+      if (enabled) onToggleEnabled();
+    } else {
+      // Turn on and set hour
+      if (!enabled) onToggleEnabled();
       onSetForecastHour(hour);
     }
   };
+
+  const isSelected = (hour: number) => {
+    if (hour === -1) return !enabled;
+    return enabled && forecastHour === hour;
+  };
+
+  // Wind speed legend ranges with nice round numbers per unit
+  const legendRanges: Record<string, string[]> = {
+    'kt': ['<10', '10-20', '20-30', '30-40', '40+'],
+    'km/h': ['<20', '20-35', '35-55', '55-75', '75+'],
+    'mph': ['<15', '15-25', '25-35', '35-45', '45+'],
+    'm/s': ['<5', '5-10', '10-15', '15-20', '20+'],
+    'bft': ['0-3', '3-5', '5-6', '6-8', '8+'],
+  };
+
+  const unitLabel = windConversions[windUnit].label;
+  const ranges = legendRanges[windUnit] || legendRanges['kt'];
 
   return (
     <>
@@ -473,7 +455,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           width: `${settingsPanelWidth}px`,
           maxHeight: 'calc(100vh - 32px)',
           overflowY: 'auto',
-          background: 'rgba(10, 25, 41, 0.95)',
+          background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: '4px',
           padding: '1rem',
@@ -524,64 +506,30 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           </div>
         )}
 
-        {/* Current selection display */}
+        {/* 2x5 Grid of time buttons */}
         <div style={{
-          textAlign: 'center',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: '0.4rem',
           marginBottom: '1rem',
-          padding: '0.75rem',
-          background: enabled ? 'rgba(79, 195, 247, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '4px',
         }}>
-          <div style={{
-            fontSize: '1.5rem',
-            fontWeight: 'bold',
-            color: enabled ? '#4FC3F7' : 'rgba(255,255,255,0.5)',
-          }}>
-            {getCurrentLabel()}
-          </div>
-          {enabled && forecastHour > 0 && (
-            <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: '0.25rem' }}>
-              {formatForecastTime(forecastHour)}
-            </div>
-          )}
-        </div>
-
-        {/* Slider */}
-        <div style={{ marginBottom: '1rem' }}>
-          <input
-            type="range"
-            min={-1}
-            max={11}
-            step={1}
-            value={sliderValue}
-            onChange={handleSliderChange}
-            style={{
-              width: '100%',
-              height: '8px',
-              borderRadius: '4px',
-              background: `linear-gradient(to right,
-                rgba(255,255,255,0.2) 0%,
-                rgba(255,255,255,0.2) ${((sliderValue + 1) / 12) * 100}%,
-                rgba(79, 195, 247, 0.5) ${((sliderValue + 1) / 12) * 100}%,
-                rgba(79, 195, 247, 0.5) 100%)`,
-              appearance: 'none',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
-          />
-          {/* Slider labels */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '0.5rem',
-            fontSize: '0.55rem',
-            opacity: 0.5,
-          }}>
-            <span>Off</span>
-            <span>Now</span>
-            <span>+6h</span>
-            <span>+7d</span>
-          </div>
+          {FORECAST_OPTIONS.map((opt) => (
+            <button
+              key={opt.hour}
+              onClick={() => handleSelect(opt.hour)}
+              style={{
+                padding: '0.6rem 0.25rem',
+                borderRadius: '3px',
+                border: 'none',
+                background: isSelected(opt.hour) ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {/* Legend */}
@@ -589,20 +537,20 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           paddingTop: '0.75rem',
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         }}>
-          <div style={{ fontSize: '0.65rem', opacity: 0.5, marginBottom: '0.5rem' }}>
-            WIND SPEED
+          <div style={{ fontSize: '0.6rem', opacity: 0.5, marginBottom: '0.4rem' }}>
+            Wind speed ({unitLabel})
           </div>
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '0.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
             fontSize: '0.6rem',
+            color: 'rgba(255, 255, 255, 0.7)',
           }}>
-            <span><span style={{ color: '#4FC3F7' }}>●</span> &lt;10kt</span>
-            <span><span style={{ color: '#4CAF50' }}>●</span> 10-20</span>
-            <span><span style={{ color: '#FFEB3B' }}>●</span> 20-30</span>
-            <span><span style={{ color: '#FF9800' }}>●</span> 30-40</span>
-            <span><span style={{ color: '#F44336' }}>●</span> 40+kt</span>
+            <span><span style={{ color: '#4FC3F7' }}>●</span> {ranges[0]}</span>
+            <span><span style={{ color: '#4CAF50' }}>●</span> {ranges[1]}</span>
+            <span><span style={{ color: '#FFEB3B' }}>●</span> {ranges[2]}</span>
+            <span><span style={{ color: '#FF9800' }}>●</span> {ranges[3]}</span>
+            <span><span style={{ color: '#F44336' }}>●</span> {ranges[4]}</span>
           </div>
         </div>
 
@@ -615,31 +563,12 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           opacity: 0.5,
           textAlign: 'center',
         }}>
-          Powered by Open-Meteo.com (CC-BY 4.0)
+          Powered by Open-Meteo.com
         </div>
 
         <style>{`
           @keyframes weather-spin {
             to { transform: rotate(360deg); }
-          }
-          input[type="range"]::-webkit-slider-thumb {
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4FC3F7;
-            cursor: pointer;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          }
-          input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4FC3F7;
-            cursor: pointer;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
           }
         `}</style>
       </div>
@@ -692,7 +621,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           right: `${sidebarWidth + 8}px`,
           width: '300px',
           maxHeight: 'calc(100vh - 32px)',
-          background: 'rgba(10, 25, 41, 0.95)',
+          background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: '4px',
           padding: '1rem',
@@ -860,6 +789,32 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
               LOCATIONS
             </div>
           )}
+          {searchLoading && searchQuery && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem',
+                  gap: '0.75rem',
+                }}
+              >
+                <div
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                    borderTopColor: '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
+                <div style={{ opacity: 0.6, fontSize: '0.85rem' }}>
+                  Searching...
+                </div>
+              </div>
+            )}
           {searchResults.length === 0 &&
             matchingMarkers.length === 0 &&
             !searchLoading &&
@@ -930,6 +885,13 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           zIndex: 999,
         }}
       />
+
+      {/* Spinner animation */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 };

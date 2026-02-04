@@ -201,13 +201,17 @@ class WeatherService {
     // e.g., at 11pm + 1h forecast = need index 24, so 2 days minimum
     const requiredDays = Math.ceil((forecastHour + 24) / 24);
 
-    // Generate grid coordinates
-    const latStep = resolution;
-    const lonStep = resolution;
+    // Generate grid coordinates using integer steps to avoid floating point accumulation errors
     const coordinates: Array<{ lat: number; lon: number }> = [];
 
-    for (let lat = bounds.south; lat <= bounds.north; lat += latStep) {
-      for (let lon = bounds.west; lon <= bounds.east; lon += lonStep) {
+    // Calculate number of steps (add small epsilon to handle floating point edge cases)
+    const latSteps = Math.round((bounds.north - bounds.south) / resolution) + 1;
+    const lonSteps = Math.round((bounds.east - bounds.west) / resolution) + 1;
+
+    for (let latIdx = 0; latIdx < latSteps; latIdx++) {
+      for (let lonIdx = 0; lonIdx < lonSteps; lonIdx++) {
+        const lat = bounds.south + latIdx * resolution;
+        const lon = bounds.west + lonIdx * resolution;
         coordinates.push({ lat, lon });
       }
     }

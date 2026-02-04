@@ -98,6 +98,9 @@ class WeatherCanvasLayer extends L.Layer {
   private frame: number | null = null;
   private dataPoints: DataPoint[] = [];
   private windConverter: (knots: number) => number = (knots) => knots;
+  private loading: boolean = false;
+  private loadingAnimationFrame: number | null = null;
+  private loadingStartTime: number = 0;
 
   onAdd(map: L.Map): this {
     const pane = map.getPane('overlayPane');
@@ -120,6 +123,9 @@ class WeatherCanvasLayer extends L.Layer {
     if (this.frame) {
       cancelAnimationFrame(this.frame);
     }
+    if (this.loadingAnimationFrame) {
+      cancelAnimationFrame(this.loadingAnimationFrame);
+    }
     return this;
   }
 
@@ -137,6 +143,39 @@ class WeatherCanvasLayer extends L.Layer {
     if (this.canvas) {
       this.canvas.style.display = visible ? '' : 'none';
     }
+  }
+
+  setLoading(loading: boolean): void {
+    const wasLoading = this.loading;
+    this.loading = loading;
+
+    if (loading && !wasLoading) {
+      // Start loading animation
+      this.loadingStartTime = performance.now();
+      this.animateLoading();
+    } else if (!loading && wasLoading) {
+      // Stop loading animation
+      if (this.loadingAnimationFrame) {
+        cancelAnimationFrame(this.loadingAnimationFrame);
+        this.loadingAnimationFrame = null;
+      }
+      // Reset opacity and redraw
+      if (this.canvas) {
+        this.canvas.style.opacity = '1';
+      }
+      this.redraw();
+    }
+  }
+
+  private animateLoading(): void {
+    if (!this.loading || !this.canvas) return;
+
+    const elapsed = performance.now() - this.loadingStartTime;
+    // Pulse between 0.3 and 0.7 opacity with a 1 second cycle
+    const opacity = 0.5 + 0.2 * Math.sin((elapsed / 500) * Math.PI);
+    this.canvas.style.opacity = opacity.toString();
+
+    this.loadingAnimationFrame = requestAnimationFrame(() => this.animateLoading());
   }
 
   reset(): void {
@@ -205,23 +244,6 @@ class WeatherCanvasLayer extends L.Layer {
       }
     }
 
-    // Draw actual data points as small circles (for debugging)
-    for (const point of this.dataPoints) {
-      const screenPoint = map.latLngToContainerPoint([point.lat, point.lon]);
-
-      // Skip if outside visible area
-      if (screenPoint.x < -10 || screenPoint.x > size.x + 10) continue;
-      if (screenPoint.y < -10 || screenPoint.y > size.y + 10) continue;
-
-      // Draw a small magenta circle at actual data point locations
-      ctx.beginPath();
-      ctx.arc(screenPoint.x, screenPoint.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 0, 255, 0.8)';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
   }
 
   private drawArrow(
@@ -290,7 +312,7 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
   const layerRef = useRef<WeatherCanvasLayer | null>(null);
   const dataPointsRef = useRef<DataPoint[]>([]);
   const lastFetchKey = useRef<string>('');
-  const [debugPointCount, setDebugPointCount] = React.useState(0);
+  const [isLoading, setIsLoading] = React.useState(false);
   const { convertWind } = useSettings();
 
   // Fetch weather data for current bounds
@@ -316,21 +338,24 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     const arrowRows = Math.ceil(latRange / arrowSpacing) + 1;
     const totalArrows = arrowCols * arrowRows;
 
-    // Max data points = 1/4 of arrows shown (minimum 9 for good interpolation)
-    const maxDataPoints = Math.max(9, Math.floor(totalArrows / 4));
+    // Open-Meteo maximum resolution is 0.1° (~11km) - always aim for this
+    const OPEN_METEO_MAX_RESOLUTION = 0.1;
 
-    // Calculate minimum resolution to stay within maxDataPoints
-    // Grid covers viewport + 1 ring, so points ≈ (latRange/res + 3) * (lonRange/res + 3)
-    // Solving for res: res >= sqrt(latRange * lonRange / (maxDataPoints - buffer))
-    // Use a conservative buffer to ensure we don't exceed the limit
-    const effectiveMax = Math.max(4, maxDataPoints - 6); // Account for ring buffer
-    const minResolution = Math.sqrt((latRange * lonRange) / effectiveMax);
+    // Maximum data points = number of arrows on screen (never fetch more than we display)
+    const maxDataPoints = totalArrows;
 
-    // Standard resolutions - snap UPWARD to ensure we don't exceed maxDataPoints
-    const standardResolutions = [0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0];
-    let resolution = standardResolutions[standardResolutions.length - 1]; // Default to coarsest
+    // Calculate minimum resolution needed to not exceed maxDataPoints
+    // Grid with ring adds ~2 extra rows/cols, use 0.6 factor as buffer
+    const minResolutionForLimit = Math.sqrt((latRange * lonRange) / (maxDataPoints * 0.6));
+
+    // Use best resolution possible: start at 0.1° but back off only if needed
+    const targetResolution = Math.max(OPEN_METEO_MAX_RESOLUTION, minResolutionForLimit);
+
+    // Standard resolutions (0.1° is finest for Open-Meteo)
+    const standardResolutions = [0.1, 0.25, 0.5, 1.0, 2.0, 5.0];
+    let resolution = standardResolutions[standardResolutions.length - 1];
     for (const res of standardResolutions) {
-      if (res >= minResolution) {
+      if (res >= targetResolution) {
         resolution = res;
         break;
       }
@@ -354,6 +379,7 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     if (fetchKey === lastFetchKey.current && dataPointsRef.current.length > 0) return;
     lastFetchKey.current = fetchKey;
 
+    setIsLoading(true);
     onLoadingChange?.(true);
     onError?.(null);
 
@@ -379,21 +405,6 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
       dataPointsRef.current = points;
       layerRef.current?.setDataPoints(points);
 
-      // Count only visible points for debug
-      try {
-        const currentBounds = map.getBounds();
-        const visibleCount = points.filter(
-          (p) =>
-            p.lat >= currentBounds.getSouth() &&
-            p.lat <= currentBounds.getNorth() &&
-            p.lon >= currentBounds.getWest() &&
-            p.lon <= currentBounds.getEast()
-        ).length;
-        setDebugPointCount(visibleCount);
-      } catch {
-        setDebugPointCount(points.length);
-      }
-
       if (points.length === 0) {
         onError?.('No weather data available for this area');
       }
@@ -401,6 +412,7 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
       console.error('[WeatherOverlay] Fetch failed:', error);
       onError?.(error.message || 'Failed to fetch weather');
     } finally {
+      setIsLoading(false);
       onLoadingChange?.(false);
     }
   }, [map, enabled, forecastHour, onLoadingChange, onError]);
@@ -440,22 +452,12 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     }
   }, [convertWind]);
 
-  // Helper to count visible data points
-  const updateVisibleCount = useCallback(() => {
-    try {
-      const bounds = map.getBounds();
-      const visible = dataPointsRef.current.filter(
-        (p) =>
-          p.lat >= bounds.getSouth() &&
-          p.lat <= bounds.getNorth() &&
-          p.lon >= bounds.getWest() &&
-          p.lon <= bounds.getEast()
-      );
-      setDebugPointCount(visible.length);
-    } catch {
-      // Map not ready yet
+  // Sync loading state with canvas layer
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.setLoading(isLoading);
     }
-  }, [map]);
+  }, [isLoading]);
 
   // Map events
   useMapEvents({
@@ -467,7 +469,6 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     moveend: () => {
       if (enabled) {
         fetchWeatherData();
-        updateVisibleCount();
       }
     },
     zoomstart: () => {
@@ -481,7 +482,6 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
       if (enabled && layerRef.current) {
         layerRef.current.setVisible(true);
         layerRef.current.reset();
-        updateVisibleCount();
       }
     },
   });
@@ -494,27 +494,7 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     }
   }, [forecastHour, enabled, fetchWeatherData]);
 
-  // Debug counter (remove later)
-  if (!enabled) return null;
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        background: 'rgba(0,0,0,0.7)',
-        color: '#fff',
-        padding: '4px 8px',
-        borderRadius: 4,
-        fontSize: 12,
-        fontFamily: 'monospace',
-        zIndex: 1000,
-        pointerEvents: 'none',
-      }}
-    >
-      pts: {debugPointCount}
-    </div>
-  );
+  return null;
 };
 
 // ============================================

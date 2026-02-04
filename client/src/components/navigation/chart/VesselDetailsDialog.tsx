@@ -34,9 +34,11 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay - only close on single click, not double-click zoom */}
       <div
-        onClick={onClose}
+        onClick={(e) => {
+          if (e.detail === 1) onClose();
+        }}
         style={{
           position: 'absolute',
           top: 0,

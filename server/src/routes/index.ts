@@ -78,6 +78,7 @@ router.get('/weather/forecast', weatherController.getForecast.bind(weatherContro
 router.get('/weather/grid', weatherController.getGrid.bind(weatherController));
 router.get('/weather/settings', weatherController.getSettings.bind(weatherController));
 router.put('/weather/settings', weatherController.updateSettings.bind(weatherController));
+router.delete('/weather/cache', weatherController.clearCache.bind(weatherController));
 
 // Geocoding routes (proxied through server for offline awareness)
 router.get('/geocoding/search', tilesController.searchLocations.bind(tilesController));

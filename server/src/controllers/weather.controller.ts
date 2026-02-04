@@ -158,6 +158,20 @@ export class WeatherController {
       res.status(500).json({ error: 'Failed to update settings' });
     }
   }
+
+  /**
+   * DELETE /api/weather/cache
+   * Clear weather cache
+   */
+  async clearCache(req: Request, res: Response) {
+    try {
+      const clearedCount = await weatherService.clearCache();
+      res.json({ success: true, clearedEntries: clearedCount });
+    } catch (error) {
+      console.error('[Weather Controller] clearCache error:', error);
+      res.status(500).json({ error: 'Failed to clear cache' });
+    }
+  }
 }
 
 export const weatherController = new WeatherController();

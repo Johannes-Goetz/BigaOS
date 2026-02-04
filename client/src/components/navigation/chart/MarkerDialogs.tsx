@@ -294,7 +294,10 @@ const DialogOverlay: React.FC<{
 }> = ({ onClick, children }) => (
   <>
     <div
-      onClick={onClick}
+      onClick={(e) => {
+        // Only close on single click, not double-click (used for map zoom)
+        if (e.detail === 1) onClick();
+      }}
       style={{
         position: 'absolute',
         top: 0,
@@ -444,9 +447,11 @@ const ChainCalculationInfoDialog: React.FC<{
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - only close on single click, not double-click zoom */}
       <div
-        onClick={onClose}
+        onClick={(e) => {
+          if (e.detail === 1) onClose();
+        }}
         style={{
           position: 'fixed',
           top: 0,

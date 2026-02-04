@@ -298,11 +298,13 @@ export const weatherAPI = {
 
   /**
    * Get weather grid for map overlay
+   * Uses longer timeout since it may need multiple API calls with rate limiting
    */
   getGrid: (bounds: WeatherGridBounds, resolution: number = 0.5, hour: number = 0, config?: { signal?: AbortSignal }) =>
     api.get<WeatherGrid>('/weather/grid', {
       params: { ...bounds, resolution, hour },
       signal: config?.signal,
+      timeout: 60000, // 60s timeout for grid requests (rate limiting may cause delays)
     }),
 
   /**

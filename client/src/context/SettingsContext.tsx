@@ -9,6 +9,7 @@ export type DistanceUnit = 'nm' | 'km' | 'mi';
 export type WeightUnit = 'kg' | 'lbs';
 export type TemperatureUnit = '°C' | '°F';
 export type TimeFormat = '12h' | '24h';
+export type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
 
 export interface MapTileUrls {
   streetMap: string;
@@ -312,6 +313,7 @@ interface SettingsContextType {
   weightUnit: WeightUnit;
   temperatureUnit: TemperatureUnit;
   timeFormat: TimeFormat;
+  dateFormat: DateFormat;
   setSpeedUnit: (unit: SpeedUnit) => void;
   setWindUnit: (unit: WindUnit) => void;
   setDepthUnit: (unit: DepthUnit) => void;
@@ -319,6 +321,7 @@ interface SettingsContextType {
   setWeightUnit: (unit: WeightUnit) => void;
   setTemperatureUnit: (unit: TemperatureUnit) => void;
   setTimeFormat: (format: TimeFormat) => void;
+  setDateFormat: (format: DateFormat) => void;
 
   // Map Tile URLs
   mapTileUrls: MapTileUrls;
@@ -410,6 +413,7 @@ const defaultSettings = {
   weightUnit: 'kg' as WeightUnit,
   temperatureUnit: '°C' as TemperatureUnit,
   timeFormat: '24h' as TimeFormat,
+  dateFormat: 'DD/MM/YYYY' as DateFormat,
   depthAlarm: null as number | null,
   soundAlarmEnabled: false,
   demoMode: true,
@@ -436,6 +440,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [weightUnit, setWeightUnitState] = useState<WeightUnit>(defaultSettings.weightUnit);
   const [temperatureUnit, setTemperatureUnitState] = useState<TemperatureUnit>(defaultSettings.temperatureUnit);
   const [timeFormat, setTimeFormatState] = useState<TimeFormat>(defaultSettings.timeFormat);
+  const [dateFormat, setDateFormatState] = useState<DateFormat>(defaultSettings.dateFormat);
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
   const [demoMode, setDemoModeState] = useState<boolean>(defaultSettings.demoMode);
@@ -474,6 +479,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       if (data.settings.timeFormat) {
         setTimeFormatState(data.settings.timeFormat);
+      }
+      if (data.settings.dateFormat) {
+        setDateFormatState(data.settings.dateFormat);
       }
       if (data.settings.depthAlarm !== undefined) {
         setDepthAlarmState(data.settings.depthAlarm);
@@ -527,6 +535,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'timeFormat':
           setTimeFormatState(data.value);
+          break;
+        case 'dateFormat':
+          setDateFormatState(data.value);
           break;
         case 'depthAlarm':
           setDepthAlarmState(data.value);
@@ -610,6 +621,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setTimeFormat = useCallback((format: TimeFormat) => {
     setTimeFormatState(format);
     updateServerSetting('timeFormat', format);
+  }, [updateServerSetting]);
+
+  const setDateFormat = useCallback((format: DateFormat) => {
+    setDateFormatState(format);
+    updateServerSetting('dateFormat', format);
   }, [updateServerSetting]);
 
   const setDepthAlarm = useCallback((depth: number | null) => {
@@ -707,6 +723,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     weightUnit,
     temperatureUnit,
     timeFormat,
+    dateFormat,
     setSpeedUnit,
     setWindUnit,
     setDepthUnit,
@@ -714,6 +731,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setWeightUnit,
     setTemperatureUnit,
     setTimeFormat,
+    setDateFormat,
     mapTileUrls,
     setMapTileUrls,
     apiUrls,

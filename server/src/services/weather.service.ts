@@ -25,9 +25,54 @@ import {
 // Round coordinates to ~11km precision for cache keys (0.1 degrees)
 const COORD_PRECISION = 1;
 
+// Rate limiting configuration
+const MAX_CONCURRENT_API_REQUESTS = 2; // Open-Meteo free tier is very limited
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 1000;
+
 function roundCoord(coord: number): number {
   return Math.round(coord * Math.pow(10, COORD_PRECISION)) / Math.pow(10, COORD_PRECISION);
 }
+
+/**
+ * Simple semaphore for limiting concurrent operations
+ */
+class Semaphore {
+  private permits: number;
+  private maxPermits: number;
+  private queue: Array<() => void> = [];
+
+  constructor(permits: number) {
+    this.permits = permits;
+    this.maxPermits = permits;
+  }
+
+  async acquire(): Promise<void> {
+    if (this.permits > 0) {
+      this.permits--;
+      return;
+    }
+    return new Promise((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else if (this.permits < this.maxPermits) {
+      // Only increment if we haven't exceeded max (prevents corruption from double-release)
+      this.permits++;
+    }
+  }
+}
+
+// Global semaphore for API requests
+const apiSemaphore = new Semaphore(MAX_CONCURRENT_API_REQUESTS);
+
+// In-flight request deduplication
+const inFlightRequests = new Map<string, Promise<WeatherForecast | null>>();
 
 class WeatherService {
   private settings: WeatherSettings = DEFAULT_WEATHER_SETTINGS;
@@ -134,10 +179,14 @@ class WeatherService {
   /**
    * Get weather forecast for a location
    * Uses database cache only - no in-memory caching to conserve RAM
+   * Deduplicates in-flight requests to avoid redundant API calls
    * @param requiredDays - Minimum number of forecast days needed (defaults to UPFRONT_FORECAST_DAYS)
    */
   async getWeather(lat: number, lon: number, requiredDays: number = UPFRONT_FORECAST_DAYS): Promise<WeatherForecast | null> {
     const requiredHours = requiredDays * 24;
+    const roundedLat = roundCoord(lat);
+    const roundedLon = roundCoord(lon);
+    const cacheKey = `${roundedLat}_${roundedLon}_${requiredDays}`;
 
     // Check database cache first
     const cached = await this.loadFromDatabase(lat, lon);
@@ -152,15 +201,32 @@ class WeatherService {
     const isOnline = connectivityService.getOnlineStatus();
 
     if (isOnline) {
-      try {
-        const forecast = await this.fetchFromApi(lat, lon, requiredDays);
-        if (forecast) {
-          await this.saveToDatabase(lat, lon, forecast);
-          return forecast;
-        }
-      } catch (error) {
-        console.error('[Weather] API fetch failed:', error);
+      // Check if there's already an in-flight request for this location
+      const existingRequest = inFlightRequests.get(cacheKey);
+      if (existingRequest) {
+        return existingRequest;
       }
+
+      // Create new request and track it
+      const fetchPromise = (async () => {
+        try {
+          const forecast = await this.fetchFromApi(lat, lon, requiredDays);
+          if (forecast) {
+            await this.saveToDatabase(lat, lon, forecast);
+            return forecast;
+          }
+        } catch (error) {
+          console.error('[Weather] API fetch failed:', error);
+        } finally {
+          // Remove from in-flight map when done
+          inFlightRequests.delete(cacheKey);
+        }
+        return null;
+      })();
+
+      inFlightRequests.set(cacheKey, fetchPromise);
+      const result = await fetchPromise;
+      if (result) return result;
     }
 
     // Return cached data even if expired/insufficient (better than nothing when offline)
@@ -216,8 +282,9 @@ class WeatherService {
       }
     }
 
-    // Fetch all points in parallel with concurrency limit
-    const BATCH_SIZE = 10; // Limit concurrent requests to avoid overwhelming the API
+    // Fetch all points sequentially through the rate-limited queue
+    // The semaphore handles concurrency, so we process points one at a time here
+    const BATCH_SIZE = 5; // Small batches, rate limiting handles the rest
     const points: WeatherGridPoint[] = [];
     const now = new Date();
 
@@ -314,6 +381,22 @@ class WeatherService {
               period: marineData.hourly.swell_wave_period[i]!,
             };
           }
+
+          // Add sea temperature if available
+          if (marineData.hourly.sea_surface_temperature?.[i] != null) {
+            point.seaTemperature = marineData.hourly.sea_surface_temperature[i]!;
+          }
+
+          // Add ocean current if available
+          if (
+            marineData.hourly.ocean_current_velocity?.[i] != null &&
+            marineData.hourly.ocean_current_direction?.[i] != null
+          ) {
+            point.current = {
+              velocity: marineData.hourly.ocean_current_velocity[i]!,
+              direction: marineData.hourly.ocean_current_direction[i]!,
+            };
+          }
         }
 
         hourly.push(point);
@@ -341,6 +424,69 @@ class WeatherService {
   }
 
   /**
+   * Fetch with rate limiting and retry logic
+   */
+  private async fetchWithRateLimit<T>(
+    url: string,
+    apiName: string,
+    optional: boolean = false
+  ): Promise<T | null> {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      await apiSemaphore.acquire();
+
+      try {
+        const response = await fetch(url);
+
+        if (response.status === 429) {
+          // Rate limited - release, wait and retry
+          apiSemaphore.release();
+          const retryAfter = response.headers.get('Retry-After');
+          const delay = retryAfter
+            ? parseInt(retryAfter) * 1000
+            : BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+          console.warn(`[Weather] Rate limited on ${apiName}, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        if (!response.ok) {
+          apiSemaphore.release();
+          if (optional) {
+            // Optional APIs (like marine) just return null on error
+            return null;
+          }
+          const errorText = await response.text();
+          console.error(`[Weather] ${apiName} error ${response.status}: ${errorText}`);
+          return null; // Don't throw, just return null to avoid unhandled rejections
+        }
+
+        const result = (await response.json()) as T;
+        apiSemaphore.release();
+        return result;
+      } catch (error) {
+        apiSemaphore.release();
+
+        if (optional) {
+          console.warn(`[Weather] ${apiName} fetch failed:`, error);
+          return null;
+        }
+
+        // On last attempt, give up
+        if (attempt === MAX_RETRIES - 1) {
+          console.error(`[Weather] ${apiName} fetch failed after ${MAX_RETRIES} attempts:`, error);
+          return null;
+        }
+
+        // Wait before retry
+        const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[Weather] ${apiName} failed, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    return null;
+  }
+
+  /**
    * Fetch from Open-Meteo Weather API
    */
   private async fetchWeatherApi(lat: number, lon: number, days: number): Promise<OpenMeteoWeatherResponse | null> {
@@ -353,19 +499,7 @@ class WeatherService {
     });
 
     const url = `${this.settings.weatherApiUrl}?${params}`;
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Weather] API error ${response.status}: ${errorText}`);
-        throw new Error(`Weather API error: ${response.status}`);
-      }
-      return (await response.json()) as OpenMeteoWeatherResponse;
-    } catch (error) {
-      console.error('[Weather] Weather API fetch failed:', error);
-      return null;
-    }
+    return this.fetchWithRateLimit<OpenMeteoWeatherResponse>(url, 'Weather API', false);
   }
 
   /**
@@ -375,25 +509,12 @@ class WeatherService {
     const params = new URLSearchParams({
       latitude: lat.toString(),
       longitude: lon.toString(),
-      hourly: 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period',
+      hourly: 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature,ocean_current_velocity,ocean_current_direction',
       forecast_days: days.toString(),
     });
 
     const url = `${this.settings.marineApiUrl}?${params}`;
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        // Marine API might not be available for all locations
-        console.warn('[Weather] Marine API not available for this location');
-        return null;
-      }
-      return (await response.json()) as OpenMeteoMarineResponse;
-    } catch (error) {
-      // Marine data is optional, don't fail completely
-      console.warn('[Weather] Marine API fetch failed:', error);
-      return null;
-    }
+    return this.fetchWithRateLimit<OpenMeteoMarineResponse>(url, 'Marine API', true);
   }
 
   /**
@@ -451,6 +572,33 @@ class WeatherService {
    */
   isEnabled(): boolean {
     return this.settings.enabled;
+  }
+
+  /**
+   * Clear weather cache from database
+   */
+  async clearCache(): Promise<number> {
+    try {
+      // Get all settings and filter for weather cache keys
+      const allSettings = await dbWorker.getAllSettings();
+      const weatherCacheKeys = allSettings
+        .filter((s: { key: string }) => s.key.startsWith('weather_cache_'))
+        .map((s: { key: string }) => s.key);
+
+      // Delete each weather cache entry
+      for (const key of weatherCacheKeys) {
+        await dbWorker.setSetting(key, '', 'deleted');
+      }
+
+      // Reset last fetched position to force refetch
+      this.lastFetchedPosition = null;
+
+      console.log(`[Weather] Cleared ${weatherCacheKeys.length} cached entries`);
+      return weatherCacheKeys.length;
+    } catch (error) {
+      console.error('[Weather] Failed to clear cache:', error);
+      return 0;
+    }
   }
 }
 

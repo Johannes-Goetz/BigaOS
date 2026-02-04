@@ -1438,6 +1438,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           <WeatherOverlay
             enabled={weatherOverlayEnabled}
             forecastHour={weatherOverlay.forecastHour}
+            displayMode={weatherOverlay.displayMode}
             onLoadingChange={weatherOverlay.setLoading}
             onError={weatherOverlay.setError}
           />
@@ -1542,10 +1543,12 @@ export const ChartView: React.FC<ChartViewProps> = ({
           sidebarWidth={sidebarWidth}
           enabled={weatherOverlayEnabled}
           forecastHour={weatherOverlay.forecastHour}
+          displayMode={weatherOverlay.displayMode}
           loading={weatherOverlay.loading}
           error={weatherOverlay.error}
           onToggleEnabled={() => setWeatherOverlayEnabled(!weatherOverlayEnabled)}
           onSetForecastHour={weatherOverlay.setForecastHour}
+          onSetDisplayMode={weatherOverlay.setDisplayMode}
           onClose={() => setWeatherPanelOpen(false)}
         />
       )}

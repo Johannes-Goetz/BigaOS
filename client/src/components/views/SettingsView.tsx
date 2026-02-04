@@ -6,13 +6,16 @@ import {
   DepthUnit,
   DistanceUnit,
   WeightUnit,
+  TemperatureUnit,
   TimeFormat,
+  DateFormat,
   ChainType,
   speedConversions,
   windConversions,
   depthConversions,
   distanceConversions,
   weightConversions,
+  temperatureConversions,
 } from '../../context/SettingsContext';
 import { theme } from '../../styles/theme';
 import { dataAPI, DataFileInfo, DownloadProgress, offlineMapsAPI, StorageStats } from '../../services/api';
@@ -129,8 +132,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     };
   }, [fetchDataStatus]);
 
-  const { timeFormat } = useSettings();
-
   const formatFileSize = (bytes?: number): string => {
     if (!bytes) return 'Unknown size';
     if (bytes < 1024) return `${bytes} B`;
@@ -235,12 +236,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     depthUnit,
     distanceUnit,
     weightUnit,
+    temperatureUnit,
+    timeFormat,
+    dateFormat,
     setSpeedUnit,
     setWindUnit,
     setDepthUnit,
     setDistanceUnit,
     setWeightUnit,
+    setTemperatureUnit,
     setTimeFormat,
+    setDateFormat,
     mapTileUrls,
     setMapTileUrls,
     apiUrls,
@@ -445,17 +451,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         </button>
       </div>
 
-      {/* Time Format */}
-      {renderUnitSelector<TimeFormat>(
-        'Time Format',
-        timeFormat,
-        ['24h', '12h'],
-        {
-          '24h': '24h',
-          '12h': 'AM/PM',
-        },
-        setTimeFormat
-      )}
     </div>
   );
 
@@ -953,6 +948,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           'lbs': weightConversions['lbs'].label,
         },
         setWeightUnit
+      )}
+
+      {renderUnitSelector<TemperatureUnit>(
+        'Temperature',
+        temperatureUnit,
+        ['°C', '°F'],
+        {
+          '°C': temperatureConversions['°C'].label,
+          '°F': temperatureConversions['°F'].label,
+        },
+        setTemperatureUnit
+      )}
+
+      {renderUnitSelector<TimeFormat>(
+        'Time Format',
+        timeFormat,
+        ['24h', '12h'],
+        {
+          '24h': '24h',
+          '12h': 'AM/PM',
+        },
+        setTimeFormat
+      )}
+
+      {renderUnitSelector<DateFormat>(
+        'Date Format',
+        dateFormat,
+        ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'],
+        {
+          'DD/MM/YYYY': 'DD/MM/YYYY',
+          'MM/DD/YYYY': 'MM/DD/YYYY',
+          'YYYY-MM-DD': 'YYYY-MM-DD',
+        },
+        setDateFormat
       )}
 
       <div style={{

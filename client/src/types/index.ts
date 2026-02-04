@@ -106,12 +106,18 @@ export interface WaveData {
   period: number; // seconds
 }
 
+export interface CurrentData {
+  velocity: number; // m/s
+  direction: number; // degrees (direction current is flowing TO)
+}
+
 export interface WeatherPoint {
   timestamp: string; // ISO date
   location: { lat: number; lon: number };
   wind: WindData;
   waves?: WaveData;
   swell?: WaveData;
+  current?: CurrentData; // ocean current
   pressure?: number; // hPa
   seaTemperature?: number; // celsius
 }

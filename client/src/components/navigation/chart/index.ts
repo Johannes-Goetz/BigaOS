@@ -34,3 +34,4 @@ export type { DebugMode } from './WaterDebugOverlay';
 
 // Weather overlay
 export { WeatherOverlay, useWeatherOverlay } from './WeatherOverlay';
+export type { WeatherDisplayMode } from './WeatherOverlay';

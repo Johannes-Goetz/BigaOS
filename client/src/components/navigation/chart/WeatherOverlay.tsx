@@ -1,14 +1,26 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { weatherAPI } from '../../../services/api';
+import { weatherAPI, navigationAPI } from '../../../services/api';
 import { WeatherGridPoint } from '../../../types';
-import { getWindColor } from '../../../utils/weather.utils';
+import { getWindColor, getWaveColor, getWaterTempColor, getCurrentColor } from '../../../utils/weather.utils';
 import { useSettings } from '../../../context/SettingsContext';
+
+// Debounce delay for fetch requests (ms)
+const FETCH_DEBOUNCE_MS = 500;
+
+interface WaterGridPoint {
+  lat: number;
+  lon: number;
+  type: 'ocean' | 'lake' | 'land';
+}
+
+export type WeatherDisplayMode = 'wind' | 'waves' | 'swell' | 'current' | 'water-temp';
 
 interface WeatherOverlayProps {
   enabled: boolean;
   forecastHour: number;
+  displayMode: WeatherDisplayMode;
   onLoadingChange?: (loading: boolean) => void;
   onError?: (error: string | null) => void;
 }
@@ -19,10 +31,46 @@ interface WindData {
   gusts: number;
 }
 
+interface WaveData {
+  height: number;
+  direction: number;
+  period: number;
+}
+
+interface CurrentData {
+  velocity: number;
+  direction: number;
+}
+
 interface DataPoint {
   lat: number;
   lon: number;
-  wind: WindData;
+  wind?: WindData;
+  waves?: WaveData;
+  swell?: WaveData;
+  current?: CurrentData;
+  seaTemperature?: number;
+}
+
+/**
+ * Get contrasting outline color based on fill color brightness.
+ * Returns white for dark colors, dark grey for bright colors.
+ */
+function getContrastOutline(rgbColor: string): string {
+  // Parse rgb(r, g, b) string
+  const match = rgbColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!match) return 'rgba(30, 30, 30, 0.85)'; // fallback to dark
+
+  const r = parseInt(match[1], 10);
+  const g = parseInt(match[2], 10);
+  const b = parseInt(match[3], 10);
+
+  // Calculate relative luminance (perceived brightness)
+  // Using the formula: 0.299*R + 0.587*G + 0.114*B
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Use black outline for all colors (matching arrow outlines)
+  return '#000';
 }
 
 /**
@@ -34,20 +82,21 @@ function interpolateWind(
   targetLon: number,
   dataPoints: DataPoint[]
 ): WindData | null {
-  if (dataPoints.length === 0) return null;
-  if (dataPoints.length === 1) return dataPoints[0].wind;
+  const pointsWithWind = dataPoints.filter(p => p.wind);
+  if (pointsWithWind.length === 0) return null;
+  if (pointsWithWind.length === 1) return pointsWithWind[0].wind!;
 
   // Find nearest neighbors and calculate weights
   const MAX_NEIGHBORS = 4;
   const neighbors: Array<{ point: DataPoint; dist: number }> = [];
 
-  for (const point of dataPoints) {
+  for (const point of pointsWithWind) {
     const dLat = targetLat - point.lat;
     const dLon = targetLon - point.lon;
     const dist = Math.sqrt(dLat * dLat + dLon * dLon);
 
     // If very close to a data point, just return it
-    if (dist < 0.001) return point.wind;
+    if (dist < 0.001) return point.wind!;
 
     neighbors.push({ point, dist });
   }
@@ -68,11 +117,11 @@ function interpolateWind(
     totalWeight += weight;
 
     // Convert wind to U/V components for proper direction averaging
-    const dirRad = (point.wind.direction * Math.PI) / 180;
+    const dirRad = (point.wind!.direction * Math.PI) / 180;
     weightedU += Math.sin(dirRad) * weight;
     weightedV += Math.cos(dirRad) * weight;
-    weightedSpeed += point.wind.speed * weight;
-    weightedGusts += point.wind.gusts * weight;
+    weightedSpeed += point.wind!.speed * weight;
+    weightedGusts += point.wind!.gusts * weight;
   }
 
   // Calculate interpolated direction from averaged U/V
@@ -88,6 +137,214 @@ function interpolateWind(
   };
 }
 
+/**
+ * Interpolate waves using Inverse Distance Weighting (IDW)
+ */
+function interpolateWaves(
+  targetLat: number,
+  targetLon: number,
+  dataPoints: DataPoint[]
+): WaveData | null {
+  const pointsWithWaves = dataPoints.filter(p => p.waves);
+  if (pointsWithWaves.length === 0) return null;
+  if (pointsWithWaves.length === 1) return pointsWithWaves[0].waves!;
+
+  const MAX_NEIGHBORS = 4;
+  const neighbors: Array<{ point: DataPoint; dist: number }> = [];
+
+  for (const point of pointsWithWaves) {
+    const dLat = targetLat - point.lat;
+    const dLon = targetLon - point.lon;
+    const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+
+    if (dist < 0.001) return point.waves!;
+
+    neighbors.push({ point, dist });
+  }
+
+  neighbors.sort((a, b) => a.dist - b.dist);
+  const nearby = neighbors.slice(0, MAX_NEIGHBORS);
+
+  let totalWeight = 0;
+  let weightedU = 0;
+  let weightedV = 0;
+  let weightedHeight = 0;
+  let weightedPeriod = 0;
+
+  for (const { point, dist } of nearby) {
+    const weight = 1 / (dist * dist);
+    totalWeight += weight;
+
+    const dirRad = (point.waves!.direction * Math.PI) / 180;
+    weightedU += Math.sin(dirRad) * weight;
+    weightedV += Math.cos(dirRad) * weight;
+    weightedHeight += point.waves!.height * weight;
+    weightedPeriod += point.waves!.period * weight;
+  }
+
+  const avgU = weightedU / totalWeight;
+  const avgV = weightedV / totalWeight;
+  let direction = (Math.atan2(avgU, avgV) * 180) / Math.PI;
+  if (direction < 0) direction += 360;
+
+  return {
+    height: weightedHeight / totalWeight,
+    direction: Math.round(direction),
+    period: weightedPeriod / totalWeight,
+  };
+}
+
+/**
+ * Interpolate sea temperature using Inverse Distance Weighting (IDW)
+ */
+function interpolateSeaTemp(
+  targetLat: number,
+  targetLon: number,
+  dataPoints: DataPoint[]
+): number | null {
+  const pointsWithTemp = dataPoints.filter(p => p.seaTemperature !== undefined);
+  if (pointsWithTemp.length === 0) return null;
+  if (pointsWithTemp.length === 1) return pointsWithTemp[0].seaTemperature!;
+
+  const MAX_NEIGHBORS = 4;
+  const neighbors: Array<{ point: DataPoint; dist: number }> = [];
+
+  for (const point of pointsWithTemp) {
+    const dLat = targetLat - point.lat;
+    const dLon = targetLon - point.lon;
+    const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+
+    if (dist < 0.001) return point.seaTemperature!;
+
+    neighbors.push({ point, dist });
+  }
+
+  neighbors.sort((a, b) => a.dist - b.dist);
+  const nearby = neighbors.slice(0, MAX_NEIGHBORS);
+
+  let totalWeight = 0;
+  let weightedTemp = 0;
+
+  for (const { point, dist } of nearby) {
+    const weight = 1 / (dist * dist);
+    totalWeight += weight;
+    weightedTemp += point.seaTemperature! * weight;
+  }
+
+  return weightedTemp / totalWeight;
+}
+
+/**
+ * Interpolate swell using Inverse Distance Weighting (IDW)
+ */
+function interpolateSwell(
+  targetLat: number,
+  targetLon: number,
+  dataPoints: DataPoint[]
+): WaveData | null {
+  const pointsWithSwell = dataPoints.filter(p => p.swell);
+  if (pointsWithSwell.length === 0) return null;
+  if (pointsWithSwell.length === 1) return pointsWithSwell[0].swell!;
+
+  const MAX_NEIGHBORS = 4;
+  const neighbors: Array<{ point: DataPoint; dist: number }> = [];
+
+  for (const point of pointsWithSwell) {
+    const dLat = targetLat - point.lat;
+    const dLon = targetLon - point.lon;
+    const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+
+    if (dist < 0.001) return point.swell!;
+
+    neighbors.push({ point, dist });
+  }
+
+  neighbors.sort((a, b) => a.dist - b.dist);
+  const nearby = neighbors.slice(0, MAX_NEIGHBORS);
+
+  let totalWeight = 0;
+  let weightedU = 0;
+  let weightedV = 0;
+  let weightedHeight = 0;
+  let weightedPeriod = 0;
+
+  for (const { point, dist } of nearby) {
+    const weight = 1 / (dist * dist);
+    totalWeight += weight;
+
+    const dirRad = (point.swell!.direction * Math.PI) / 180;
+    weightedU += Math.sin(dirRad) * weight;
+    weightedV += Math.cos(dirRad) * weight;
+    weightedHeight += point.swell!.height * weight;
+    weightedPeriod += point.swell!.period * weight;
+  }
+
+  const avgU = weightedU / totalWeight;
+  const avgV = weightedV / totalWeight;
+  let direction = (Math.atan2(avgU, avgV) * 180) / Math.PI;
+  if (direction < 0) direction += 360;
+
+  return {
+    height: weightedHeight / totalWeight,
+    direction: Math.round(direction),
+    period: weightedPeriod / totalWeight,
+  };
+}
+
+/**
+ * Interpolate ocean current using Inverse Distance Weighting (IDW)
+ */
+function interpolateCurrent(
+  targetLat: number,
+  targetLon: number,
+  dataPoints: DataPoint[]
+): CurrentData | null {
+  const pointsWithCurrent = dataPoints.filter(p => p.current);
+  if (pointsWithCurrent.length === 0) return null;
+  if (pointsWithCurrent.length === 1) return pointsWithCurrent[0].current!;
+
+  const MAX_NEIGHBORS = 4;
+  const neighbors: Array<{ point: DataPoint; dist: number }> = [];
+
+  for (const point of pointsWithCurrent) {
+    const dLat = targetLat - point.lat;
+    const dLon = targetLon - point.lon;
+    const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+
+    if (dist < 0.001) return point.current!;
+
+    neighbors.push({ point, dist });
+  }
+
+  neighbors.sort((a, b) => a.dist - b.dist);
+  const nearby = neighbors.slice(0, MAX_NEIGHBORS);
+
+  let totalWeight = 0;
+  let weightedU = 0;
+  let weightedV = 0;
+  let weightedVelocity = 0;
+
+  for (const { point, dist } of nearby) {
+    const weight = 1 / (dist * dist);
+    totalWeight += weight;
+
+    const dirRad = (point.current!.direction * Math.PI) / 180;
+    weightedU += Math.sin(dirRad) * weight;
+    weightedV += Math.cos(dirRad) * weight;
+    weightedVelocity += point.current!.velocity * weight;
+  }
+
+  const avgU = weightedU / totalWeight;
+  const avgV = weightedV / totalWeight;
+  let direction = (Math.atan2(avgU, avgV) * 180) / Math.PI;
+  if (direction < 0) direction += 360;
+
+  return {
+    velocity: weightedVelocity / totalWeight,
+    direction: Math.round(direction),
+  };
+}
+
 // ============================================
 // Canvas Overlay Layer
 // ============================================
@@ -97,10 +354,14 @@ class WeatherCanvasLayer extends L.Layer {
   private ctx: CanvasRenderingContext2D | null = null;
   private frame: number | null = null;
   private dataPoints: DataPoint[] = [];
+  private waterGrid: WaterGridPoint[] = [];
   private windConverter: (knots: number) => number = (knots) => knots;
+  private heightConverter: (meters: number) => number = (meters) => meters;
+  private tempConverter: (celsius: number) => number = (celsius) => celsius;
   private loading: boolean = false;
   private loadingAnimationFrame: number | null = null;
   private loadingStartTime: number = 0;
+  private displayMode: WeatherDisplayMode = 'wind';
 
   onAdd(map: L.Map): this {
     const pane = map.getPane('overlayPane');
@@ -137,6 +398,47 @@ class WeatherCanvasLayer extends L.Layer {
   setWindConverter(converter: (knots: number) => number): void {
     this.windConverter = converter;
     this.redraw();
+  }
+
+  setDisplayMode(mode: WeatherDisplayMode): void {
+    this.displayMode = mode;
+    this.redraw();
+  }
+
+  setHeightConverter(converter: (meters: number) => number): void {
+    this.heightConverter = converter;
+    this.redraw();
+  }
+
+  setTempConverter(converter: (celsius: number) => number): void {
+    this.tempConverter = converter;
+    this.redraw();
+  }
+
+  setWaterGrid(grid: WaterGridPoint[]): void {
+    this.waterGrid = grid;
+    this.redraw();
+  }
+
+  private isPointOnOcean(lat: number, lon: number): boolean {
+    if (this.waterGrid.length === 0) return true; // Default to showing if no grid data
+
+    // Find nearest water grid point
+    let minDist = Infinity;
+    let nearest: WaterGridPoint | null = null;
+
+    for (const point of this.waterGrid) {
+      const dLat = lat - point.lat;
+      const dLon = lon - point.lon;
+      const dist = dLat * dLat + dLon * dLon;
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = point;
+      }
+    }
+
+    // Only return true for ocean (Marine API doesn't cover lakes)
+    return nearest?.type === 'ocean';
   }
 
   setVisible(visible: boolean): void {
@@ -228,7 +530,7 @@ class WeatherCanvasLayer extends L.Layer {
     const startLon = Math.floor(bounds.getWest() / finalSpacing) * finalSpacing;
     const endLon = Math.ceil(bounds.getEast() / finalSpacing) * finalSpacing;
 
-    // Draw arrows at fixed geographic positions with interpolated wind data
+    // Draw arrows at fixed geographic positions with interpolated data
     for (let lat = startLat; lat <= endLat; lat += finalSpacing) {
       for (let lon = startLon; lon <= endLon; lon += finalSpacing) {
         const screenPoint = map.latLngToContainerPoint([lat, lon]);
@@ -237,16 +539,45 @@ class WeatherCanvasLayer extends L.Layer {
         if (screenPoint.x < -20 || screenPoint.x > size.x + 20) continue;
         if (screenPoint.y < -20 || screenPoint.y > size.y + 20) continue;
 
-        const wind = interpolateWind(lat, lon, this.dataPoints);
-        if (!wind) continue;
+        if (this.displayMode === 'wind') {
+          const wind = interpolateWind(lat, lon, this.dataPoints);
+          if (!wind) continue;
+          this.drawWindArrow(ctx, screenPoint.x, screenPoint.y, wind.direction, wind.speed);
+        } else if (this.displayMode === 'waves') {
+          // Only show waves on ocean (not lakes - Marine API doesn't cover lakes)
+          if (!this.isPointOnOcean(lat, lon)) continue;
 
-        this.drawArrow(ctx, screenPoint.x, screenPoint.y, wind.direction, wind.speed);
+          const waves = interpolateWaves(lat, lon, this.dataPoints);
+          if (!waves) continue;
+          this.drawWaveArrow(ctx, screenPoint.x, screenPoint.y, waves.direction, waves.height, waves.period);
+        } else if (this.displayMode === 'swell') {
+          // Only show swell on ocean
+          if (!this.isPointOnOcean(lat, lon)) continue;
+
+          const swell = interpolateSwell(lat, lon, this.dataPoints);
+          if (!swell) continue;
+          this.drawSwellArrow(ctx, screenPoint.x, screenPoint.y, swell.direction, swell.height, swell.period);
+        } else if (this.displayMode === 'current') {
+          // Only show current on ocean
+          if (!this.isPointOnOcean(lat, lon)) continue;
+
+          const current = interpolateCurrent(lat, lon, this.dataPoints);
+          if (!current) continue;
+          this.drawCurrentArrow(ctx, screenPoint.x, screenPoint.y, current.direction, current.velocity);
+        } else if (this.displayMode === 'water-temp') {
+          // Only show sea temperature on ocean (not lakes - Marine API doesn't cover lakes)
+          if (!this.isPointOnOcean(lat, lon)) continue;
+
+          const temp = interpolateSeaTemp(lat, lon, this.dataPoints);
+          if (temp === null) continue;
+          this.drawWaterTemp(ctx, screenPoint.x, screenPoint.y, temp);
+        }
       }
     }
 
   }
 
-  private drawArrow(
+  private drawWindArrow(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
@@ -267,7 +598,7 @@ class WeatherCanvasLayer extends L.Layer {
     // Draw arrow shaft and head
     ctx.fillStyle = color;
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 1;
 
     ctx.beginPath();
     ctx.moveTo(0, -arrowLength / 2);
@@ -285,14 +616,189 @@ class WeatherCanvasLayer extends L.Layer {
     // Draw speed text (converted to user's preferred unit)
     ctx.restore();
     ctx.fillStyle = color;
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
-    ctx.font = 'bold 9px sans-serif';
+    ctx.strokeStyle = getContrastOutline(color);
+    ctx.lineWidth = 1;
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     const convertedSpeed = this.windConverter(speed);
     const text = Math.round(convertedSpeed).toString();
+    ctx.strokeText(text, x, y + 10);
+    ctx.fillText(text, x, y + 10);
+  }
+
+  private drawWaveArrow(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    direction: number,
+    height: number,
+    period: number
+  ): void {
+    const color = getWaveColor(height);
+    const arrowLength = 16;
+    const arrowWidth = 6;
+
+    // Direction is where waves come FROM, arrow points where they go TO
+    const angle = ((direction + 180) * Math.PI) / 180;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    // Draw wave arrow (same shape as wind for consistency)
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -arrowLength / 2);
+    ctx.lineTo(-arrowWidth / 2, arrowLength / 6);
+    ctx.lineTo(-arrowWidth / 4, arrowLength / 6);
+    ctx.lineTo(-arrowWidth / 4, arrowLength / 2);
+    ctx.lineTo(arrowWidth / 4, arrowLength / 2);
+    ctx.lineTo(arrowWidth / 4, arrowLength / 6);
+    ctx.lineTo(arrowWidth / 2, arrowLength / 6);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw height and period text (converted to user's preferred unit)
+    ctx.restore();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = getContrastOutline(color);
+    ctx.lineWidth = 1;
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const convertedHeight = this.heightConverter(height);
+    const text = `${convertedHeight.toFixed(1)} (${Math.round(period)}s)`;
+    ctx.strokeText(text, x, y + 10);
+    ctx.fillText(text, x, y + 10);
+  }
+
+  private drawWaterTemp(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    tempCelsius: number
+  ): void {
+    const color = getWaterTempColor(tempCelsius);
+    const convertedTemp = this.tempConverter(tempCelsius);
+    const text = Math.round(convertedTemp).toString();
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = getContrastOutline(color);
+    ctx.lineWidth = 1;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
+  }
+
+  private drawSwellArrow(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    direction: number,
+    height: number,
+    period: number
+  ): void {
+    const color = getWaveColor(height);
+    const arrowLength = 16;
+    const arrowWidth = 6;
+
+    // Direction is where swell comes FROM, arrow points where it goes TO
+    const angle = ((direction + 180) * Math.PI) / 180;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    // Draw swell arrow (same shape as waves for consistency)
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -arrowLength / 2);
+    ctx.lineTo(-arrowWidth / 2, arrowLength / 6);
+    ctx.lineTo(-arrowWidth / 4, arrowLength / 6);
+    ctx.lineTo(-arrowWidth / 4, arrowLength / 2);
+    ctx.lineTo(arrowWidth / 4, arrowLength / 2);
+    ctx.lineTo(arrowWidth / 4, arrowLength / 6);
+    ctx.lineTo(arrowWidth / 2, arrowLength / 6);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw height and period text
+    ctx.restore();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = getContrastOutline(color);
+    ctx.lineWidth = 1;
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const convertedHeight = this.heightConverter(height);
+    const text = `${convertedHeight.toFixed(1)} (${Math.round(period)}s)`;
+    ctx.strokeText(text, x, y + 10);
+    ctx.fillText(text, x, y + 10);
+  }
+
+  private drawCurrentArrow(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    direction: number,
+    velocity: number
+  ): void {
+    const color = getCurrentColor(velocity);
+    const arrowLength = 16;
+    const arrowWidth = 6;
+
+    // Current direction is where it flows TO (unlike wind/waves which is FROM)
+    const angle = (direction * Math.PI) / 180;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    // Draw current arrow
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -arrowLength / 2);
+    ctx.lineTo(-arrowWidth / 2, arrowLength / 6);
+    ctx.lineTo(-arrowWidth / 4, arrowLength / 6);
+    ctx.lineTo(-arrowWidth / 4, arrowLength / 2);
+    ctx.lineTo(arrowWidth / 4, arrowLength / 2);
+    ctx.lineTo(arrowWidth / 4, arrowLength / 6);
+    ctx.lineTo(arrowWidth / 2, arrowLength / 6);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw velocity text in knots (convert from m/s: 1 m/s ≈ 1.944 knots)
+    ctx.restore();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = getContrastOutline(color);
+    ctx.lineWidth = 1;
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const velocityKnots = velocity * 1.944;
+    const text = velocityKnots.toFixed(1);
     ctx.strokeText(text, x, y + 10);
     ctx.fillText(text, x, y + 10);
   }
@@ -305,15 +811,20 @@ class WeatherCanvasLayer extends L.Layer {
 export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
   enabled,
   forecastHour,
+  displayMode,
   onLoadingChange,
   onError,
 }) => {
   const map = useMap();
   const layerRef = useRef<WeatherCanvasLayer | null>(null);
   const dataPointsRef = useRef<DataPoint[]>([]);
+  const waterGridRef = useRef<WaterGridPoint[]>([]);
   const lastFetchKey = useRef<string>('');
+  const lastWaterGridKey = useRef<string>('');
+  const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const waterGridDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
-  const { convertWind } = useSettings();
+  const { convertWind, convertDepth, convertTemperature } = useSettings();
 
   // Fetch weather data for current bounds
   const fetchWeatherData = useCallback(async () => {
@@ -391,31 +902,141 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
       );
 
       const points = (response.data?.points || [])
-        .filter((p: WeatherGridPoint) => p.wind)
+        .filter((p: WeatherGridPoint) => p.wind || p.waves || p.swell || p.current || p.seaTemperature !== undefined)
         .map((p: WeatherGridPoint) => ({
           lat: p.location.lat,
           lon: p.location.lon,
-          wind: {
-            speed: p.wind!.speed,
-            direction: p.wind!.direction,
-            gusts: p.wind!.gusts,
-          },
+          wind: p.wind ? {
+            speed: p.wind.speed,
+            direction: p.wind.direction,
+            gusts: p.wind.gusts,
+          } : undefined,
+          waves: p.waves ? {
+            height: p.waves.height,
+            direction: p.waves.direction,
+            period: p.waves.period,
+          } : undefined,
+          swell: p.swell ? {
+            height: p.swell.height,
+            direction: p.swell.direction,
+            period: p.swell.period,
+          } : undefined,
+          current: p.current ? {
+            velocity: p.current.velocity,
+            direction: p.current.direction,
+          } : undefined,
+          seaTemperature: p.seaTemperature,
         }));
 
       dataPointsRef.current = points;
       layerRef.current?.setDataPoints(points);
 
+      // Check if we have data for the current mode
+      let hasDataForMode = false;
+      if (displayMode === 'wind') {
+        hasDataForMode = points.some(p => p.wind);
+      } else if (displayMode === 'waves') {
+        hasDataForMode = points.some(p => p.waves);
+      } else if (displayMode === 'swell') {
+        hasDataForMode = points.some(p => p.swell);
+      } else if (displayMode === 'current') {
+        hasDataForMode = points.some(p => p.current);
+      } else if (displayMode === 'water-temp') {
+        hasDataForMode = points.some(p => p.seaTemperature !== undefined);
+      }
+
       if (points.length === 0) {
         onError?.('No weather data available for this area');
+      } else if (!hasDataForMode) {
+        if (displayMode === 'waves') {
+          onError?.('No wave data available for this area (only available in marine areas)');
+        } else if (displayMode === 'swell') {
+          onError?.('No swell data available for this area (only available in marine areas)');
+        } else if (displayMode === 'current') {
+          onError?.('No current data available for this area (only available in marine areas)');
+        } else if (displayMode === 'water-temp') {
+          onError?.('No water temperature data available for this area (only available in marine areas)');
+        } else {
+          onError?.('No wind data available for this area');
+        }
       }
     } catch (error: any) {
       console.error('[WeatherOverlay] Fetch failed:', error);
-      onError?.(error.message || 'Failed to fetch weather');
+      // Provide more specific error messages
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        onError?.('Request timed out - server may be busy, try again');
+      } else if (error.response?.status === 429) {
+        onError?.('Rate limited - please wait a moment and try again');
+      } else if (error.response?.status === 503) {
+        onError?.('Weather service temporarily unavailable');
+      } else if (!navigator.onLine) {
+        onError?.('You appear to be offline');
+      } else {
+        onError?.('Failed to load weather data, try again');
+      }
     } finally {
       setIsLoading(false);
       onLoadingChange?.(false);
     }
-  }, [map, enabled, forecastHour, onLoadingChange, onError]);
+  }, [map, enabled, forecastHour, displayMode, onLoadingChange, onError]);
+
+  // Fetch water grid for marine data filtering (needed for waves, swell, current, and water-temp modes)
+  // Uses the exact same grid positions as arrow rendering
+  const fetchWaterGrid = useCallback(async () => {
+    const marineDisplayModes = ['waves', 'swell', 'current', 'water-temp'];
+    if (!enabled || !marineDisplayModes.includes(displayMode)) {
+      waterGridRef.current = [];
+      layerRef.current?.setWaterGrid([]);
+      return;
+    }
+
+    let bounds;
+    try {
+      bounds = map.getBounds();
+    } catch {
+      return;
+    }
+
+    // Calculate spacing exactly like the render function does
+    const latRange = bounds.getNorth() - bounds.getSouth();
+    const lonRange = bounds.getEast() - bounds.getWest();
+    const diagonal = Math.sqrt(latRange * latRange + lonRange * lonRange);
+    const spacing = diagonal / 15;
+
+    // Snap to grid boundaries - exactly like render function
+    const startLat = Math.floor(bounds.getSouth() / spacing) * spacing;
+    const endLat = Math.ceil(bounds.getNorth() / spacing) * spacing;
+    const startLon = Math.floor(bounds.getWest() / spacing) * spacing;
+    const endLon = Math.ceil(bounds.getEast() / spacing) * spacing;
+
+    // Create key based on the actual grid
+    const waterGridKey = `${startLat.toFixed(4)},${startLon.toFixed(4)},${endLat.toFixed(4)},${endLon.toFixed(4)},${spacing.toFixed(4)}`;
+
+    if (waterGridKey === lastWaterGridKey.current && waterGridRef.current.length > 0) return;
+    lastWaterGridKey.current = waterGridKey;
+
+    try {
+      const response = await navigationAPI.getWaterGrid(
+        startLat,
+        endLat,
+        startLon,
+        endLon,
+        spacing
+      );
+
+      const waterPoints: WaterGridPoint[] = (response.data?.grid || []).map((p) => ({
+        lat: p.lat,
+        lon: p.lon,
+        type: p.type,
+      }));
+
+      waterGridRef.current = waterPoints;
+      layerRef.current?.setWaterGrid(waterPoints);
+    } catch (error) {
+      console.error('[WeatherOverlay] Water grid fetch failed:', error);
+      // Continue without water filtering if fetch fails
+    }
+  }, [map, enabled, displayMode]);
 
   // Layer lifecycle
   useEffect(() => {
@@ -430,12 +1051,22 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     const layer = new WeatherCanvasLayer();
     layer.addTo(map);
     layer.setWindConverter(convertWind);
+    layer.setHeightConverter(convertDepth);
+    layer.setTempConverter(convertTemperature);
+    layer.setDisplayMode(displayMode);
     layerRef.current = layer;
 
     if (dataPointsRef.current.length > 0) {
       layer.setDataPoints(dataPointsRef.current);
     }
+    if (waterGridRef.current.length > 0) {
+      layer.setWaterGrid(waterGridRef.current);
+    }
     fetchWeatherData();
+    const marineDisplayModes = ['waves', 'swell', 'current', 'water-temp'];
+    if (marineDisplayModes.includes(displayMode)) {
+      fetchWaterGrid();
+    }
 
     return () => {
       if (layerRef.current) {
@@ -452,12 +1083,69 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     }
   }, [convertWind]);
 
+  // Update height converter when depth unit changes
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.setHeightConverter(convertDepth);
+    }
+  }, [convertDepth]);
+
+  // Update temperature converter when temperature unit changes
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.setTempConverter(convertTemperature);
+    }
+  }, [convertTemperature]);
+
+  // Update display mode when it changes
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.setDisplayMode(displayMode);
+    }
+    // Fetch water grid when switching to marine data modes
+    const marineDisplayModes = ['waves', 'swell', 'current', 'water-temp'];
+    if (marineDisplayModes.includes(displayMode)) {
+      fetchWaterGrid();
+    } else {
+      // Clear water grid when not in marine data mode
+      waterGridRef.current = [];
+      layerRef.current?.setWaterGrid([]);
+    }
+  }, [displayMode, fetchWaterGrid]);
+
   // Sync loading state with canvas layer
   useEffect(() => {
     if (layerRef.current) {
       layerRef.current.setLoading(isLoading);
     }
   }, [isLoading]);
+
+  // Debounced fetch functions to prevent rapid API calls when panning
+  const debouncedFetchWeather = useCallback(() => {
+    if (fetchDebounceRef.current) {
+      clearTimeout(fetchDebounceRef.current);
+    }
+    fetchDebounceRef.current = setTimeout(() => {
+      fetchWeatherData();
+    }, FETCH_DEBOUNCE_MS);
+  }, [fetchWeatherData]);
+
+  const debouncedFetchWaterGrid = useCallback(() => {
+    if (waterGridDebounceRef.current) {
+      clearTimeout(waterGridDebounceRef.current);
+    }
+    waterGridDebounceRef.current = setTimeout(() => {
+      fetchWaterGrid();
+    }, FETCH_DEBOUNCE_MS);
+  }, [fetchWaterGrid]);
+
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+      if (waterGridDebounceRef.current) clearTimeout(waterGridDebounceRef.current);
+    };
+  }, []);
 
   // Map events
   useMapEvents({
@@ -468,14 +1156,21 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
     },
     moveend: () => {
       if (enabled) {
-        fetchWeatherData();
+        // Use debounced fetch to avoid hammering the API when panning quickly
+        debouncedFetchWeather();
+        const marineDisplayModes = ['waves', 'swell', 'current', 'water-temp'];
+        if (marineDisplayModes.includes(displayMode)) {
+          debouncedFetchWaterGrid();
+        }
       }
     },
     zoomstart: () => {
-      // Hide arrows while zooming
+      // Hide arrows while zooming and cancel pending fetches
       if (enabled && layerRef.current) {
         layerRef.current.setVisible(false);
       }
+      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+      if (waterGridDebounceRef.current) clearTimeout(waterGridDebounceRef.current);
     },
     zoomend: () => {
       // Show and redraw after zoom completes
@@ -504,6 +1199,11 @@ export const WeatherOverlay: React.FC<WeatherOverlayProps> = ({
 export function useWeatherOverlay() {
   const [enabled, setEnabled] = React.useState(false);
   const [forecastHour, setForecastHour] = React.useState(0);
+  const [displayMode, setDisplayModeState] = React.useState<WeatherDisplayMode>(() => {
+    const saved = localStorage.getItem('weatherDisplayMode');
+    const validModes: WeatherDisplayMode[] = ['wind', 'waves', 'swell', 'current', 'water-temp'];
+    return validModes.includes(saved as WeatherDisplayMode) ? saved as WeatherDisplayMode : 'wind';
+  });
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -511,11 +1211,18 @@ export function useWeatherOverlay() {
     setEnabled((prev) => !prev);
   }, []);
 
+  const setDisplayMode = React.useCallback((mode: WeatherDisplayMode) => {
+    setDisplayModeState(mode);
+    localStorage.setItem('weatherDisplayMode', mode);
+  }, []);
+
   return {
     enabled,
     setEnabled,
     forecastHour,
     setForecastHour,
+    displayMode,
+    setDisplayMode,
     loading,
     setLoading,
     error,

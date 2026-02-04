@@ -15,12 +15,18 @@ export interface WaveData {
   period: number; // seconds
 }
 
+export interface CurrentData {
+  velocity: number; // m/s
+  direction: number; // degrees (direction current is flowing TO)
+}
+
 export interface WeatherPoint {
   timestamp: string; // ISO date
   location: { lat: number; lon: number };
   wind: WindData;
   waves?: WaveData;
   swell?: WaveData;
+  current?: CurrentData; // ocean current
   pressure?: number; // hPa
   seaTemperature?: number; // celsius
 }
@@ -110,6 +116,9 @@ export interface OpenMeteoMarineResponse {
     swell_wave_height?: string;
     swell_wave_direction?: string;
     swell_wave_period?: string;
+    sea_surface_temperature?: string;
+    ocean_current_velocity?: string;
+    ocean_current_direction?: string;
   };
   hourly: {
     time: string[];
@@ -119,6 +128,9 @@ export interface OpenMeteoMarineResponse {
     swell_wave_height?: (number | null)[];
     swell_wave_direction?: (number | null)[];
     swell_wave_period?: (number | null)[];
+    sea_surface_temperature?: (number | null)[];
+    ocean_current_velocity?: (number | null)[];
+    ocean_current_direction?: (number | null)[];
   };
 }
 

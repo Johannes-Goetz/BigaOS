@@ -198,22 +198,18 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
             background: weatherPanelOpen ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
           }}
-          title="Wind forecast settings"
+          title="Marine forecast settings"
         >
           <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={weatherOverlayEnabled ? '#4fc3f7' : 'currentColor'}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            width="22"
+            height="22"
+            viewBox="0 -960 960 960"
+            fill={weatherOverlayEnabled ? '#4fc3f7' : 'currentColor'}
           >
-            {/* Wind icon */}
-            <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+            {/* Google Material cloud icon */}
+            <path d="M251-160q-88 0-149.5-61.5T40-371q0-78 50-137t127-71q20-97 94-158.5T482-799q112 0 189 81.5T748-522v24q72-2 122 46.5T920-329q0 69-50 119t-119 50H251Zm0-80h500q36 0 62-26t26-63q0-36-26-62t-63-26h-70v-56q0-83-56.5-141T480-722q-83 0-141.5 58.5T280-522h-23q-56 0-96.5 40T120-386q0 56 40.5 96t90.5 40Zm229-260Z" />
           </svg>
-          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>WIND</span>
+          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>WEATHER</span>
         </button>
       )}
 

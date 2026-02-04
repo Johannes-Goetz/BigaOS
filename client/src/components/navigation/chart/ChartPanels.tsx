@@ -1,7 +1,7 @@
 import React from 'react';
 import { SearchResult } from '../../../services/geocoding';
 import { CustomMarker, markerIcons } from './map-icons';
-import { useSettings, windConversions } from '../../../context/SettingsContext';
+import { useSettings, windConversions, depthConversions, temperatureConversions } from '../../../context/SettingsContext';
 
 interface DepthSettingsPanelProps {
   sidebarWidth: number;
@@ -119,9 +119,11 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
         </button>
       </div>
 
-      {/* Click outside to close */}
+      {/* Click outside to close (only on single click, not double-click zoom) */}
       <div
-        onClick={onClose}
+        onClick={(e) => {
+          if (e.detail === 1) onClose();
+        }}
         style={{
           position: 'absolute',
           top: 0,
@@ -361,9 +363,11 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
         </button>
       </div>
 
-      {/* Click outside to close */}
+      {/* Click outside to close (only on single click, not double-click zoom) */}
       <div
-        onClick={onClose}
+        onClick={(e) => {
+          if (e.detail === 1) onClose();
+        }}
         style={{
           position: 'absolute',
           top: 0,
@@ -378,14 +382,18 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
 };
 
 // Weather forecast panel
+type WeatherDisplayMode = 'wind' | 'waves' | 'swell' | 'current' | 'water-temp';
+
 interface WeatherPanelProps {
   sidebarWidth: number;
   enabled: boolean;
   forecastHour: number;
+  displayMode: WeatherDisplayMode;
   loading?: boolean;
   error?: string | null;
   onToggleEnabled: () => void;
   onSetForecastHour: (hour: number) => void;
+  onSetDisplayMode: (mode: WeatherDisplayMode) => void;
   onClose: () => void;
 }
 
@@ -407,14 +415,58 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
   sidebarWidth,
   enabled,
   forecastHour,
+  displayMode,
   loading = false,
   error = null,
   onToggleEnabled,
   onSetForecastHour,
+  onSetDisplayMode,
   onClose,
 }) => {
   const settingsPanelWidth = 280;
-  const { windUnit } = useSettings();
+  const { windUnit, depthUnit, temperatureUnit, timeFormat, dateFormat } = useSettings();
+
+  // Calculate forecast time (rounded to actual forecast hours)
+  const getForecastTime = () => {
+    if (!enabled) return null;
+    const now = new Date();
+    // Round down to current hour (forecast data is hourly)
+    const currentHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+    const forecastDate = new Date(currentHour.getTime() + forecastHour * 60 * 60 * 1000);
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const forecastDay = new Date(forecastDate.getFullYear(), forecastDate.getMonth(), forecastDate.getDate());
+    const dayDiff = Math.round((forecastDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+
+    const timeStr = forecastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
+
+    if (dayDiff === 0) {
+      return `Today ${timeStr}`;
+    } else if (dayDiff === 1) {
+      return `Tomorrow ${timeStr}`;
+    } else {
+      // Format date based on user's date format preference
+      const day = forecastDate.getDate().toString().padStart(2, '0');
+      const month = (forecastDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = forecastDate.getFullYear();
+      const weekday = forecastDate.toLocaleDateString([], { weekday: 'short' });
+
+      let dateStr: string;
+      switch (dateFormat) {
+        case 'MM/DD/YYYY':
+          dateStr = `${weekday} ${month}/${day}`;
+          break;
+        case 'YYYY-MM-DD':
+          dateStr = `${weekday} ${month}-${day}`;
+          break;
+        case 'DD/MM/YYYY':
+        default:
+          dateStr = `${weekday} ${day}/${month}`;
+          break;
+      }
+      return `${dateStr} ${timeStr}`;
+    }
+  };
 
   const handleSelect = (hour: number) => {
     if (hour === -1) {
@@ -463,9 +515,119 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
         }}
       >
-        <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.75rem' }}>
-          WIND FORECAST
+        <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>
+          MARINE FORECAST
         </div>
+
+        {/* Display mode selector - two rows */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.4rem',
+          marginBottom: '0.75rem',
+        }}>
+          {/* First row: Wind, Waves, Swell */}
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={() => onSetDisplayMode('wind')}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                borderRadius: '3px',
+                border: 'none',
+                background: displayMode === 'wind' ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: displayMode === 'wind' ? 'bold' : 'normal',
+              }}
+            >
+              Wind
+            </button>
+            <button
+              onClick={() => onSetDisplayMode('waves')}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                borderRadius: '3px',
+                border: 'none',
+                background: displayMode === 'waves' ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: displayMode === 'waves' ? 'bold' : 'normal',
+              }}
+            >
+              Waves
+            </button>
+            <button
+              onClick={() => onSetDisplayMode('swell')}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                borderRadius: '3px',
+                border: 'none',
+                background: displayMode === 'swell' ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: displayMode === 'swell' ? 'bold' : 'normal',
+              }}
+            >
+              Swell
+            </button>
+          </div>
+          {/* Second row: Current, Sea Temp */}
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={() => onSetDisplayMode('current')}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                borderRadius: '3px',
+                border: 'none',
+                background: displayMode === 'current' ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: displayMode === 'current' ? 'bold' : 'normal',
+              }}
+            >
+              Current
+            </button>
+            <button
+              onClick={() => onSetDisplayMode('water-temp')}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                borderRadius: '3px',
+                border: 'none',
+                background: displayMode === 'water-temp' ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: displayMode === 'water-temp' ? 'bold' : 'normal',
+              }}
+            >
+              Sea Temp
+            </button>
+          </div>
+        </div>
+
+        {/* Forecast time indicator */}
+        {enabled && (
+          <div style={{
+            marginBottom: '0.75rem',
+            padding: '0.5rem 0.6rem',
+            background: 'rgba(79, 195, 247, 0.1)',
+            borderRadius: '4px',
+            fontSize: '0.85rem',
+            color: '#4FC3F7',
+            textAlign: 'center',
+          }}>
+            {getForecastTime()}
+          </div>
+        )}
 
         {/* Status indicator */}
         {loading && (
@@ -537,21 +699,197 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           paddingTop: '0.75rem',
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         }}>
-          <div style={{ fontSize: '0.6rem', opacity: 0.5, marginBottom: '0.4rem' }}>
-            Wind speed ({unitLabel})
-          </div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: '0.6rem',
-            color: 'rgba(255, 255, 255, 0.7)',
-          }}>
-            <span><span style={{ color: '#4FC3F7' }}>●</span> {ranges[0]}</span>
-            <span><span style={{ color: '#4CAF50' }}>●</span> {ranges[1]}</span>
-            <span><span style={{ color: '#FFEB3B' }}>●</span> {ranges[2]}</span>
-            <span><span style={{ color: '#FF9800' }}>●</span> {ranges[3]}</span>
-            <span><span style={{ color: '#F44336' }}>●</span> {ranges[4]}</span>
-          </div>
+          {displayMode === 'wind' ? (
+            <>
+              <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
+                Wind speed ({unitLabel})
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.75rem',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4FC3F7' }}></span>
+                  {ranges[0]}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4CAF50' }}></span>
+                  {ranges[1]}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FFEB3B' }}></span>
+                  {ranges[2]}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FF9800' }}></span>
+                  {ranges[3]}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F44336' }}></span>
+                  {ranges[4]}
+                </span>
+              </div>
+            </>
+          ) : displayMode === 'waves' || displayMode === 'swell' ? (
+            <>
+              <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
+                {displayMode === 'swell' ? 'Swell' : 'Wave'} height ({depthConversions[depthUnit].label}) + period (s)
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.75rem',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}>
+                {depthUnit === 'm' ? (
+                  <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4FC3F7' }}></span>
+                      &lt;0.5
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4CAF50' }}></span>
+                      0.5-1
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FFEB3B' }}></span>
+                      1-2
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FF9800' }}></span>
+                      2-3
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F44336' }}></span>
+                      3+
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4FC3F7' }}></span>
+                      &lt;2
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4CAF50' }}></span>
+                      2-3
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FFEB3B' }}></span>
+                      3-7
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FF9800' }}></span>
+                      7-10
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F44336' }}></span>
+                      10+
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          ) : displayMode === 'current' ? (
+            <>
+              <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
+                Current speed (kt)
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.75rem',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ADD8E6' }}></span>
+                  &lt;0.5
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#8A2BE2' }}></span>
+                  0.5-1
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9400D3' }}></span>
+                  1-2
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FF1493' }}></span>
+                  2-3
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#8B0000' }}></span>
+                  3+
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
+                Sea temperature ({temperatureConversions[temperatureUnit].label})
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.75rem',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}>
+                {temperatureUnit === '°C' ? (
+                  <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#6495ED' }}></span>
+                      &lt;10
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#00D2FF' }}></span>
+                      10-15
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#32CD32' }}></span>
+                      15-20
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FFD700' }}></span>
+                      20-25
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC143C' }}></span>
+                      25+
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#6495ED' }}></span>
+                      &lt;50
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#00D2FF' }}></span>
+                      50-60
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#32CD32' }}></span>
+                      60-70
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FFD700' }}></span>
+                      70-80
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC143C' }}></span>
+                      80+
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Attribution */}
@@ -573,9 +911,11 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
         `}</style>
       </div>
 
-      {/* Click outside to close */}
+      {/* Click outside to close (only on single click, not double-click zoom) */}
       <div
-        onClick={onClose}
+        onClick={(e) => {
+          if (e.detail === 1) onClose();
+        }}
         style={{
           position: 'absolute',
           top: 0,
@@ -873,9 +1213,11 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         </div>
       </div>
 
-      {/* Click outside to close */}
+      {/* Click outside to close (only on single click, not double-click zoom) */}
       <div
-        onClick={onClose}
+        onClick={(e) => {
+          if (e.detail === 1) onClose();
+        }}
         style={{
           position: 'absolute',
           top: 0,

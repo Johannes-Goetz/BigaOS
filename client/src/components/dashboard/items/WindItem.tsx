@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSettings, windConversions } from '../../../context/SettingsContext';
 import { theme } from '../../../styles/theme';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface WindItemProps {
   speedApparent: number; // Speed in knots
@@ -8,14 +9,15 @@ interface WindItemProps {
 }
 
 export const WindItem: React.FC<WindItemProps> = ({ speedApparent, angleApparent }) => {
+  const { t } = useLanguage();
   const { windUnit, convertWind } = useSettings();
   const convertedSpeed = convertWind(speedApparent);
 
   const getWindDirection = (angle: number): string => {
-    if (angle < 45 || angle > 315) return 'HEAD';
-    if (angle >= 45 && angle <= 135) return 'STBD';
-    if (angle > 135 && angle < 225) return 'STERN';
-    return 'PORT';
+    if (angle < 45 || angle > 315) return t('dashboard_item.head');
+    if (angle >= 45 && angle <= 135) return t('dashboard_item.stbd');
+    if (angle > 135 && angle < 225) return t('dashboard_item.stern');
+    return t('dashboard_item.port');
   };
 
   // For Beaufort, show as integer; for others show one decimal
@@ -39,7 +41,7 @@ export const WindItem: React.FC<WindItemProps> = ({ speedApparent, angleApparent
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
       }}>
-        Wind
+        {t('dashboard.wind')}
       </div>
       <div style={{
         fontSize: theme.fontSize['2xl'],
@@ -51,7 +53,7 @@ export const WindItem: React.FC<WindItemProps> = ({ speedApparent, angleApparent
         {displayValue}
       </div>
       <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>
-        {windConversions[windUnit].label} AWA
+        {windConversions[windUnit].label} {t('dashboard_item.awa')}
       </div>
       <div style={{
         display: 'flex',

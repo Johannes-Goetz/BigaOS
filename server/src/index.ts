@@ -9,6 +9,7 @@ import { dbWorker } from './services/database-worker.service';
 import { waterDetectionService } from './services/water-detection.service';
 import { routeWorkerService } from './services/route-worker.service';
 import { DataController } from './services/data.controller';
+import { initializeLanguages } from './i18n/lang';
 
 // Load environment variables
 dotenv.config();
@@ -41,6 +42,9 @@ async function startServer() {
   routeWorkerService.initialize().catch(error => {
     console.error('Failed to initialize route worker:', error);
   });
+
+  // Initialize i18n translations
+  initializeLanguages();
 
   const app = express();
   const PORT = parseInt(process.env.PORT || '3000', 10);

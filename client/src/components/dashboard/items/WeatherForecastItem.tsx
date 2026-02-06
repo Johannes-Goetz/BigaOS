@@ -4,6 +4,7 @@ import { useSettings } from '../../../context/SettingsContext';
 import { theme } from '../../../styles/theme';
 import { wsService } from '../../../services/websocket';
 import { getWindColor, formatWindDirection } from '../../../utils/weather.utils';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface WeatherForecastItemProps {
   latitude: number;
@@ -14,6 +15,7 @@ export const WeatherForecastItem: React.FC<WeatherForecastItemProps> = ({
   latitude,
   longitude,
 }) => {
+  const { t } = useLanguage();
   const [forecast, setForecast] = useState<WeatherForecastResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export const WeatherForecastItem: React.FC<WeatherForecastItemProps> = ({
         setForecast(response.data);
       } catch (err) {
         console.error('Failed to fetch weather:', err);
-        setError('Failed to load');
+        setError(t('dashboard_item.failed_load'));
       } finally {
         setLoading(false);
       }
@@ -65,7 +67,7 @@ export const WeatherForecastItem: React.FC<WeatherForecastItemProps> = ({
         padding: theme.space.md,
         color: theme.colors.textMuted,
       }}>
-        <div style={{ fontSize: theme.fontSize.sm }}>Loading weather...</div>
+        <div style={{ fontSize: theme.fontSize.sm }}>{t('dashboard_item.loading_weather')}</div>
       </div>
     );
   }
@@ -84,7 +86,7 @@ export const WeatherForecastItem: React.FC<WeatherForecastItemProps> = ({
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <div style={{ fontSize: theme.fontSize.sm, marginTop: theme.space.sm }}>{error || 'No data'}</div>
+        <div style={{ fontSize: theme.fontSize.sm, marginTop: theme.space.sm }}>{error || t('dashboard_item.no_data')}</div>
       </div>
     );
   }
@@ -110,7 +112,7 @@ export const WeatherForecastItem: React.FC<WeatherForecastItemProps> = ({
         letterSpacing: '0.1em',
         textAlign: 'center',
       }}>
-        Weather
+        {t('dashboard.weather')}
       </div>
 
       {/* Current conditions */}
@@ -171,7 +173,7 @@ export const WeatherForecastItem: React.FC<WeatherForecastItemProps> = ({
         }}>
           {current.waves && (
             <div>
-              <span style={{ color: '#4FC3F7' }}>{current.waves.height.toFixed(1)}m</span> waves
+              <span style={{ color: '#4FC3F7' }}>{current.waves.height.toFixed(1)}m</span> {t('dashboard_item.waves')}
             </div>
           )}
           {current.pressure && (

@@ -2,31 +2,32 @@ import React, { useState } from 'react';
 import { theme } from '../../styles/theme';
 import { useSettings, windConversions, speedConversions, depthConversions, temperatureConversions } from '../../context/SettingsContext';
 import { useAlerts } from '../../context/AlertContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   AlertDefinition,
-  DATA_SOURCE_LABELS,
   OPERATOR_LABELS,
   getSeverityColor,
   isWeatherDataSource,
   getUnitForDataSource,
+  getDataSourceLabel,
 } from '../../types/alerts';
 import { AlertEditDialog } from './AlertEditDialog';
 
 export const AlertsTab: React.FC = () => {
   const {
     alertSettings,
-    setAlertSettings,
     windUnit,
     speedUnit,
     depthUnit,
     temperatureUnit,
   } = useSettings();
-  const { toggleAlert, deleteAlert, createAlert, updateAlert } = useAlerts();
+  const { toggleAlert, deleteAlert, createAlert, updateAlert, setGlobalEnabled } = useAlerts();
+  const { t } = useLanguage();
   const [editingAlert, setEditingAlert] = useState<AlertDefinition | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const formatCondition = (alert: AlertDefinition) => {
-    const sourceLabel = DATA_SOURCE_LABELS[alert.dataSource];
+    const sourceLabel = getDataSourceLabel(alert.dataSource, t);
     const unit = getUnitForDataSource(
       alert.dataSource,
       windConversions[windUnit].label,
@@ -45,10 +46,7 @@ export const AlertsTab: React.FC = () => {
   };
 
   const handleToggleGlobal = (enabled: boolean) => {
-    setAlertSettings({
-      ...alertSettings,
-      globalEnabled: enabled,
-    });
+    setGlobalEnabled(enabled);
   };
 
   const renderAlertItem = (alert: AlertDefinition) => {
@@ -155,7 +153,7 @@ export const AlertsTab: React.FC = () => {
             e.currentTarget.style.borderColor = theme.colors.border;
           }}
         >
-          Edit
+          {t('common.edit')}
         </button>
 
         {/* Delete Button */}
@@ -221,7 +219,7 @@ export const AlertsTab: React.FC = () => {
               marginBottom: theme.space.xs,
             }}
           >
-            Enable Alerts
+            {t('alerts.enable_alerts')}
           </div>
           <div
             style={{
@@ -229,7 +227,7 @@ export const AlertsTab: React.FC = () => {
               color: theme.colors.textMuted,
             }}
           >
-            Master toggle for all alert notifications
+            {t('alerts.master_toggle')}
           </div>
         </div>
         <label
@@ -296,7 +294,7 @@ export const AlertsTab: React.FC = () => {
               marginBottom: theme.space.md,
             }}
           >
-            No alerts configured
+            {t('alerts.no_alerts')}
           </div>
         )}
       </div>
@@ -341,7 +339,7 @@ export const AlertsTab: React.FC = () => {
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        Add Alert
+        {t('alerts.add_alert')}
       </button>
 
       {/* Edit Dialog */}

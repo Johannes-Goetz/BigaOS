@@ -1,0 +1,19 @@
+# BigaOS Server - English Translation File
+
+# Alert messages
+alert.shallow_water=Shallow water! Depth {displayDepth} below {displayThreshold}
+alert.anchor_dragging=Anchor dragging! +{overDistance}m outside radius
+alert.depth_alarm=Depth Alarm
+alert.anchor_alarm=Anchor Alarm
+
+# Premade alert names
+alert.premade.wind_alert=Wind Alert
+alert.premade.high_wind_warning=High Wind Warning
+alert.premade.low_battery=Low Battery
+alert.premade.high_wave_alert=High Wave Alert
+
+# Premade alert messages
+alert.premade.wind_alert_msg=Wind forecast {condition} {threshold} (max: {value} in next hour)
+alert.premade.high_wind_msg=Strong winds ({value}) forecast in next 3 hours
+alert.premade.low_battery_msg=Battery voltage low: {value}
+alert.premade.high_wave_msg=Waves forecast {condition} {threshold} (max: {value} in next 3 hours)

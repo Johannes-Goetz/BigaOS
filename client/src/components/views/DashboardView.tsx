@@ -7,6 +7,7 @@ import { DepthGauge } from '../widgets/DepthGauge';
 import { SpeedLog } from '../widgets/SpeedLog';
 import { Compass } from '../widgets/Compass';
 import { BatteryStatus } from '../widgets/BatteryStatus';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface DashboardViewProps {
   state: BoatState;
@@ -14,6 +15,8 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ state, sensorData }) => {
+  const { t } = useLanguage();
+
   // Render state-specific view
   if (state === BoatState.ANCHORED) {
     return <AnchoredView sensorData={sensorData} />;
@@ -32,12 +35,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ state, sensorData 
     <div>
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ marginBottom: '0.5rem' }}>
-          {state === BoatState.IN_MARINA ? 'Marina Status' : 'Drifting'}
+          {state === BoatState.IN_MARINA ? t('state.marina_status') : t('state.drifting')}
         </h2>
         <p style={{ opacity: 0.7 }}>
           {state === BoatState.IN_MARINA
-            ? 'Boat is securely moored in marina'
-            : 'Boat is drifting - consider anchoring or starting motor'}
+            ? t('state.moored_message')
+            : t('state.drifting_message')}
         </p>
       </div>
 

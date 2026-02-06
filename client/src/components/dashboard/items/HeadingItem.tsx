@@ -1,11 +1,13 @@
 import React from 'react';
 import { theme } from '../../../styles/theme';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface HeadingItemProps {
   heading: number;
 }
 
 export const HeadingItem: React.FC<HeadingItemProps> = ({ heading }) => {
+  const { t } = useLanguage();
   const getCardinalDirection = (deg: number): string => {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     const index = Math.round(deg / 45) % 8;
@@ -27,7 +29,7 @@ export const HeadingItem: React.FC<HeadingItemProps> = ({ heading }) => {
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
       }}>
-        Heading
+        {t('dashboard_item.hdg')}
       </div>
       <div style={{
         fontSize: theme.fontSize['3xl'],

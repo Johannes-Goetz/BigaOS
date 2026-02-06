@@ -16,6 +16,7 @@ import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { AlertProvider } from './context/AlertContext';
 import { AlertContainer } from './components/alerts';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { wsService } from './services/websocket';
 import { sensorAPI } from './services/api';
 import './styles/globals.css';
@@ -117,6 +118,10 @@ function AppContent() {
     navigate(view);
   };
 
+  // Translation hook - safe to use here since LanguageProvider wraps SettingsProvider
+  const langContext = useLanguage();
+  const t = langContext.t;
+
   if (loading || !sensorData) {
     return (
       <div style={{
@@ -127,7 +132,7 @@ function AppContent() {
         background: '#0a1929',
         color: '#e0e0e0',
       }}>
-        <div style={{ fontSize: '1.5rem' }}>Loading...</div>
+        <div style={{ fontSize: '1.5rem' }}>{t('common.loading')}</div>
       </div>
     );
   }
@@ -150,7 +155,7 @@ function AppContent() {
         borderRadius: '3px',
         opacity: 0.8,
       }}>
-        DEMO
+        {t('app.demo')}
       </div>
     );
   };
@@ -173,7 +178,7 @@ function AppContent() {
           borderRadius: '3px',
           animation: 'fadeOut 3s ease-in-out forwards',
         }}>
-          ONLINE
+          {t('app.online')}
           <style>
             {`
               @keyframes fadeOut {
@@ -203,7 +208,7 @@ function AppContent() {
           borderRadius: '3px',
           opacity: 0.8,
         }}>
-          OFFLINE
+          {t('app.offline')}
         </div>
       );
     }
@@ -240,7 +245,7 @@ function AppContent() {
           background: '#fff',
           animation: 'blink 1s ease-in-out infinite',
         }} />
-        <span>Server unreachable - Reconnecting...</span>
+        <span>{t('app.server_unreachable')}</span>
         <style>
           {`
             @keyframes blink {
@@ -376,18 +381,33 @@ function AppContent() {
   );
 }
 
+// Bridge component to sync language setting with LanguageContext
+function LanguageSyncBridge() {
+  const { language } = useSettings();
+  const { setLanguage } = useLanguage();
+
+  useEffect(() => {
+    setLanguage(language);
+  }, [language, setLanguage]);
+
+  return null;
+}
+
 // Main App component with providers
 function App() {
   return (
     <NavigationProvider>
-      <SettingsProvider>
-        <AlertProvider>
-          <ConfirmDialogProvider>
-            <AppContent />
-            <AlertContainer />
-          </ConfirmDialogProvider>
-        </AlertProvider>
-      </SettingsProvider>
+      <LanguageProvider>
+        <SettingsProvider>
+          <LanguageSyncBridge />
+          <AlertProvider>
+            <ConfirmDialogProvider>
+              <AppContent />
+              <AlertContainer />
+            </ConfirmDialogProvider>
+          </AlertProvider>
+        </SettingsProvider>
+      </LanguageProvider>
     </NavigationProvider>
   );
 }

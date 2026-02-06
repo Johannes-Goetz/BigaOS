@@ -1,11 +1,13 @@
 import React from 'react';
 import { theme } from '../../../styles/theme';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface COGItemProps {
   cog: number;
 }
 
 export const COGItem: React.FC<COGItemProps> = ({ cog }) => {
+  const { t } = useLanguage();
   const getCardinalDirection = (deg: number): string => {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     const index = Math.round(deg / 45) % 8;
@@ -27,7 +29,7 @@ export const COGItem: React.FC<COGItemProps> = ({ cog }) => {
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
       }}>
-        COG
+        {t('dashboard_item.cog')}
       </div>
       <div style={{
         fontSize: theme.fontSize['3xl'],

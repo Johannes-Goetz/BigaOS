@@ -1,12 +1,14 @@
 import React from 'react';
 import { useSettings, speedConversions } from '../../../context/SettingsContext';
 import { theme } from '../../../styles/theme';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface SpeedItemProps {
   speed: number; // Speed in knots
 }
 
 export const SpeedItem: React.FC<SpeedItemProps> = ({ speed }) => {
+  const { t } = useLanguage();
   const { speedUnit, convertSpeed } = useSettings();
   const convertedSpeed = convertSpeed(speed);
 
@@ -25,7 +27,7 @@ export const SpeedItem: React.FC<SpeedItemProps> = ({ speed }) => {
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
       }}>
-        Speed
+        {t('dashboard.speed')}
       </div>
       <div style={{
         fontSize: theme.fontSize['3xl'],

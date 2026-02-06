@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSettings, depthConversions } from '../../context/SettingsContext';
 import { TimeSeriesChart, TimeSeriesDataPoint } from '../charts';
 import { sensorAPI } from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface DepthViewProps {
   depth: number; // Current depth in meters
@@ -27,6 +28,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
     isDepthAlarmTriggered,
     convertDepth,
   } = useSettings();
+  const { t } = useLanguage();
 
   const [timeframe, setTimeframe] = useState<TimeframeOption>('15m');
   const [historyData, setHistoryData] = useState<TimeSeriesDataPoint[]>([]);
@@ -123,7 +125,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </button>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>Depth</h1>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{t('depth.depth')}</h1>
       </div>
 
       {/* Main depth display */}
@@ -172,7 +174,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
           }}>
-            Depth History
+            {t('depth.depth_history')}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {(Object.keys(TIMEFRAMES) as TimeframeOption[]).map((tf) => (
@@ -211,7 +213,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
               opacity: 0.5,
               fontSize: '0.9rem',
             }}>
-              Loading history...
+              {t('common.loading_history')}
             </div>
           )}
           <TimeSeriesChart
@@ -244,7 +246,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
           }}>
-            Depth Alarm
+            {t('depth.depth_alarm')}
           </div>
           {depthAlarm !== null && (
             <button
@@ -259,7 +261,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
                 cursor: 'pointer',
               }}
             >
-              Clear Alarm
+              {t('depth.clear_alarm')}
             </button>
           )}
         </div>
@@ -311,7 +313,7 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
                 </>
               )}
             </svg>
-            <span>Sound Alarm</span>
+            <span>{t('depth.sound_alarm')}</span>
           </div>
           <button
             onClick={() => setSoundAlarmEnabled(!soundAlarmEnabled)}

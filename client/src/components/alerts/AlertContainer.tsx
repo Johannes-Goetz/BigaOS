@@ -8,14 +8,10 @@ import { useSettings } from '../../context/SettingsContext';
 export const AlertContainer: React.FC = () => {
   const { alertSettings } = useSettings();
   const { notifications, dismissAlert, snoozeAlert, clearNotification } = useAlerts();
-
   // Track repeating alarms for critical alerts
   const criticalAlarmsRef = useRef<Map<string, () => void>>(new Map());
   // Track which notifications have played their initial sound
   const playedSoundsRef = useRef<Set<string>>(new Set());
-
-  // Don't render if alerts are disabled globally
-  if (!alertSettings.globalEnabled) return null;
 
   // Handle dismiss based on notification source
   const handleDismiss = (notification: Notification) => {
@@ -111,6 +107,9 @@ export const AlertContainer: React.FC = () => {
       criticalAlarmsRef.current.clear();
     };
   }, []);
+
+  // Don't render if alerts are disabled globally
+  if (!alertSettings.globalEnabled) return null;
 
   if (notifications.length === 0) return null;
 

@@ -1,0 +1,555 @@
+# BigaOS Deutsche Übersetzungsdatei
+# Format: key=Wert
+# Zeilen die mit # beginnen sind Kommentare
+
+# ==================== Allgemein ====================
+common.loading=Laden...
+common.back=Zurück
+common.cancel=Abbrechen
+common.save=Speichern
+common.delete=Löschen
+common.edit=Bearbeiten
+common.close=Schließen
+common.on=An
+common.off=Aus
+common.yes=Ja
+common.no=Nein
+common.reset=Zurücksetzen
+common.apply=Anwenden
+common.add=Hinzufügen
+common.unknown=Unbekannt
+common.error=Fehler
+common.today=Heute
+common.tomorrow=Morgen
+common.loading_history=Verlauf laden...
+common.no_data=Keine Daten
+common.starting=Starten...
+
+# ==================== App ====================
+app.demo=DEMO
+app.online=ONLINE
+app.offline=OFFLINE
+app.server_unreachable=Server nicht erreichbar - Verbindung wird hergestellt...
+app.version=BigaOS v1.0
+
+# ==================== Sprache ====================
+language.label=Sprache
+language.description=Wählen Sie Ihre bevorzugte Sprache
+
+# ==================== Einstellungen Tabs ====================
+settings.general=Allgemein
+settings.vessel=Mein Schiff
+settings.units=Einheiten
+settings.downloads=Navigationsdaten
+settings.alerts=Alarme
+settings.offline_maps=Offline-Karten
+settings.advanced=Erweitert
+settings.home=Startseite
+settings.demo_mode=Demo-Modus
+settings.demo_mode_desc=Sensordaten für Tests simulieren
+
+# ==================== Schiff ====================
+vessel.name=Schiffsname
+vessel.name_placeholder=Name Ihres Schiffes eingeben...
+vessel.identification=Identifikation
+vessel.registration_no=Registrierungsnr.
+vessel.registration_placeholder=z.B., 123456-A
+vessel.call_sign=Rufzeichen
+vessel.call_sign_placeholder=z.B., DA1234
+vessel.mmsi=MMSI
+vessel.mmsi_placeholder=9-stellige Nummer
+vessel.home_port=Heimathafen
+vessel.home_port_placeholder=z.B., Hamburg
+vessel.flag=Flagge
+vessel.flag_placeholder=z.B., Deutschland
+vessel.dimensions=Abmessungen
+vessel.length_loa=Länge (LÜA)
+vessel.waterline_length=Wasserlinienlänge
+vessel.beam=Breite
+vessel.draft=Tiefgang
+vessel.freeboard=Freibord
+vessel.freeboard_desc=Höhe von Wasserlinie bis Deck
+vessel.displacement=Verdrängung
+vessel.chain=Kette
+vessel.total_chain=Gesamte Kette
+vessel.chain_diameter=Kettendurchmesser
+vessel.chain_type=Kettentyp
+vessel.galvanized=Verzinkt
+vessel.stainless_steel=Edelstahl
+vessel.why_matters=Warum das wichtig ist: Die Abmessungen und Kettenspezifikationen Ihres Schiffes helfen bei der Berechnung der empfohlenen Ankerkettenlänge für sicheres Ankern. Schwerere Schiffe und stärkere Winde erfordern mehr Kette.
+
+# ==================== Einheiten ====================
+units.speed=Geschwindigkeit
+units.wind=Wind
+units.depth=Tiefe
+units.distance=Entfernung
+units.weight=Gewicht
+units.temperature=Temperatur
+units.time_format=Zeitformat
+units.date_format=Datumsformat
+units.change_note=Das Ändern der Einheiten aktualisiert alle Anzeigen in der Anwendung. Der Tiefenalarm wird beim Ändern der Tiefeneinheit zurückgesetzt.
+
+# ==================== Dashboard ====================
+dashboard.add_widget=Widget hinzufügen
+dashboard.select_columns=Spalten wählen
+dashboard.select_rows=Zeilen wählen
+dashboard.width=Breite
+dashboard.height=Höhe
+dashboard.delete_widget=Widget löschen
+dashboard.speed=Geschwindigkeit
+dashboard.heading=Kurs
+dashboard.depth=Tiefe
+dashboard.wind=Wind
+dashboard.position=Position
+dashboard.battery=Batterie
+dashboard.cog=COG
+dashboard.chart=Karte
+dashboard.weather=Wetter
+
+# ==================== Dashboard Items ====================
+dashboard_item.battery=Batterie
+dashboard_item.hdg=HDG
+dashboard_item.cog=COG
+dashboard_item.awa=AWA
+dashboard_item.head=BUG
+dashboard_item.stbd=STBD
+dashboard_item.stern=HECK
+dashboard_item.port=BB
+dashboard_item.loading_weather=Wetter laden...
+dashboard_item.no_data=Keine Daten
+dashboard_item.failed_load=Laden fehlgeschlagen
+dashboard_item.waves=Wellen
+dashboard_item.open_meteo_attribution=Open-Meteo.com (CC-BY 4.0)
+dashboard_item.pan_and_zoom=Verschieben & Zoomen
+
+# ==================== Wind ====================
+wind.instrument=Windinstrument
+wind.apparent_wind=SCHEINBARER WIND
+wind.true_wind=WAHRER WIND
+wind.apparent=Scheinbar
+wind.true=Wahr
+wind.dead_ahead=Voraus
+wind.close_reach_stbd=Am Wind (Stb)
+wind.beam_reach_stbd=Halbwind (Stb)
+wind.broad_reach_stbd=Raumschots (Stb)
+wind.running_stbd=Vor dem Wind (Stb)
+wind.running_port=Vor dem Wind (Bb)
+wind.broad_reach_port=Raumschots (Bb)
+wind.beam_reach_port=Halbwind (Bb)
+wind.close_reach_port=Am Wind (Bb)
+wind.beaufort=Beaufort:
+wind.force=Stärke
+wind.vmg=VMG
+wind.point_of_sail=Kurssegel
+wind.close_hauled=Hart am Wind
+
+# ==================== Beaufort ====================
+beaufort.0=Windstille
+beaufort.1=Leiser Zug
+beaufort.2=Leichte Brise
+beaufort.3=Schwache Brise
+beaufort.4=Mäßige Brise
+beaufort.5=Frische Brise
+beaufort.6=Starker Wind
+beaufort.7=Steifer Wind
+beaufort.8=Stürmischer Wind
+beaufort.9=Sturm
+beaufort.10=Schwerer Sturm
+beaufort.11=Orkanartiger Sturm
+beaufort.12=Orkan
+
+# ==================== Tiefe ====================
+depth.depth=Tiefe
+depth.depth_history=Tiefenverlauf
+depth.depth_alarm=Tiefenalarm
+depth.depth_alarm_upper=TIEFENALARM
+depth.clear_alarm=Alarm löschen
+depth.sound_alarm=Akustischer Alarm
+depth.sound=TON
+
+# ==================== Geschwindigkeit ====================
+speed.speed=Geschwindigkeit
+speed.speed_history=Geschwindigkeitsverlauf
+speed.avg=Durchschn.
+speed.max=Max
+speed.min=Min
+
+# ==================== Kurs ====================
+heading.heading=Kurs
+heading.heading_history=Kursverlauf
+
+# ==================== COG ====================
+cog.course_over_ground=Kurs über Grund
+cog.course_history=Kursverlauf
+
+# ==================== Batterie ====================
+battery.battery=Batterie
+battery.state_of_charge=Ladezustand
+battery.voltage=Spannung
+battery.current=Strom
+battery.temperature=Temperatur
+battery.status=Status
+battery.charging=Laden
+battery.discharging=Entladen
+battery.idle=Leerlauf
+battery.voltage_history=Spannungsverlauf
+battery.charge_history=Ladeverlauf
+
+# ==================== Position ====================
+position.position=Position
+position.recent_track=Letzter Track
+position.distance_traveled=Zurückgelegte Strecke
+position.track_points=Track-Punkte
+position.decimal_coordinates=Dezimalkoordinaten
+position.lat=Breite
+position.lon=Länge
+position.collecting_data=Positionsdaten werden erfasst...
+
+# ==================== Alarme ====================
+alerts.enable_alerts=Alarme aktivieren
+alerts.master_toggle=Hauptschalter für alle Alarmbenachrichtigungen
+alerts.no_alerts=Keine Alarme konfiguriert
+alerts.add_alert=Alarm hinzufügen
+alerts.create_alert=Alarm erstellen
+alerts.edit_alert=Alarm bearbeiten
+alerts.alert_name=Alarmname
+alerts.alert_name_placeholder=Alarmnamen eingeben...
+alerts.data_source=Datenquelle
+alerts.condition=Bedingung
+alerts.threshold=Schwellenwert
+alerts.forecast_window=Vorhersagezeitraum (Stunden)
+alerts.snooze_duration=Schlummerdauer
+alerts.severity=Schweregrad
+alerts.sound=Ton
+alerts.preview=Vorschau
+alerts.message_template=Nachrichtenvorlage
+alerts.message_placeholder=z.B. Wind überschreitet {threshold}
+alerts.placeholders=Platzhalter:
+alerts.value_desc={value} gemessener Wert mit Einheit
+alerts.threshold_desc={threshold} Schwellenwert mit Einheit
+alerts.condition_desc={condition} Bedingung
+alerts.preview_label=Vorschau:
+alerts.reset_to_default=Auf Standard zurücksetzen
+alerts.create=Erstellen
+alerts.minutes=Minuten
+alerts.snooze=Schlummern
+alerts.dismiss=Verwerfen
+
+# ==================== Alarm-Datenquellen ====================
+alert.ds.wind_speed=Windgeschwindigkeit (Sensor)
+alert.ds.speed_over_ground=Geschwindigkeit über Grund (Sensor)
+alert.ds.depth=Tiefe (Sensor)
+alert.ds.battery_voltage=Batteriespannung (Sensor)
+alert.ds.battery_soc=Batterie-Ladezustand (Sensor)
+alert.ds.wind_gusts=Windböen (Wetter)
+alert.ds.wave_height=Wellenhöhe (Wetter)
+alert.ds.temperature_air=Lufttemperatur (Wetter)
+alert.ds.temperature_water=Wassertemperatur (Wetter)
+alert.ds.wind_forecast=Windvorhersage (Wetter)
+alert.ds.wave_forecast=Wellenvorhersage (Wetter)
+
+# ==================== Alarm-Töne ====================
+alert.tone.none=Keiner
+alert.tone.beep=Piep
+alert.tone.notification=Benachrichtigung
+alert.tone.alarm=Alarm
+alert.tone.chime=Glockenspiel
+alert.tone.warning=Warnung
+alert.tone.sonar=Sonar-Ping
+alert.tone.bell=Schiffsglocke
+alert.tone.siren=Sirene
+alert.tone.gentle=Sanft
+alert.tone.urgent=Dringend
+alert.tone.foghorn=Nebelhorn
+alert.tone.triple=Dreifach-Piep
+alert.tone.ascending=Aufsteigend
+alert.tone.ding=Sanfter Ton
+
+# ==================== Alarm-Operatoren ====================
+alert.op.greater_than=> (größer als)
+alert.op.greater_or_equal=>= (größer oder gleich)
+alert.op.less_than=< (kleiner als)
+alert.op.less_or_equal=<= (kleiner oder gleich)
+alert.op.equals== (gleich)
+alert.op.not_equals=!= (ungleich)
+
+# ==================== Alarm-Schweregrad ====================
+alert.severity.info=Info
+alert.severity.warning=Warnung
+alert.severity.critical=Kritisch
+
+# ==================== Vordefinierte Alarme ====================
+alert.premade.wind_alert=Windalarm
+alert.premade.high_wind_warning=Starkwindwarnung
+alert.premade.low_battery=Niedrige Batterie
+alert.premade.high_wave_alert=Hoher Wellengang
+alert.premade.wind_alert_msg=Windvorhersage {condition} {threshold} (max: {value} in nächster Stunde)
+alert.premade.high_wind_msg=Starker Wind ({value}) in den nächsten 3 Stunden vorhergesagt
+alert.premade.low_battery_msg=Batteriespannung niedrig: {value}
+alert.premade.high_wave_msg=Wellenvorhersage {condition} {threshold} (max: {value} in den nächsten 3 Stunden)
+
+# ==================== Downloads ====================
+downloads.description=Gewässerdatensätze für Marinenavigation und Routenplanung.
+downloads.storage=Speicher:
+downloads.free=frei
+downloads.installed=Installiert:
+downloads.update=Update:
+downloads.available=verfügbar
+downloads.custom_url=Benutzerdefinierte URL
+downloads.modified=(geändert)
+downloads.enter_url=Download-URL eingeben
+downloads.saving=Speichern...
+downloads.cancel_download=Download abbrechen
+downloads.download=Herunterladen
+downloads.retry_download=Download wiederholen
+downloads.extracting=Entpacken...
+downloads.converting=Konvertiere zu Shapefile...
+downloads.indexing=Navigationsdaten indizieren...
+downloads.loading_data=Datenstatus laden...
+downloads.installed_label=Installiert
+downloads.error_download_failed=Download fehlgeschlagen
+downloads.starting=Starten...
+
+# ==================== Erweitert ====================
+advanced.map_tiles=Kartenkacheln
+advanced.street_map=Straßenkarte
+advanced.satellite_map=Satellitenkarte
+advanced.nautical_overlay=Seekartenoverlay
+advanced.reset_map_tiles=Kartenkacheln auf Standard zurücksetzen
+advanced.api_endpoints=API-Endpunkte
+advanced.geocoding_api=Geocoding-API (Ortssuche)
+advanced.reset_api=API-Endpunkte auf Standard zurücksetzen
+advanced.weather_data=Wetterdaten
+advanced.weather_service=Wetterdienst
+advanced.weather_service_desc=Wind- und Wellenvorhersagen von Open-Meteo
+advanced.refresh_interval=Aktualisierungsintervall
+advanced.weather_api=Wetter-API (Wind, Druck)
+advanced.marine_api=Marine-API (Wellen, Dünung)
+advanced.reset_weather=Wettereinstellungen auf Standard zurücksetzen
+advanced.map_tiles_info=Kartenkacheln: Verwenden Sie das Standard-XYZ-Kachelformat mit Platzhaltern: {z} für Zoom, {x}/{y} für Koordinaten, {s} für Subdomains.
+advanced.geocoding_info=Geocoding: Wird für die Ortssuche verwendet. Standard ist Photon (kostenlos, CORS-fähig).
+advanced.weather_info=Wetter: Verwendet Open-Meteo (kostenlos, kein API-Schlüssel). Wind- und Marinedaten werden automatisch basierend auf der Bootsposition abgerufen.
+
+# ==================== Offline-Karten ====================
+offline_maps.download_new_region=Neue Region herunterladen
+offline_maps.region_name_placeholder=Regionsname (z.B. 'Ostsee')
+offline_maps.calculating=Berechne...
+offline_maps.move_map_estimate=Karte verschieben um Schätzung zu sehen
+offline_maps.street_maps=Straßenkarten
+offline_maps.satellite=Satellit
+offline_maps.sea_charts=Seekarten
+offline_maps.total=Gesamt
+offline_maps.download_region=Region herunterladen
+offline_maps.saved_regions=Gespeicherte Regionen ({count})
+offline_maps.loading=Laden...
+offline_maps.no_regions=Noch keine Offline-Regionen gespeichert
+offline_maps.cancel_download=Download abbrechen
+offline_maps.downloaded=Heruntergeladen
+offline_maps.retry=Wiederholen
+offline_maps.info=Offline-Karten: Heruntergeladene Regionen beinhalten Straßenkarte, Satellitenbilder und Seekartenoverlay (Zoom 0-16). Kacheln werden von Ihrem lokalen Server bereitgestellt, wenn verfügbar.
+offline_maps.complete=Fertig
+offline_maps.downloading=Herunterladen... {percent}%
+offline_maps.delete_region="{name}" löschen?
+offline_maps.delete_region_desc=Alle heruntergeladenen Kacheln dieser Region werden entfernt.
+offline_maps.pan_and_zoom=Verschieben & Zoomen
+offline_maps.storage_free=Speicher: {available} frei
+offline_maps.error=Fehler
+
+# ==================== Karte / Navigation ====================
+chart.speed=GESCHW.
+chart.depth=TIEFE
+chart.forecast=VORHERSAGE
+chart.search=SUCHE
+chart.back_to_dashboard=Zurück zum Dashboard
+chart.switch_to_street=Zur Straßenansicht wechseln
+chart.switch_to_satellite=Zur Satellitenansicht wechseln
+chart.map=KARTE
+chart.satellite=SATELLIT
+chart.search_locations=Orte suchen
+chart.vessel_details=Schiffsdetails
+chart.my_vessel=Mein Schiff
+chart.identification=Identifikation
+chart.registration=Registrierung
+chart.call_sign=Rufzeichen
+chart.mmsi=MMSI
+chart.dimensions=Abmessungen
+chart.length=Länge
+chart.beam=Breite
+chart.draft=Tiefgang
+chart.displacement=Verdrängung
+chart.freeboard=Freibord
+chart.wl_length=WL-Länge
+chart.edit_vessel=Schiffsdetails bearbeiten
+chart.chain_calculation=Kettenlängenberechnung
+chart.how_calculated=Wie Empfehlungen berechnet werden
+chart.your_vessel=Ihr Schiff
+chart.length_loa=Länge (LÜA)
+chart.chain_diameter=Ketten-Ø
+chart.windage_area=Windangriffsfläche
+chart.chain_weight=Kettengewicht
+chart.wind_forecast=Windvorhersage
+chart.minimum=Minimum
+chart.recommended=Empfohlen
+chart.storm=Sturm
+chart.tap_for_details=Tippen für Berechnungsdetails
+chart.method_catenary=Methode 1: Kettengleichung
+chart.method_wind_loa=Methode 2: Wind + LÜA Regel
+chart.depth_factors=Tiefenfaktoren
+chart.uses=Verwendet
+chart.on_upper=AN
+chart.off_upper=AUS
+chart.search_attribution=Suche bereitgestellt von Photon (© OpenStreetMap)
+
+# ==================== Anker ====================
+anchor.anchor_alarm=Ankeralarm
+anchor.chain_out=Kette ausgebracht (Meter)
+anchor.depth_meters=Tiefe (Meter)
+anchor.planned_stay=Geplanter Aufenthalt
+anchor.min_chain=Minimale Kette
+anchor.recommended_chain=Empfohlene Kette
+anchor.set_depth=Tiefe eingeben
+anchor.max_wind=Max. Wind
+anchor.max_gust=Max. Böe
+anchor.chain_gt_depth=Kettenlänge muss größer als Tiefe sein
+anchor.activate=Aktivieren
+anchor.deactivate=Deaktivieren
+anchor.adjust_position=Ankerposition anpassen
+anchor.alarm_radius=Alarmradius
+anchor.chain_out_label=Kette ausgebracht
+
+# ==================== Autopilot ====================
+autopilot.autopilot=AUTOPILOT
+autopilot.set_course=KURS SETZEN
+autopilot.follow_route=Route folgen
+autopilot.activate=AKTIVIEREN
+autopilot.deactivate=DEAKTIVIEREN
+
+# ==================== Wetter-Panel ====================
+weather.marine_forecast=MARINE-VORHERSAGE
+weather.wind=Wind
+weather.waves=Wellen
+weather.swell=Dünung
+weather.current=Strömung
+weather.temp=Temp.
+weather.loading=Laden...
+weather.select_time=Wählen Sie eine Zeit unten
+weather.time=ZEIT
+weather.now=Jetzt
+weather.custom=Benutzerdef.
+weather.wind_speed=Windgeschwindigkeit
+weather.wave_height=Wellenhöhe
+weather.swell_height=Dünungshöhe
+weather.current_speed=Strömungsgeschwindigkeit
+weather.sea_temperature=Wassertemperatur
+weather.powered_by=Bereitgestellt von Open-Meteo.com
+weather.custom_time=BENUTZERDEFINIERTE ZEIT
+weather.days_from_now=Tage ab jetzt
+weather.hours=Stunden
+weather.period=Periode
+
+# ==================== Such-Panel ====================
+search.search_locations=ORTE SUCHEN
+search.offline_marker_only=Offline - nur Markersuche verfügbar
+search.type_to_search=Tippen zum Suchen (min. 2 Zeichen)...
+search.searching=Suchen...
+search.your_markers=IHRE MARKER
+search.locations=ORTE
+search.no_results=Keine Ergebnisse gefunden
+
+# ==================== Marker ====================
+markers.edit_marker=Marker bearbeiten
+markers.add_marker=Marker hinzufügen
+markers.icon=SYMBOL
+markers.color=FARBE
+markers.name_placeholder=Markername...
+
+# ==================== Status ====================
+state.anchored=Geankert
+state.sailing=Segeln
+state.motoring=Motorbetrieb
+state.in_marina=Im Hafen
+state.drifting=Treibend
+state.boat_status=Bootsstatus
+state.alarm_status=Alarmstatus
+state.alarm_radius=Alarmradius
+state.chain_out=Kette ausgebracht
+state.sailing_performance=Segelleistung
+state.motor_status=Motorstatus
+state.throttle=Gas
+state.motor_temp=Motortemp.
+state.running=Läuft
+state.stopped=Gestoppt
+state.marina_status=Hafenstatus
+state.moored_message=Boot ist sicher im Hafen vertäut
+state.drifting_message=Boot treibt - Ankern oder Motor starten empfohlen
+
+# ==================== Karte Zusätzlich ====================
+chart.calculating_route=Route wird berechnet...
+chart.nav_data_missing=Navigationsdaten fehlen
+chart.go_to_nav_data=Gehen Sie zu Einstellungen > Navigationsdaten, um die erforderlichen Ozean- und Seedaten herunterzuladen.
+chart.go_to_settings=Zu Einstellungen
+chart.suggestions=Vorschläge:
+chart.loading_map=Karte laden...
+chart.course_change_in=KURSWECHSEL IN
+chart.pan_to_set_anchor=Karte verschieben um Ankerposition festzulegen
+chart.distance_from_boat=Entfernung zum Boot:
+chart.bearing=Peilung:
+chart.confirm_position=Position bestätigen
+chart.create_marker=Marker erstellen
+chart.navigate_here=Hierhin navigieren
+chart.navigate_to_marker=Zum Marker navigieren
+chart.delete_marker=Marker löschen
+chart.your_boat=Ihr Boot
+chart.anchor_alarm_active=Ankeralarm aktiv
+chart.route=ROUTE
+chart.auto_centering_on=Automatische Zentrierung AN
+chart.click_to_recenter=Klicken zum Zentrieren
+chart.route_start_on_land_title=Startpunkt nicht auf Wasser
+chart.route_start_on_land_msg=Ihre aktuelle Position scheint laut Navigationsdaten an Land zu sein.
+chart.route_start_on_land_s1=In tieferes Wasser weiter von der Küste entfernt bewegen
+chart.route_start_on_land_s2=Kleine Häfen und Marinas werden möglicherweise nicht von der Wassererkennung erkannt
+chart.route_start_on_land_s3=Versuchen Sie, von einer weiter entfernten Position zu navigieren
+chart.route_end_on_land_title=Ziel nicht auf Wasser
+chart.route_end_on_land_msg=Der Zielpunkt scheint an Land zu liegen.
+chart.route_end_on_land_s1=Ein Ziel weiter von der Küste entfernt wählen
+chart.route_end_on_land_s2=Kleine Häfen und Marinas werden möglicherweise nicht erkannt
+chart.route_end_on_land_s3=Versuchen Sie, einen Punkt in tieferem Wasser in der Nähe Ihres gewünschten Ziels auszuwählen
+chart.route_no_path_title=Keine Wasserroute gefunden
+chart.route_no_path_msg=Es konnte keine befahrbare Wasserroute zwischen diesen Punkten gefunden werden. Land scheint den Weg zu blockieren.
+chart.route_no_path_s1=Die Route erfordert möglicherweise eine Umfahrung einer Landmasse
+chart.route_no_path_s2=Versuchen Sie, die Reise in kürzere Abschnitte aufzuteilen
+chart.route_no_path_s3=Prüfen Sie, ob tatsächlich eine Wasserverbindung zwischen diesen Punkten besteht
+chart.route_too_long_title=Route zu lang
+chart.route_too_long_msg=Die Entfernung zwischen diesen Punkten ist zu groß für die automatische Routenberechnung.
+chart.route_too_long_s1=Versuchen Sie, die Reise in kürzere Abschnitte aufzuteilen (unter 100 sm)
+chart.route_too_long_s2=Navigieren Sie zuerst zu einem Zwischenwegpunkt
+chart.route_too_long_s3=Für Ozeanüberquerungen Wegpunkte manuell erstellen
+chart.route_narrow_title=Kanal zu eng
+chart.route_narrow_msg=Die Route führt möglicherweise durch Kanäle, die zu eng sind, um erkannt zu werden.
+chart.route_narrow_s1=Kleine Flüsse, Kanäle und enge Passagen werden möglicherweise nicht erkannt
+chart.route_narrow_s2=Versuchen Sie, durch breitere Wasserstraßen zu navigieren
+chart.route_narrow_s3=Verwenden Sie lokale Seekarten für die Navigation in engen Bereichen
+chart.route_timeout_title=Zeitüberschreitung bei Routenberechnung
+chart.route_timeout_msg=Die Routenberechnung hat zu lange gedauert und wurde gestoppt.
+chart.route_timeout_s1=Versuchen Sie eine kürzere Entfernung
+chart.route_timeout_s2=Das Gebiet hat möglicherweise komplexe Küstenlinien, die manuelle Wegpunkte erfordern
+chart.route_timeout_s3=Teilen Sie die Route in kleinere Abschnitte auf
+chart.route_failed_title=Routenberechnung fehlgeschlagen
+chart.route_failed_msg=Es konnte keine Wasserroute zwischen diesen Punkten berechnet werden.
+chart.route_failed_s1=Versuchen Sie, Punkte zu wählen, die eindeutig im offenen Wasser liegen
+chart.route_failed_s2=Prüfen Sie, ob sowohl Start als auch Ziel befahrbar sind
+chart.dismiss=Verwerfen
+chart.ok=OK
+chart.anchor_status=Ankerstatus
+chart.status=Status
+chart.storage=Speicher:
+chart.free=frei
+chart.navigate=WASD: navigieren ({speed} kt)
+
+# ==================== Bestätigungsdialoge ====================
+confirm.delete_file={name} löschen?
+confirm.remove_data=Die heruntergeladenen Daten werden entfernt. Sie können sie später erneut herunterladen.
+
+# ==================== Validierung ====================
+validation.invalid_number=Bitte geben Sie eine gültige Zahl ein
+validation.min_value=Wert muss mindestens {min} betragen

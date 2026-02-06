@@ -1,5 +1,6 @@
 import React from 'react';
 import { BoatState } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface StateIndicatorProps {
   state: BoatState;
@@ -7,14 +8,15 @@ interface StateIndicatorProps {
 }
 
 const stateConfig = {
-  [BoatState.ANCHORED]: { emoji: '⚓', color: '#4fc3f7', label: 'Anchored' },
-  [BoatState.SAILING]: { emoji: '⛵', color: '#66bb6a', label: 'Sailing' },
-  [BoatState.MOTORING]: { emoji: '🚤', color: '#ffa726', label: 'Motoring' },
-  [BoatState.IN_MARINA]: { emoji: '🏠', color: '#ab47bc', label: 'In Marina' },
-  [BoatState.DRIFTING]: { emoji: '🌊', color: '#78909c', label: 'Drifting' }
+  [BoatState.ANCHORED]: { emoji: '⚓', color: '#4fc3f7', labelKey: 'state.anchored' },
+  [BoatState.SAILING]: { emoji: '⛵', color: '#66bb6a', labelKey: 'state.sailing' },
+  [BoatState.MOTORING]: { emoji: '🚤', color: '#ffa726', labelKey: 'state.motoring' },
+  [BoatState.IN_MARINA]: { emoji: '🏠', color: '#ab47bc', labelKey: 'state.in_marina' },
+  [BoatState.DRIFTING]: { emoji: '🌊', color: '#78909c', labelKey: 'state.drifting' }
 };
 
 export const StateIndicator: React.FC<StateIndicatorProps> = ({ state, onStateChange }) => {
+  const { t } = useLanguage();
   const config = stateConfig[state];
 
   return (
@@ -28,10 +30,10 @@ export const StateIndicator: React.FC<StateIndicatorProps> = ({ state, onStateCh
           <span style={{ fontSize: '2.5rem' }}>{config.emoji}</span>
           <div>
             <div style={{ fontSize: '0.75rem', opacity: 0.7, textTransform: 'uppercase' }}>
-              Boat Status
+              {t('state.boat_status')}
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: config.color }}>
-              {config.label}
+              {t(config.labelKey)}
             </div>
           </div>
         </div>
@@ -49,7 +51,7 @@ export const StateIndicator: React.FC<StateIndicatorProps> = ({ state, onStateCh
                   opacity: s === state ? 1 : 0.5,
                   border: s === state ? `2px solid ${stateConfig[s].color}` : 'none'
                 }}
-                title={stateConfig[s].label}
+                title={t(stateConfig[s].labelKey)}
               >
                 {stateConfig[s].emoji}
               </button>

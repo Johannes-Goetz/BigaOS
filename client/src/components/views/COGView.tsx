@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TimeSeriesChart, TimeSeriesDataPoint } from '../charts';
 import { sensorAPI } from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface COGViewProps {
   cog: number; // Current course over ground in degrees
@@ -16,6 +17,7 @@ const TIMEFRAMES: Record<TimeframeOption, { label: string; ms: number; minutes: 
 };
 
 export const COGView: React.FC<COGViewProps> = ({ cog, onClose }) => {
+  const { t } = useLanguage();
   const [historyData, setHistoryData] = useState<TimeSeriesDataPoint[]>([]);
   const [timeframe, setTimeframe] = useState<TimeframeOption>('5m');
   const [isLoading, setIsLoading] = useState(true);
@@ -59,10 +61,7 @@ export const COGView: React.FC<COGViewProps> = ({ cog, onClose }) => {
     return () => clearInterval(interval);
   }, [fetchHistory]);
 
-  // Chart data from server
-  const chartData = React.useMemo(() => {
-    return historyData;
-  }, [historyData]);
+  const chartData = historyData;
 
   // Render compass rose for COG
   const renderCompass = () => {
@@ -186,7 +185,7 @@ export const COGView: React.FC<COGViewProps> = ({ cog, onClose }) => {
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </button>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>Course Over Ground</h1>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{t('cog.course_over_ground')}</h1>
       </div>
 
       {/* Main COG display with compass */}
@@ -240,7 +239,7 @@ export const COGView: React.FC<COGViewProps> = ({ cog, onClose }) => {
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
           }}>
-            Course History
+            {t('cog.course_history')}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {(Object.keys(TIMEFRAMES) as TimeframeOption[]).map((tf) => (
@@ -279,7 +278,7 @@ export const COGView: React.FC<COGViewProps> = ({ cog, onClose }) => {
               opacity: 0.5,
               fontSize: '0.9rem',
             }}>
-              Loading history...
+              {t('common.loading_history')}
             </div>
           )}
           <TimeSeriesChart

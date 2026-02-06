@@ -1,0 +1,19 @@
+# BigaOS Server - Deutsche Übersetzungsdatei
+
+# Alarmmeldungen
+alert.shallow_water=Flachwasser! Tiefe {displayDepth} unter {displayThreshold}
+alert.anchor_dragging=Anker schleppt! +{overDistance}m außerhalb des Radius
+alert.depth_alarm=Tiefenalarm
+alert.anchor_alarm=Ankeralarm
+
+# Vordefinierte Alarmnamen
+alert.premade.wind_alert=Windalarm
+alert.premade.high_wind_warning=Starkwindwarnung
+alert.premade.low_battery=Niedrige Batterie
+alert.premade.high_wave_alert=Hoher Wellengang
+
+# Vordefinierte Alarmmeldungen
+alert.premade.wind_alert_msg=Windvorhersage {condition} {threshold} (max: {value} in nächster Stunde)
+alert.premade.high_wind_msg=Starker Wind ({value}) in den nächsten 3 Stunden vorhergesagt
+alert.premade.low_battery_msg=Batteriespannung niedrig: {value}
+alert.premade.high_wave_msg=Wellenvorhersage {condition} {threshold} (max: {value} in den nächsten 3 Stunden)

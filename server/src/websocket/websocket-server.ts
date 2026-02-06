@@ -19,6 +19,7 @@ import { connectivityService } from '../services/connectivity.service';
 import { DisplaySensorData } from '../types/data.types';
 import { TriggeredAlert, AlertSettings } from '../types/alert.types';
 import { UserUnitPreferences } from '../types/units.types';
+import { setLanguage as setI18nLanguage } from '../i18n/lang';
 
 export class WebSocketServer {
   private io: SocketIOServer;
@@ -148,7 +149,7 @@ export class WebSocketServer {
           // Send to alert service for server-side evaluation
           this.dataController.getAlertService().updateAnchorAlarm(data.anchorAlarm);
         }
-        // Broadcast to other clients
+        // Broadcast to all clients
         this.io.emit('anchor_alarm_changed', {
           ...data,
           timestamp: new Date(),
@@ -241,6 +242,15 @@ export class WebSocketServer {
         timestamp: new Date(),
       });
 
+      // Send current depth alarm state from AlertService (authoritative source)
+      // This overrides whatever depthAlarm value is in the DB settings
+      const depthAlarmState = this.dataController.getAlertService().getDepthAlarmState();
+      socket.emit('depth_alarm_sync', {
+        threshold: depthAlarmState.threshold,
+        soundEnabled: depthAlarmState.soundEnabled,
+        timestamp: new Date(),
+      });
+
       // Send current anchor alarm state if active
       const anchorAlarmState = this.dataController.getAlertService().getAnchorAlarmState();
       if (anchorAlarmState?.active) {
@@ -279,6 +289,11 @@ export class WebSocketServer {
         this.dataController.getSensorService().setDemoMode(data.value);
       }
 
+      // Handle language change
+      if (data.key === 'language') {
+        setI18nLanguage(data.value);
+      }
+
       // Handle unit preference changes
       if (['speedUnit', 'windUnit', 'depthUnit', 'temperatureUnit'].includes(data.key)) {
         if (this.dataController) {
@@ -313,9 +328,17 @@ export class WebSocketServer {
       });
     }
 
-    // Handle demo navigation updates
+    // Handle demo navigation updates - sync to all clients
     if (data.type === 'demo_navigation' && this.dataController) {
       this.dataController.getSensorService().setDemoNavigation(data);
+      // Broadcast to all clients so other map views sync position
+      this.io.emit('demo_navigation_sync', {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        heading: data.heading,
+        speed: data.speed,
+        timestamp: new Date(),
+      });
     }
 
     socket.emit('control_response', {

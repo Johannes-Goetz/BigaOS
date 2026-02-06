@@ -20,22 +20,18 @@ import {
 import { theme } from '../../styles/theme';
 import { dataAPI, DataFileInfo, DownloadProgress, offlineMapsAPI, StorageStats } from '../../services/api';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { OfflineMapsTab } from '../settings/OfflineMapsTab';
 import { AlertsTab } from '../settings/AlertsTab';
 import { wsService } from '../../services/websocket';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { LANGUAGES, LanguageCode } from '../../i18n/languages';
+import { CustomSelect } from '../ui/CustomSelect';
 
-type SettingsTab = 'general' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'offline-maps' | 'advanced';
+type SettingsTab = 'general' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'advanced';
 
 interface SettingsViewProps {
   onClose: () => void;
   initialTab?: SettingsTab;
 }
-
-// Chain type options
-const chainTypeOptions: { value: ChainType; label: string }[] = [
-  { value: 'galvanized', label: 'Galvanized' },
-  { value: 'stainless-steel', label: 'Stainless Steel' },
-];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general');
@@ -47,6 +43,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
   const { confirm } = useConfirmDialog();
+  const { t } = useLanguage();
 
   const fetchStorageStats = useCallback(async () => {
     try {
@@ -231,6 +228,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
 
   const navigationFiles = dataFiles.filter(f => f.category === 'navigation');
 
+  const settings = useSettings();
+
   const {
     speedUnit,
     windUnit,
@@ -258,7 +257,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     setWeatherSettings,
     demoMode,
     setDemoMode,
-  } = useSettings();
+  } = settings;
 
   const renderUnitSelector = <T extends string>(
     label: string,
@@ -310,7 +309,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
   const tabs: { id: SettingsTab; label: string; icon: JSX.Element }[] = [
     {
       id: 'general',
-      label: 'General',
+      label: t('settings.general'),
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
@@ -320,7 +319,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     },
     {
       id: 'vessel',
-      label: 'My Vessel',
+      label: t('settings.vessel'),
       icon: (
         <svg width="18" height="18" viewBox="-12 -18 24 28" fill="none">
           {/* Hull - flat stern (left), pointy bow (right) */}
@@ -354,7 +353,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     },
     {
       id: 'units',
-      label: 'Units',
+      label: t('settings.units'),
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {/* Sliders/adjustment icon - represents configurable units */}
@@ -372,7 +371,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     },
     {
       id: 'downloads',
-      label: 'Navigation Data',
+      label: t('settings.downloads'),
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
@@ -382,7 +381,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
     },
     {
       id: 'alerts',
-      label: 'Alerts',
+      label: t('settings.alerts'),
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -390,20 +389,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         </svg>
       ),
     },
-    // Offline Maps tab temporarily hidden due to legal concerns
-    // {
-    //   id: 'offline-maps',
-    //   label: 'Offline Maps',
-    //   icon: (
-    //     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    //       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    //       <circle cx="12" cy="10" r="3" />
-    //     </svg>
-    //   ),
-    // },
     {
       id: 'advanced',
-      label: 'Advanced',
+      label: t('settings.advanced'),
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -417,6 +405,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
   // Render General Tab
   const renderGeneralTab = () => (
     <div>
+      {/* Language Selector */}
+      <div style={{ marginBottom: theme.space.xl }}>
+        <div style={{
+          fontSize: theme.fontSize.sm,
+          color: theme.colors.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          marginBottom: theme.space.md,
+        }}>
+          {t('language.label')}
+        </div>
+        <CustomSelect
+          value={settings.language}
+          options={Object.entries(LANGUAGES).map(([code, info]) => ({
+            value: code,
+            label: info.name,
+          }))}
+          onChange={(code) => settings.setLanguage(code as LanguageCode)}
+        />
+      </div>
+
       {/* Demo Mode Toggle */}
       <div style={{
         display: 'flex',
@@ -430,10 +439,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       }}>
         <div>
           <div style={{ fontWeight: theme.fontWeight.medium, marginBottom: theme.space.xs }}>
-            Demo Mode
+            {t('settings.demo_mode')}
           </div>
           <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>
-            Simulate sensor data for testing
+            {t('settings.demo_mode_desc')}
           </div>
         </div>
         <button
@@ -554,7 +563,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.error,
           marginTop: theme.space.xs,
         }}>
-          Please enter a valid number
+          {t('validation.invalid_number')}
         </div>
       )}
       {isBelowMin && (
@@ -563,7 +572,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.error,
           marginTop: theme.space.xs,
         }}>
-          Value must be at least {min}
+          {t('validation.min_value', { min })}
         </div>
       )}
     </div>
@@ -619,13 +628,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           letterSpacing: '0.1em',
           marginBottom: theme.space.sm,
         }}>
-          Vessel Name
+          {t('vessel.name')}
         </div>
         <input
           type="text"
           value={vesselSettings.name}
           onChange={(e) => setVesselSettings({ ...vesselSettings, name: e.target.value })}
-          placeholder="Enter your vessel's name..."
+          placeholder={t('vessel.name_placeholder')}
           style={{
             width: '100%',
             padding: theme.space.md,
@@ -648,7 +657,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Identification
+        {t('vessel.identification')}
       </div>
 
       <div style={{
@@ -658,17 +667,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.md,
       }}>
         {renderVesselTextInput(
-          'Registration No.',
+          t('vessel.registration_no'),
           vesselSettings.registrationNumber,
           (v) => setVesselSettings({ ...vesselSettings, registrationNumber: v }),
-          'e.g., 123456-A',
+          t('vessel.registration_placeholder'),
           true
         )}
         {renderVesselTextInput(
-          'Call Sign',
+          t('vessel.call_sign'),
           vesselSettings.callSign,
           (v) => setVesselSettings({ ...vesselSettings, callSign: v }),
-          'e.g., DA1234',
+          t('vessel.call_sign_placeholder'),
           true
         )}
       </div>
@@ -680,10 +689,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.md,
       }}>
         {renderVesselTextInput(
-          'MMSI',
+          t('vessel.mmsi'),
           vesselSettings.mmsi,
           (v) => setVesselSettings({ ...vesselSettings, mmsi: v }),
-          '9-digit number',
+          t('vessel.mmsi_placeholder'),
           true
         )}
       </div>
@@ -695,17 +704,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.xl,
       }}>
         {renderVesselTextInput(
-          'Home Port',
+          t('vessel.home_port'),
           vesselSettings.homePort,
           (v) => setVesselSettings({ ...vesselSettings, homePort: v }),
-          'e.g., Hamburg',
+          t('vessel.home_port_placeholder'),
           true
         )}
         {renderVesselTextInput(
-          'Flag',
+          t('vessel.flag'),
           vesselSettings.flag,
           (v) => setVesselSettings({ ...vesselSettings, flag: v }),
-          'e.g., Germany',
+          t('vessel.flag_placeholder'),
           true
         )}
       </div>
@@ -719,7 +728,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Dimensions
+        {t('vessel.dimensions')}
       </div>
 
       <div style={{
@@ -729,7 +738,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.md,
       }}>
         {renderVesselNumberInput(
-          'Length (LOA)',
+          t('vessel.length_loa'),
           vesselSettings.length,
           (v) => setVesselSettings({ ...vesselSettings, length: v }),
           'meters',
@@ -739,7 +748,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           true
         )}
         {renderVesselNumberInput(
-          'Waterline Length',
+          t('vessel.waterline_length'),
           vesselSettings.waterlineLength,
           (v) => setVesselSettings({ ...vesselSettings, waterlineLength: v }),
           'meters',
@@ -757,7 +766,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.md,
       }}>
         {renderVesselNumberInput(
-          'Beam',
+          t('vessel.beam'),
           vesselSettings.beam,
           (v) => setVesselSettings({ ...vesselSettings, beam: v }),
           'meters',
@@ -767,7 +776,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           true
         )}
         {renderVesselNumberInput(
-          'Draft',
+          t('vessel.draft'),
           vesselSettings.draft,
           (v) => setVesselSettings({ ...vesselSettings, draft: v }),
           'meters',
@@ -785,17 +794,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.md,
       }}>
         {renderVesselNumberInput(
-          'Freeboard',
+          t('vessel.freeboard'),
           vesselSettings.freeboardHeight,
           (v) => setVesselSettings({ ...vesselSettings, freeboardHeight: v }),
           'meters',
           0.1,
           0.3,
-          'Height from waterline to deck',
+          t('vessel.freeboard_desc'),
           true
         )}
         {renderVesselNumberInput(
-          'Displacement',
+          t('vessel.displacement'),
           vesselSettings.displacement,
           (v) => setVesselSettings({ ...vesselSettings, displacement: v }),
           'tons',
@@ -816,7 +825,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Chain
+        {t('vessel.chain')}
       </div>
 
       <div style={{
@@ -826,7 +835,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginBottom: theme.space.md,
       }}>
         {renderVesselNumberInput(
-          'Total Chain',
+          t('vessel.total_chain'),
           vesselSettings.totalChainLength,
           (v) => setVesselSettings({ ...vesselSettings, totalChainLength: v }),
           'meters',
@@ -836,7 +845,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           true
         )}
         {renderVesselNumberInput(
-          'Chain Diameter',
+          t('vessel.chain_diameter'),
           vesselSettings.chainDiameter,
           (v) => setVesselSettings({ ...vesselSettings, chainDiameter: v }),
           'mm',
@@ -854,13 +863,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.textMuted,
           marginBottom: theme.space.xs,
         }}>
-          Chain Type
+          {t('vessel.chain_type')}
         </div>
         <div style={{
           display: 'flex',
           gap: theme.space.sm,
         }}>
-          {chainTypeOptions.map((option) => (
+          {([
+            { value: 'galvanized' as ChainType, label: t('vessel.galvanized') },
+            { value: 'stainless-steel' as ChainType, label: t('vessel.stainless_steel') },
+          ]).map((option) => (
             <button
               key={option.value}
               onClick={() => setVesselSettings({ ...vesselSettings, chainType: option.value })}
@@ -893,7 +905,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginTop: theme.space.lg,
         lineHeight: 1.5,
       }}>
-        <strong>Why this matters:</strong> Your vessel's dimensions and chain specifications help calculate recommended anchor chain length for safe anchoring. Heavier vessels and stronger winds require more chain.
+        {t('vessel.why_matters')}
       </div>
     </div>
   );
@@ -902,7 +914,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
   const renderUnitsTab = () => (
     <div>
       {renderUnitSelector<SpeedUnit>(
-        'Speed',
+        t('units.speed'),
         speedUnit,
         ['kt', 'km/h', 'mph', 'm/s'],
         {
@@ -915,7 +927,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<WindUnit>(
-        'Wind',
+        t('units.wind'),
         windUnit,
         ['kt', 'km/h', 'mph', 'm/s', 'bft'],
         {
@@ -929,7 +941,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<DepthUnit>(
-        'Depth',
+        t('units.depth'),
         depthUnit,
         ['m', 'ft'],
         {
@@ -940,7 +952,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<DistanceUnit>(
-        'Distance',
+        t('units.distance'),
         distanceUnit,
         ['nm', 'km', 'mi'],
         {
@@ -952,7 +964,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<WeightUnit>(
-        'Weight',
+        t('units.weight'),
         weightUnit,
         ['kg', 'lbs'],
         {
@@ -963,7 +975,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<TemperatureUnit>(
-        'Temperature',
+        t('units.temperature'),
         temperatureUnit,
         ['°C', '°F'],
         {
@@ -974,7 +986,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<TimeFormat>(
-        'Time Format',
+        t('units.time_format'),
         timeFormat,
         ['24h', '12h'],
         {
@@ -985,7 +997,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       )}
 
       {renderUnitSelector<DateFormat>(
-        'Date Format',
+        t('units.date_format'),
         dateFormat,
         ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'],
         {
@@ -1004,8 +1016,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         color: theme.colors.textMuted,
         marginTop: theme.space.lg,
       }}>
-        Changing units will update all displays across the application.
-        The depth alarm will be reset when changing depth units.
+        {t('units.change_note')}
       </div>
     </div>
   );
@@ -1018,7 +1029,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         color: theme.colors.textMuted,
         marginBottom: theme.space.md,
       }}>
-        Water body datasets for marine navigation and route planning.
+        {t('downloads.description')}
       </div>
 
       {/* Device Storage Info - compact */}
@@ -1030,7 +1041,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           gap: theme.space.sm,
         }}>
           <span style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted, whiteSpace: 'nowrap' }}>
-            Storage: {storageStats.deviceStorage.availableFormatted} free
+            {t('downloads.storage')} {storageStats.deviceStorage.availableFormatted} {t('downloads.free')}
           </span>
           <div style={{
             flex: 1,
@@ -1055,7 +1066,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
 
       {loadingFiles ? (
         <div style={{ color: theme.colors.textMuted, padding: theme.space.lg }}>
-          Loading data status...
+          {t('downloads.loading_data')}
         </div>
       ) : (
         navigationFiles.map((file) => (
@@ -1087,14 +1098,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
             }}>
               {file.exists && (
                 <>
-                  <span>Installed:</span>
+                  <span>{t('downloads.installed')}</span>
                   <span>{formatDate(getInstalledDate(file))}</span>
                 </>
               )}
               {hasUpdate(file) && file.remoteDate && (
                 <>
-                  <span style={{ color: theme.colors.warning }}>Update:</span>
-                  <span style={{ color: theme.colors.warning }}>{formatDate(file.remoteDate)} available</span>
+                  <span style={{ color: theme.colors.warning }}>{t('downloads.update')}</span>
+                  <span style={{ color: theme.colors.warning }}>{formatDate(file.remoteDate)} {t('downloads.available')}</span>
                 </>
               )}
             </div>
@@ -1137,10 +1148,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                 >
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
-                Custom URL
+                {t('downloads.custom_url')}
                 {editingUrls[file.id] !== file.defaultUrl && (
                   <span style={{ color: theme.colors.primary, marginLeft: theme.space.xs }}>
-                    (modified)
+                    {t('downloads.modified')}
                   </span>
                 )}
               </button>
@@ -1162,7 +1173,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                         fontSize: '11px',
                         fontFamily: 'monospace',
                       }}
-                      placeholder="Enter download URL"
+                      placeholder={t('downloads.enter_url')}
                     />
                     {editingUrls[file.id] !== file.url && (
                       <button
@@ -1179,7 +1190,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                           opacity: savingUrl === file.id ? 0.7 : 1,
                         }}
                       >
-                        {savingUrl === file.id ? 'Saving...' : 'Save'}
+                        {savingUrl === file.id ? t('downloads.saving') : t('common.save')}
                       </button>
                     )}
                     {editingUrls[file.id] !== file.defaultUrl && (
@@ -1245,9 +1256,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                   marginBottom: theme.space.sm,
                 }}>
                   <span>
-                    {file.downloadStatus.status === 'extracting' ? 'Extracting...' :
-                     file.downloadStatus.status === 'converting' ? 'Converting to shapefile...' :
-                     file.downloadStatus.status === 'indexing' ? 'Indexing navigation data...' : (
+                    {file.downloadStatus.status === 'extracting' ? t('downloads.extracting') :
+                     file.downloadStatus.status === 'converting' ? t('downloads.converting') :
+                     file.downloadStatus.status === 'indexing' ? t('downloads.indexing') : (
                       `${formatFileSize(file.downloadStatus.bytesDownloaded)} / ${formatFileSize(file.downloadStatus.totalBytes)}`
                     )}
                   </span>
@@ -1267,7 +1278,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                     fontWeight: theme.fontWeight.bold,
                   }}
                 >
-                  Cancel Download
+                  {t('downloads.cancel_download')}
                 </button>
               </div>
             ) : file.downloadStatus && file.downloadStatus.status === 'error' ? (
@@ -1281,7 +1292,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                   fontSize: theme.fontSize.xs,
                   marginBottom: theme.space.sm,
                 }}>
-                  Error: {file.downloadStatus.error || 'Download failed'}
+                  {t('downloads.error_download_failed')}{file.downloadStatus.error ? `: ${file.downloadStatus.error}` : ''}
                 </div>
                 <button
                   onClick={() => handleDownload(file)}
@@ -1297,7 +1308,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                     fontWeight: theme.fontWeight.bold,
                   }}
                 >
-                  Retry Download
+                  {t('downloads.retry_download')}
                 </button>
               </div>
             ) : (
@@ -1328,7 +1339,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    {downloadingFiles.has(file.id) ? 'Starting...' : `Download${file.remoteSize ? ` (${formatFileSize(file.remoteSize)})` : ''}`}
+                    {downloadingFiles.has(file.id) ? t('downloads.starting') : `${t('downloads.download')}${file.remoteSize ? ` (${formatFileSize(file.remoteSize)})` : ''}`}
                   </button>
                 ) : hasUpdate(file) ? (
                   <button
@@ -1356,7 +1367,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    {downloadingFiles.has(file.id) ? 'Starting...' : `Update${file.remoteSize ? ` (${formatFileSize(file.remoteSize)})` : ''}`}
+                    {downloadingFiles.has(file.id) ? t('downloads.starting') : `${t('downloads.update')}${file.remoteSize ? ` (${formatFileSize(file.remoteSize)})` : ''}`}
                   </button>
                 ) : (
                   <div style={{
@@ -1375,7 +1386,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    Installed{file.size ? ` (${formatFileSize(file.size)})` : ''}
+                    {t('downloads.installed_label')}{file.size ? ` (${formatFileSize(file.size)})` : ''}
                   </div>
                 )}
                 {file.exists && (
@@ -1417,7 +1428,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Map Tiles
+        {t('advanced.map_tiles')}
       </div>
 
       <div style={{ marginBottom: theme.space.lg }}>
@@ -1426,7 +1437,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.textMuted,
           marginBottom: theme.space.sm,
         }}>
-          Street Map
+          {t('advanced.street_map')}
         </div>
         <input
           type="text"
@@ -1451,7 +1462,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.textMuted,
           marginBottom: theme.space.sm,
         }}>
-          Satellite Map
+          {t('advanced.satellite_map')}
         </div>
         <input
           type="text"
@@ -1476,7 +1487,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.textMuted,
           marginBottom: theme.space.sm,
         }}>
-          Nautical Overlay
+          {t('advanced.nautical_overlay')}
         </div>
         <input
           type="text"
@@ -1512,7 +1523,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           marginBottom: theme.space.xl,
         }}
       >
-        Reset Map Tiles to Defaults
+        {t('advanced.reset_map_tiles')}
       </button>
 
       {/* API Endpoints subsection */}
@@ -1524,7 +1535,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        API Endpoints
+        {t('advanced.api_endpoints')}
       </div>
 
       <div style={{ marginBottom: theme.space.lg }}>
@@ -1533,7 +1544,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           color: theme.colors.textMuted,
           marginBottom: theme.space.sm,
         }}>
-          Geocoding API (location search)
+          {t('advanced.geocoding_api')}
         </div>
         <input
           type="text"
@@ -1566,7 +1577,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           fontSize: theme.fontSize.xs,
         }}
       >
-        Reset API Endpoints to Defaults
+        {t('advanced.reset_api')}
       </button>
 
       {/* Weather subsection */}
@@ -1579,7 +1590,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Weather Data
+        {t('advanced.weather_data')}
       </div>
 
       {/* Weather enabled toggle */}
@@ -1595,10 +1606,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
       }}>
         <div>
           <div style={{ fontWeight: theme.fontWeight.medium, marginBottom: theme.space.xs, fontSize: theme.fontSize.sm }}>
-            Weather Service
+            {t('advanced.weather_service')}
           </div>
           <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted }}>
-            Wind and wave forecasts from Open-Meteo
+            {t('advanced.weather_service_desc')}
           </div>
         </div>
         <button
@@ -1641,7 +1652,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
                 fontSize: theme.fontSize.xs,
                 color: theme.colors.textMuted,
               }}>
-                Refresh Interval
+                {t('advanced.refresh_interval')}
               </div>
               <div style={{
                 fontSize: theme.fontSize.xs,
@@ -1671,7 +1682,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
               color: theme.colors.textMuted,
               marginBottom: theme.space.sm,
             }}>
-              Weather API (wind, pressure)
+              {t('advanced.weather_api')}
             </div>
             <input
               type="text"
@@ -1697,7 +1708,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
               color: theme.colors.textMuted,
               marginBottom: theme.space.sm,
             }}>
-              Marine API (waves, swell)
+              {t('advanced.marine_api')}
             </div>
             <input
               type="text"
@@ -1733,7 +1744,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
               fontSize: theme.fontSize.xs,
             }}
           >
-            Reset Weather Settings to Defaults
+            {t('advanced.reset_weather')}
           </button>
         </>
       )}
@@ -1747,11 +1758,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         marginTop: theme.space.xl,
         lineHeight: 1.5,
       }}>
-        <strong>Map Tiles:</strong> Use standard XYZ tile format with placeholders: {'{z}'} for zoom, {'{x}'}/{'{y}'} for coordinates, {'{s}'} for subdomains.
+        {t('advanced.map_tiles_info')}
         <br /><br />
-        <strong>Geocoding:</strong> Used for location search. Default uses Photon (free, CORS-enabled).
+        {t('advanced.geocoding_info')}
         <br /><br />
-        <strong>Weather:</strong> Uses Open-Meteo (free, no API key). Wind and marine data fetched automatically based on boat position.
+        {t('advanced.weather_info')}
       </div>
     </div>
   );
@@ -1768,8 +1779,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         return renderDownloadsTab();
       case 'alerts':
         return <AlertsTab />;
-      case 'offline-maps':
-        return <OfflineMapsTab formatFileSize={formatFileSize} />;
       case 'advanced':
         return renderAdvancedTab();
     }
@@ -1844,7 +1853,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
-          <span style={{ fontSize: theme.fontSize.xs }}>Home</span>
+          <span style={{ fontSize: theme.fontSize.xs }}>{t('settings.home')}</span>
         </button>
       </div>
 
@@ -1865,7 +1874,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         fontSize: theme.fontSize.xs,
         color: theme.colors.textMuted,
       }}>
-        BigaOS v1.0
+        {t('app.version')}
       </div>
     </div>
   );

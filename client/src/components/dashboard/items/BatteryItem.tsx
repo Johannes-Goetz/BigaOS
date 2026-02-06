@@ -1,5 +1,6 @@
 import React from 'react';
 import { theme } from '../../../styles/theme';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface BatteryItemProps {
   voltage: number;
@@ -7,6 +8,7 @@ interface BatteryItemProps {
 }
 
 export const BatteryItem: React.FC<BatteryItemProps> = ({ voltage, stateOfCharge }) => {
+  const { t } = useLanguage();
   const getBatteryColor = (soc: number): string => {
     if (soc < 20) return theme.colors.error;
     if (soc < 50) return theme.colors.warning;
@@ -28,7 +30,7 @@ export const BatteryItem: React.FC<BatteryItemProps> = ({ voltage, stateOfCharge
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
       }}>
-        Battery
+        {t('dashboard_item.battery')}
       </div>
       <div style={{
         fontSize: theme.fontSize['2xl'],

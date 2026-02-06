@@ -200,6 +200,13 @@ export class AlertService extends EventEmitter {
   }
 
   /**
+   * Get depth alarm state for client sync
+   */
+  getDepthAlarmState(): DepthAlarmSettings {
+    return { ...this.depthAlarm };
+  }
+
+  /**
    * Dismiss depth alarm (clears the alarm setting)
    */
   dismissDepthAlarm(): void {

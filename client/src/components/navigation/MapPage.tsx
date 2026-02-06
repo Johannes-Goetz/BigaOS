@@ -4,12 +4,14 @@ import { SensorData, GeoPosition } from '../../types';
 import { wsService } from '../../services/websocket';
 import { sensorAPI, navigationAPI } from '../../services/api';
 import { useSettings } from '../../context/SettingsContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface MapPageProps {
   onClose?: () => void;
 }
 
 export const MapPage: React.FC<MapPageProps> = ({ onClose }) => {
+  const { t } = useLanguage();
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
   const { demoMode } = useSettings();
 
@@ -84,6 +86,7 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose }) => {
     }
 
     keysPressed.current.add(e.key.toLowerCase());
+    isDrivingRef.current = true;
 
     // Speed control with W/S keys
     if (e.key.toLowerCase() === 'w') {
@@ -149,28 +152,49 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose }) => {
     return () => clearInterval(interval);
   }, [demoMode, dummySpeed, dummyHeading, dummyLat]);
 
-  // Sync demo values to server (throttled)
+  // Sync demo values to server via WebSocket (throttled)
   const lastServerUpdateRef = useRef<number>(0);
+  const isDrivingRef = useRef<boolean>(false);
   useEffect(() => {
     if (!demoMode) return;
     // Don't sync until we've loaded initial values from server
     if (!demoValuesLoaded) return;
+    // Only sync if this client is actively driving
+    if (!isDrivingRef.current) return;
 
     const now = Date.now();
     // Throttle server updates to max 5 times per second
     if (now - lastServerUpdateRef.current < 200) return;
     lastServerUpdateRef.current = now;
 
-    // Send current demo values to server
-    navigationAPI.updateDemoNavigation({
+    // Send via WebSocket control command (server broadcasts to all clients)
+    wsService.emit('control', {
+      type: 'demo_navigation',
       latitude: dummyLat,
       longitude: dummyLon,
       heading: dummyHeading,
       speed: dummySpeed,
-    }).catch(() => {
-      // Silently ignore errors to avoid spamming console
     });
   }, [demoMode, dummyLat, dummyLon, dummyHeading, dummySpeed, demoValuesLoaded]);
+
+  // Listen for demo navigation sync from other clients
+  useEffect(() => {
+    if (!demoMode) return;
+
+    const handleDemoNavSync = (data: { latitude: number; longitude: number; heading: number; speed: number }) => {
+      // Only apply if this client is not actively driving
+      if (isDrivingRef.current) return;
+      setDummyLat(data.latitude);
+      setDummyLon(data.longitude);
+      setDummyHeading(data.heading);
+      setDummySpeed(data.speed);
+    };
+
+    wsService.on('demo_navigation_sync', handleDemoNavSync);
+    return () => {
+      wsService.off('demo_navigation_sync', handleDemoNavSync);
+    };
+  }, [demoMode]);
 
   // Add/remove keyboard listeners
   useEffect(() => {
@@ -193,7 +217,7 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose }) => {
         alignItems: 'center',
         background: '#0a1929'
       }}>
-        <div style={{ fontSize: '1.5rem' }}>Loading map...</div>
+        <div style={{ fontSize: '1.5rem' }}>{t('chart.loading_map')}</div>
       </div>
     );
   }
@@ -236,7 +260,7 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose }) => {
           zIndex: 1000,
           whiteSpace: 'nowrap',
         }}>
-          WASD: navigate ({dummySpeed} kt)
+          {t('chart.navigate', { speed: dummySpeed })}
         </div>
       )}
     </div>

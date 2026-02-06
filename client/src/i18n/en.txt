@@ -1,0 +1,555 @@
+# BigaOS English Translation File
+# Format: key=Value
+# Lines starting with # are comments
+
+# ==================== Common ====================
+common.loading=Loading...
+common.back=Back
+common.cancel=Cancel
+common.save=Save
+common.delete=Delete
+common.edit=Edit
+common.close=Close
+common.on=On
+common.off=Off
+common.yes=Yes
+common.no=No
+common.reset=Reset
+common.apply=Apply
+common.add=Add
+common.unknown=Unknown
+common.error=Error
+common.today=Today
+common.tomorrow=Tomorrow
+common.loading_history=Loading history...
+common.no_data=No data
+common.starting=Starting...
+
+# ==================== App ====================
+app.demo=DEMO
+app.online=ONLINE
+app.offline=OFFLINE
+app.server_unreachable=Server unreachable - Reconnecting...
+app.version=BigaOS v1.0
+
+# ==================== Language ====================
+language.label=Language
+language.description=Select your preferred language
+
+# ==================== Settings Tabs ====================
+settings.general=General
+settings.vessel=My Vessel
+settings.units=Units
+settings.downloads=Navigation Data
+settings.alerts=Alerts
+settings.offline_maps=Offline Maps
+settings.advanced=Advanced
+settings.home=Home
+settings.demo_mode=Demo Mode
+settings.demo_mode_desc=Simulate sensor data for testing
+
+# ==================== Vessel ====================
+vessel.name=Vessel Name
+vessel.name_placeholder=Enter your vessel's name...
+vessel.identification=Identification
+vessel.registration_no=Registration No.
+vessel.registration_placeholder=e.g., 123456-A
+vessel.call_sign=Call Sign
+vessel.call_sign_placeholder=e.g., DA1234
+vessel.mmsi=MMSI
+vessel.mmsi_placeholder=9-digit number
+vessel.home_port=Home Port
+vessel.home_port_placeholder=e.g., Hamburg
+vessel.flag=Flag
+vessel.flag_placeholder=e.g., Germany
+vessel.dimensions=Dimensions
+vessel.length_loa=Length (LOA)
+vessel.waterline_length=Waterline Length
+vessel.beam=Beam
+vessel.draft=Draft
+vessel.freeboard=Freeboard
+vessel.freeboard_desc=Height from waterline to deck
+vessel.displacement=Displacement
+vessel.chain=Chain
+vessel.total_chain=Total Chain
+vessel.chain_diameter=Chain Diameter
+vessel.chain_type=Chain Type
+vessel.galvanized=Galvanized
+vessel.stainless_steel=Stainless Steel
+vessel.why_matters=Why this matters: Your vessel's dimensions and chain specifications help calculate recommended anchor chain length for safe anchoring. Heavier vessels and stronger winds require more chain.
+
+# ==================== Units ====================
+units.speed=Speed
+units.wind=Wind
+units.depth=Depth
+units.distance=Distance
+units.weight=Weight
+units.temperature=Temperature
+units.time_format=Time Format
+units.date_format=Date Format
+units.change_note=Changing units will update all displays across the application. The depth alarm will be reset when changing depth units.
+
+# ==================== Dashboard ====================
+dashboard.add_widget=Add Widget
+dashboard.select_columns=Select Columns
+dashboard.select_rows=Select Rows
+dashboard.width=Width
+dashboard.height=Height
+dashboard.delete_widget=Delete widget
+dashboard.speed=Speed
+dashboard.heading=Heading
+dashboard.depth=Depth
+dashboard.wind=Wind
+dashboard.position=Position
+dashboard.battery=Battery
+dashboard.cog=COG
+dashboard.chart=Chart
+dashboard.weather=Weather
+
+# ==================== Dashboard Items ====================
+dashboard_item.battery=Battery
+dashboard_item.hdg=HDG
+dashboard_item.cog=COG
+dashboard_item.awa=AWA
+dashboard_item.head=HEAD
+dashboard_item.stbd=STBD
+dashboard_item.stern=STERN
+dashboard_item.port=PORT
+dashboard_item.loading_weather=Loading weather...
+dashboard_item.no_data=No data
+dashboard_item.failed_load=Failed to load
+dashboard_item.waves=waves
+dashboard_item.open_meteo_attribution=Open-Meteo.com (CC-BY 4.0)
+dashboard_item.pan_and_zoom=Pan & zoom
+
+# ==================== Wind ====================
+wind.instrument=Wind Instrument
+wind.apparent_wind=APPARENT WIND
+wind.true_wind=TRUE WIND
+wind.apparent=Apparent
+wind.true=True
+wind.dead_ahead=Dead Ahead
+wind.close_reach_stbd=Close Reach (Stbd)
+wind.beam_reach_stbd=Beam Reach (Stbd)
+wind.broad_reach_stbd=Broad Reach (Stbd)
+wind.running_stbd=Running (Stbd)
+wind.running_port=Running (Port)
+wind.broad_reach_port=Broad Reach (Port)
+wind.beam_reach_port=Beam Reach (Port)
+wind.close_reach_port=Close Reach (Port)
+wind.beaufort=Beaufort:
+wind.force=Force
+wind.vmg=VMG
+wind.point_of_sail=Point of Sail
+wind.close_hauled=Close Hauled
+
+# ==================== Beaufort ====================
+beaufort.0=Calm
+beaufort.1=Light Air
+beaufort.2=Light Breeze
+beaufort.3=Gentle Breeze
+beaufort.4=Moderate Breeze
+beaufort.5=Fresh Breeze
+beaufort.6=Strong Breeze
+beaufort.7=Near Gale
+beaufort.8=Gale
+beaufort.9=Strong Gale
+beaufort.10=Storm
+beaufort.11=Violent Storm
+beaufort.12=Hurricane
+
+# ==================== Depth ====================
+depth.depth=Depth
+depth.depth_history=Depth History
+depth.depth_alarm=Depth Alarm
+depth.depth_alarm_upper=DEPTH ALARM
+depth.clear_alarm=Clear Alarm
+depth.sound_alarm=Sound Alarm
+depth.sound=SOUND
+
+# ==================== Speed ====================
+speed.speed=Speed
+speed.speed_history=Speed History
+speed.avg=Avg
+speed.max=Max
+speed.min=Min
+
+# ==================== Heading ====================
+heading.heading=Heading
+heading.heading_history=Heading History
+
+# ==================== COG ====================
+cog.course_over_ground=Course Over Ground
+cog.course_history=Course History
+
+# ==================== Battery ====================
+battery.battery=Battery
+battery.state_of_charge=State of Charge
+battery.voltage=Voltage
+battery.current=Current
+battery.temperature=Temperature
+battery.status=Status
+battery.charging=Charging
+battery.discharging=Discharging
+battery.idle=Idle
+battery.voltage_history=Voltage History
+battery.charge_history=Charge History
+
+# ==================== Position ====================
+position.position=Position
+position.recent_track=Recent Track
+position.distance_traveled=Distance Traveled
+position.track_points=Track Points
+position.decimal_coordinates=Decimal Coordinates
+position.lat=Lat
+position.lon=Lon
+position.collecting_data=Collecting position data...
+
+# ==================== Alerts ====================
+alerts.enable_alerts=Enable Alerts
+alerts.master_toggle=Master toggle for all alert notifications
+alerts.no_alerts=No alerts configured
+alerts.add_alert=Add Alert
+alerts.create_alert=Create Alert
+alerts.edit_alert=Edit Alert
+alerts.alert_name=Alert Name
+alerts.alert_name_placeholder=Enter alert name...
+alerts.data_source=Data Source
+alerts.condition=Condition
+alerts.threshold=Threshold
+alerts.forecast_window=Forecast Window (hours)
+alerts.snooze_duration=Snooze Duration
+alerts.severity=Severity
+alerts.sound=Sound
+alerts.preview=Preview
+alerts.message_template=Message Template
+alerts.message_placeholder=e.g. Wind exceeds {threshold}
+alerts.placeholders=Placeholders:
+alerts.value_desc={value} measured value with unit
+alerts.threshold_desc={threshold} threshold with unit
+alerts.condition_desc={condition} condition
+alerts.preview_label=Preview:
+alerts.reset_to_default=Reset to Default
+alerts.create=Create
+alerts.minutes=minutes
+alerts.snooze=Snooze
+alerts.dismiss=Dismiss
+
+# ==================== Alert Data Sources ====================
+alert.ds.wind_speed=Wind Speed (Sensor)
+alert.ds.speed_over_ground=Speed Over Ground (Sensor)
+alert.ds.depth=Depth (Sensor)
+alert.ds.battery_voltage=Battery Voltage (Sensor)
+alert.ds.battery_soc=Battery SOC (Sensor)
+alert.ds.wind_gusts=Wind Gusts (Weather)
+alert.ds.wave_height=Wave Height (Weather)
+alert.ds.temperature_air=Air Temperature (Weather)
+alert.ds.temperature_water=Water Temperature (Weather)
+alert.ds.wind_forecast=Wind Forecast (Weather)
+alert.ds.wave_forecast=Wave Forecast (Weather)
+
+# ==================== Alert Tones ====================
+alert.tone.none=None
+alert.tone.beep=Beep
+alert.tone.notification=Notification
+alert.tone.alarm=Alarm
+alert.tone.chime=Chime
+alert.tone.warning=Warning
+alert.tone.sonar=Sonar Ping
+alert.tone.bell=Ship Bell
+alert.tone.siren=Siren
+alert.tone.gentle=Gentle
+alert.tone.urgent=Urgent Beeps
+alert.tone.foghorn=Foghorn
+alert.tone.triple=Triple Beep
+alert.tone.ascending=Ascending
+alert.tone.ding=Soft Ding
+
+# ==================== Alert Operators ====================
+alert.op.greater_than=> (greater than)
+alert.op.greater_or_equal=>= (greater or equal)
+alert.op.less_than=< (less than)
+alert.op.less_or_equal=<= (less or equal)
+alert.op.equals== (equals)
+alert.op.not_equals=!= (not equals)
+
+# ==================== Alert Severity ====================
+alert.severity.info=Info
+alert.severity.warning=Warning
+alert.severity.critical=Critical
+
+# ==================== Premade Alerts ====================
+alert.premade.wind_alert=Wind Alert
+alert.premade.high_wind_warning=High Wind Warning
+alert.premade.low_battery=Low Battery
+alert.premade.high_wave_alert=High Wave Alert
+alert.premade.wind_alert_msg=Wind forecast {condition} {threshold} (max: {value} in next hour)
+alert.premade.high_wind_msg=Strong winds ({value}) forecast in next 3 hours
+alert.premade.low_battery_msg=Battery voltage low: {value}
+alert.premade.high_wave_msg=Waves forecast {condition} {threshold} (max: {value} in next 3 hours)
+
+# ==================== Downloads ====================
+downloads.description=Water body datasets for marine navigation and route planning.
+downloads.storage=Storage:
+downloads.free=free
+downloads.installed=Installed:
+downloads.update=Update:
+downloads.available=available
+downloads.custom_url=Custom URL
+downloads.modified=(modified)
+downloads.enter_url=Enter download URL
+downloads.saving=Saving...
+downloads.cancel_download=Cancel Download
+downloads.download=Download
+downloads.retry_download=Retry Download
+downloads.extracting=Extracting...
+downloads.converting=Converting to shapefile...
+downloads.indexing=Indexing navigation data...
+downloads.loading_data=Loading data status...
+downloads.installed_label=Installed
+downloads.error_download_failed=Download failed
+downloads.starting=Starting...
+
+# ==================== Advanced ====================
+advanced.map_tiles=Map Tiles
+advanced.street_map=Street Map
+advanced.satellite_map=Satellite Map
+advanced.nautical_overlay=Nautical Overlay
+advanced.reset_map_tiles=Reset Map Tiles to Defaults
+advanced.api_endpoints=API Endpoints
+advanced.geocoding_api=Geocoding API (location search)
+advanced.reset_api=Reset API Endpoints to Defaults
+advanced.weather_data=Weather Data
+advanced.weather_service=Weather Service
+advanced.weather_service_desc=Wind and wave forecasts from Open-Meteo
+advanced.refresh_interval=Refresh Interval
+advanced.weather_api=Weather API (wind, pressure)
+advanced.marine_api=Marine API (waves, swell)
+advanced.reset_weather=Reset Weather Settings to Defaults
+advanced.map_tiles_info=Map Tiles: Use standard XYZ tile format with placeholders: {z} for zoom, {x}/{y} for coordinates, {s} for subdomains.
+advanced.geocoding_info=Geocoding: Used for location search. Default uses Photon (free, CORS-enabled).
+advanced.weather_info=Weather: Uses Open-Meteo (free, no API key). Wind and marine data fetched automatically based on boat position.
+
+# ==================== Offline Maps ====================
+offline_maps.download_new_region=Download New Region
+offline_maps.region_name_placeholder=Region name (e.g., 'Baltic Sea')
+offline_maps.calculating=Calculating...
+offline_maps.move_map_estimate=Move the map to see estimate
+offline_maps.street_maps=Street Maps
+offline_maps.satellite=Satellite
+offline_maps.sea_charts=Sea Charts
+offline_maps.total=Total
+offline_maps.download_region=Download Region
+offline_maps.saved_regions=Saved Regions ({count})
+offline_maps.loading=Loading...
+offline_maps.no_regions=No offline regions saved yet
+offline_maps.cancel_download=Cancel Download
+offline_maps.downloaded=Downloaded
+offline_maps.retry=Retry
+offline_maps.info=Offline Maps: Downloaded regions include street map, satellite imagery, and nautical overlay tiles (zoom 0-16). Tiles are served from your local server when available.
+offline_maps.complete=Complete
+offline_maps.downloading=Downloading... {percent}%
+offline_maps.delete_region=Delete "{name}"?
+offline_maps.delete_region_desc=This will remove all downloaded tiles for this region.
+offline_maps.pan_and_zoom=Pan & zoom
+offline_maps.storage_free=Storage: {available} free
+offline_maps.error=Error
+
+# ==================== Chart / Navigation ====================
+chart.speed=SPEED
+chart.depth=DEPTH
+chart.forecast=FORECAST
+chart.search=SEARCH
+chart.back_to_dashboard=Back to Dashboard
+chart.switch_to_street=Switch to Street View
+chart.switch_to_satellite=Switch to Satellite View
+chart.map=MAP
+chart.satellite=SATELLITE
+chart.search_locations=Search locations
+chart.vessel_details=Vessel Details
+chart.my_vessel=My Vessel
+chart.identification=Identification
+chart.registration=Registration
+chart.call_sign=Call Sign
+chart.mmsi=MMSI
+chart.dimensions=Dimensions
+chart.length=Length
+chart.beam=Beam
+chart.draft=Draft
+chart.displacement=Displacement
+chart.freeboard=Freeboard
+chart.wl_length=WL Length
+chart.edit_vessel=Edit Vessel Details
+chart.chain_calculation=Chain Length Calculation
+chart.how_calculated=How recommendations are calculated
+chart.your_vessel=Your Vessel
+chart.length_loa=Length (LOA)
+chart.chain_diameter=Chain Ø
+chart.windage_area=Windage area
+chart.chain_weight=Chain weight
+chart.wind_forecast=Wind Forecast
+chart.minimum=Minimum
+chart.recommended=Recommended
+chart.storm=Storm
+chart.tap_for_details=Tap for calculation details
+chart.method_catenary=Method 1: Catenary Equation
+chart.method_wind_loa=Method 2: Wind + LOA Rule
+chart.depth_factors=Depth factors
+chart.uses=Uses
+chart.on_upper=ON
+chart.off_upper=OFF
+chart.search_attribution=Search powered by Photon (© OpenStreetMap)
+
+# ==================== Anchor ====================
+anchor.anchor_alarm=Anchor Alarm
+anchor.chain_out=Chain out (meters)
+anchor.depth_meters=Depth (meters)
+anchor.planned_stay=Planned stay
+anchor.min_chain=Minimum chain
+anchor.recommended_chain=Recommended chain
+anchor.set_depth=Set depth
+anchor.max_wind=Max Wind
+anchor.max_gust=Max Gust
+anchor.chain_gt_depth=Chain length must be greater than depth
+anchor.activate=Activate
+anchor.deactivate=Deactivate
+anchor.adjust_position=Adjust Anchor Position
+anchor.alarm_radius=Alarm Radius
+anchor.chain_out_label=Chain Out
+
+# ==================== Autopilot ====================
+autopilot.autopilot=AUTOPILOT
+autopilot.set_course=SET COURSE
+autopilot.follow_route=Follow Route
+autopilot.activate=ACTIVATE
+autopilot.deactivate=DEACTIVATE
+
+# ==================== Weather Panel ====================
+weather.marine_forecast=MARINE FORECAST
+weather.wind=Wind
+weather.waves=Waves
+weather.swell=Swell
+weather.current=Current
+weather.temp=Temp
+weather.loading=Loading...
+weather.select_time=Select a time below
+weather.time=TIME
+weather.now=Now
+weather.custom=Custom
+weather.wind_speed=Wind speed
+weather.wave_height=Wave height
+weather.swell_height=Swell height
+weather.current_speed=Current speed
+weather.sea_temperature=Sea temperature
+weather.powered_by=Powered by Open-Meteo.com
+weather.custom_time=CUSTOM TIME
+weather.days_from_now=Days from now
+weather.hours=Hours
+weather.period=period
+
+# ==================== Search Panel ====================
+search.search_locations=SEARCH LOCATIONS
+search.offline_marker_only=Offline - only marker search available
+search.type_to_search=Type to search (min 2 chars)...
+search.searching=Searching...
+search.your_markers=YOUR MARKERS
+search.locations=LOCATIONS
+search.no_results=No results found
+
+# ==================== Markers ====================
+markers.edit_marker=Edit Marker
+markers.add_marker=Add Marker
+markers.icon=ICON
+markers.color=COLOR
+markers.name_placeholder=Marker name...
+
+# ==================== State / Status ====================
+state.anchored=Anchored
+state.sailing=Sailing
+state.motoring=Motoring
+state.in_marina=In Marina
+state.drifting=Drifting
+state.boat_status=Boat Status
+state.alarm_status=Alarm Status
+state.alarm_radius=Alarm Radius
+state.chain_out=Chain Out
+state.sailing_performance=Sailing Performance
+state.motor_status=Motor Status
+state.throttle=Throttle
+state.motor_temp=Motor Temp
+state.running=Running
+state.stopped=Stopped
+state.marina_status=Marina Status
+state.moored_message=Boat is securely moored in marina
+state.drifting_message=Boat is drifting - consider anchoring or starting motor
+
+# ==================== Chart Additional ====================
+chart.calculating_route=Calculating route...
+chart.nav_data_missing=Navigation Data Missing
+chart.go_to_nav_data=Go to Settings > Navigation Data to download the required ocean and lake data files.
+chart.go_to_settings=Go to Settings
+chart.suggestions=Suggestions:
+chart.loading_map=Loading map...
+chart.course_change_in=COURSE CHANGE IN
+chart.pan_to_set_anchor=Pan map to set anchor position
+chart.distance_from_boat=Distance from Boat:
+chart.bearing=Bearing:
+chart.confirm_position=Confirm Position
+chart.create_marker=Create Marker
+chart.navigate_here=Navigate Here
+chart.navigate_to_marker=Navigate to Marker
+chart.delete_marker=Delete Marker
+chart.your_boat=Your Boat
+chart.anchor_alarm_active=Anchor Alarm active
+chart.route=ROUTE
+chart.auto_centering_on=Auto-centering ON
+chart.click_to_recenter=Click to recenter
+chart.route_start_on_land_title=Start Point Not on Water
+chart.route_start_on_land_msg=Your current position appears to be on land according to the navigation data.
+chart.route_start_on_land_s1=Move to deeper water away from shore
+chart.route_start_on_land_s2=Small harbors and marinas may not be recognized by the water detection
+chart.route_start_on_land_s3=Try navigating from a position further out
+chart.route_end_on_land_title=Destination Not on Water
+chart.route_end_on_land_msg=The destination point appears to be on land.
+chart.route_end_on_land_s1=Select a destination further from shore
+chart.route_end_on_land_s2=Small harbors and marinas may not be recognized
+chart.route_end_on_land_s3=Try selecting a point in deeper water near your intended destination
+chart.route_no_path_title=No Water Route Found
+chart.route_no_path_msg=Unable to find a navigable water route between these points. Land appears to block the path.
+chart.route_no_path_s1=The route may require going around a landmass
+chart.route_no_path_s2=Try breaking the journey into shorter segments
+chart.route_no_path_s3=Check if there is actually a water connection between these points
+chart.route_too_long_title=Route Too Long
+chart.route_too_long_msg=The distance between these points is too long for automatic route calculation.
+chart.route_too_long_s1=Try breaking the journey into shorter segments (under 100 NM each)
+chart.route_too_long_s2=Navigate to an intermediate waypoint first
+chart.route_too_long_s3=For ocean crossings, create waypoints manually
+chart.route_narrow_title=Channel Too Narrow
+chart.route_narrow_msg=The route may pass through channels that are too narrow to be detected.
+chart.route_narrow_s1=Small rivers, canals, and narrow passages may not be recognized
+chart.route_narrow_s2=Try navigating through wider waterways
+chart.route_narrow_s3=Use local charts for navigation in tight areas
+chart.route_timeout_title=Route Calculation Timeout
+chart.route_timeout_msg=The route calculation took too long and was stopped.
+chart.route_timeout_s1=Try a shorter distance
+chart.route_timeout_s2=The area may have complex coastlines requiring manual waypoints
+chart.route_timeout_s3=Break the route into smaller segments
+chart.route_failed_title=Route Calculation Failed
+chart.route_failed_msg=Unable to calculate a water route between these points.
+chart.route_failed_s1=Try selecting points that are clearly in open water
+chart.route_failed_s2=Check that both start and destination are navigable
+chart.dismiss=Dismiss
+chart.ok=OK
+chart.anchor_status=Anchor Status
+chart.status=Status
+chart.storage=Storage:
+chart.free=free
+chart.navigate=WASD: navigate ({speed} kt)
+
+# ==================== Confirmation Dialogs ====================
+confirm.delete_file=Delete {name}?
+confirm.remove_data=This will remove the downloaded data. You can re-download it later.
+
+# ==================== Validation ====================
+validation.invalid_number=Please enter a valid number
+validation.min_value=Value must be at least {min}

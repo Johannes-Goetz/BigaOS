@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface ViewLayoutProps {
   title: string;
@@ -250,6 +251,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
   hasData,
   children,
 }) => {
+  const { t } = useLanguage();
   return (
     <div
       style={{
@@ -280,7 +282,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
               fontSize: '0.9rem',
             }}
           >
-            Loading history...
+            {t('common.loading_history')}
           </div>
         )}
         {children}

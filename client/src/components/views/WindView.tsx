@@ -1,6 +1,7 @@
 import React from 'react';
 import { SensorData } from '../../types';
 import { useSettings, windConversions } from '../../context/SettingsContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface WindViewProps {
   sensorData: SensorData;
@@ -10,33 +11,34 @@ interface WindViewProps {
 export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
   const { wind } = sensorData.environment;
   const { windUnit, convertWind } = useSettings();
+  const { t } = useLanguage();
 
   const getWindSector = (angle: number): string => {
-    if (angle < 30 || angle > 330) return 'Dead Ahead';
-    if (angle >= 30 && angle < 60) return 'Close Reach (Stbd)';
-    if (angle >= 60 && angle < 90) return 'Beam Reach (Stbd)';
-    if (angle >= 90 && angle < 135) return 'Broad Reach (Stbd)';
-    if (angle >= 135 && angle < 180) return 'Running (Stbd)';
-    if (angle >= 180 && angle < 225) return 'Running (Port)';
-    if (angle >= 225 && angle < 270) return 'Broad Reach (Port)';
-    if (angle >= 270 && angle < 300) return 'Beam Reach (Port)';
-    return 'Close Reach (Port)';
+    if (angle < 30 || angle > 330) return t('wind.dead_ahead');
+    if (angle >= 30 && angle < 60) return t('wind.close_reach_stbd');
+    if (angle >= 60 && angle < 90) return t('wind.beam_reach_stbd');
+    if (angle >= 90 && angle < 135) return t('wind.broad_reach_stbd');
+    if (angle >= 135 && angle < 180) return t('wind.running_stbd');
+    if (angle >= 180 && angle < 225) return t('wind.running_port');
+    if (angle >= 225 && angle < 270) return t('wind.broad_reach_port');
+    if (angle >= 270 && angle < 300) return t('wind.beam_reach_port');
+    return t('wind.close_reach_port');
   };
 
   const beaufortScale = (knots: number): { force: number; description: string } => {
-    if (knots < 1) return { force: 0, description: 'Calm' };
-    if (knots < 4) return { force: 1, description: 'Light Air' };
-    if (knots < 7) return { force: 2, description: 'Light Breeze' };
-    if (knots < 11) return { force: 3, description: 'Gentle Breeze' };
-    if (knots < 17) return { force: 4, description: 'Moderate Breeze' };
-    if (knots < 22) return { force: 5, description: 'Fresh Breeze' };
-    if (knots < 28) return { force: 6, description: 'Strong Breeze' };
-    if (knots < 34) return { force: 7, description: 'Near Gale' };
-    if (knots < 41) return { force: 8, description: 'Gale' };
-    if (knots < 48) return { force: 9, description: 'Strong Gale' };
-    if (knots < 56) return { force: 10, description: 'Storm' };
-    if (knots < 64) return { force: 11, description: 'Violent Storm' };
-    return { force: 12, description: 'Hurricane' };
+    if (knots < 1) return { force: 0, description: t('beaufort.0') };
+    if (knots < 4) return { force: 1, description: t('beaufort.1') };
+    if (knots < 7) return { force: 2, description: t('beaufort.2') };
+    if (knots < 11) return { force: 3, description: t('beaufort.3') };
+    if (knots < 17) return { force: 4, description: t('beaufort.4') };
+    if (knots < 22) return { force: 5, description: t('beaufort.5') };
+    if (knots < 28) return { force: 6, description: t('beaufort.6') };
+    if (knots < 34) return { force: 7, description: t('beaufort.7') };
+    if (knots < 41) return { force: 8, description: t('beaufort.8') };
+    if (knots < 48) return { force: 9, description: t('beaufort.9') };
+    if (knots < 56) return { force: 10, description: t('beaufort.10') };
+    if (knots < 64) return { force: 11, description: t('beaufort.11') };
+    return { force: 12, description: t('beaufort.12') };
   };
 
   const beaufort = beaufortScale(wind.speedApparent);
@@ -84,10 +86,10 @@ export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
             fontSize: '1rem',
           }}
         >
-          ← Back
+          ← {t('common.back')}
         </button>
         <h1 style={{ marginLeft: '1rem', fontSize: '1.5rem', fontWeight: 'bold' }}>
-          Wind Instrument
+          {t('wind.instrument')}
         </h1>
       </div>
 
@@ -231,7 +233,7 @@ export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '0.875rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-              APPARENT WIND
+              {t('wind.apparent_wind')}
             </div>
             <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#ffa726' }}>
               {formatWindValue(convertedApparent)}
@@ -254,7 +256,7 @@ export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '0.875rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-              TRUE WIND
+              {t('wind.true_wind')}
             </div>
             <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#4fc3f7' }}>
               {formatWindValue(convertedTrue)}
@@ -277,9 +279,9 @@ export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
           padding: '1rem 2rem',
           textAlign: 'center',
         }}>
-          <span style={{ opacity: 0.6 }}>Beaufort: </span>
+          <span style={{ opacity: 0.6 }}>{t('wind.beaufort')} </span>
           <span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-            Force {beaufort.force}
+            {t('wind.force')} {beaufort.force}
           </span>
           <span style={{ opacity: 0.6 }}> - {beaufort.description}</span>
         </div>
@@ -293,11 +295,11 @@ export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: '20px', height: '4px', background: '#ffa726', borderRadius: '2px' }} />
-            <span style={{ opacity: 0.6 }}>Apparent</span>
+            <span style={{ opacity: 0.6 }}>{t('wind.apparent')}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: '20px', height: '4px', background: '#4fc3f7', borderRadius: '2px', borderStyle: 'dashed' }} />
-            <span style={{ opacity: 0.6 }}>True</span>
+            <span style={{ opacity: 0.6 }}>{t('wind.true')}</span>
           </div>
         </div>
       </div>

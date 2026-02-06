@@ -6,6 +6,7 @@ import {
   SpeedUnit,
   DepthUnit,
 } from '../../../context/SettingsContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 type WeatherDisplayMode = 'wind' | 'waves' | 'swell' | 'current' | 'water-temp';
 
@@ -66,6 +67,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
   onDebugToggle: _onDebugToggle,
   onWeatherClick,
 }) => {
+  const { t } = useLanguage();
   const sidebarWidth = 100;
 
   return (
@@ -91,7 +93,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
           style={{
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
-          title="Back to Dashboard"
+          title={t('chart.back_to_dashboard')}
         >
           <svg
             width="24"
@@ -132,7 +134,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
         }}
       >
         <div style={{ fontSize: '0.6rem', opacity: 0.6, marginBottom: '0.15rem' }}>
-          SPEED
+          {t('chart.speed')}
         </div>
         <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>
           {convertedSpeed.toFixed(1)}
@@ -165,7 +167,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
             gap: '0.25rem',
           }}
         >
-          DEPTH
+          {t('chart.depth')}
           {depthAlarm !== null && (
             <svg
               width="12"
@@ -202,7 +204,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
             background: weatherPanelOpen ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
           }}
-          title="Marine forecast settings"
+          title={t('weather.marine_forecast')}
         >
           <svg
             width="22"
@@ -247,7 +249,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
               </g>
             )}
           </svg>
-          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>FORECAST</span>
+          <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>{t('chart.forecast')}</span>
         </button>
       )}
 
@@ -258,7 +260,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
         style={{
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         }}
-        title="Search locations"
+        title={t('search.search_locations')}
       >
         <svg
           width="24"
@@ -273,7 +275,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>SEARCH</span>
+        <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>{t('chart.search')}</span>
       </button>
 
       {/* Satellite/Street toggle button */}
@@ -283,7 +285,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
         style={{
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         }}
-        title={useSatellite ? 'Switch to Street View' : 'Switch to Satellite View'}
+        title={useSatellite ? t('chart.switch_to_street') : t('chart.switch_to_satellite')}
       >
         {useSatellite ? (
           // Map icon - shown when in satellite mode (click to switch to street/map)
@@ -319,7 +321,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
           </svg>
         )}
         <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>
-          {useSatellite ? 'MAP' : 'SATELLITE'}
+          {useSatellite ? t('chart.map') : t('chart.satellite')}
         </span>
       </button>
 

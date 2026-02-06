@@ -6,8 +6,8 @@ import { GeoPosition } from '../../types';
 import {
   useSettings,
   distanceConversions,
-  depthConversions,
 } from '../../context/SettingsContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { SearchResult } from '../../services/geocoding';
 import { navigationAPI, geocodingAPI } from '../../services/api';
@@ -125,6 +125,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   onClose,
   hideSidebar = false,
 }) => {
+  const { t } = useLanguage();
   // UI State
   const [autoCenter, setAutoCenter] = useState(true);
   const [depthSettingsOpen, setDepthSettingsOpen] = useState(false);
@@ -290,71 +291,71 @@ export const ChartView: React.FC<ChartViewProps> = ({
     switch (failureReason) {
       case 'START_ON_LAND':
         return {
-          title: 'Start Point Not on Water',
-          message: 'Your current position appears to be on land according to the navigation data.',
+          title: t('chart.route_start_on_land_title'),
+          message: t('chart.route_start_on_land_msg'),
           suggestions: [
-            'Move to deeper water away from shore',
-            'Small harbors and marinas may not be recognized by the water detection',
-            'Try navigating from a position further out'
+            t('chart.route_start_on_land_s1'),
+            t('chart.route_start_on_land_s2'),
+            t('chart.route_start_on_land_s3')
           ]
         };
       case 'END_ON_LAND':
         return {
-          title: 'Destination Not on Water',
-          message: 'The destination point appears to be on land.',
+          title: t('chart.route_end_on_land_title'),
+          message: t('chart.route_end_on_land_msg'),
           suggestions: [
-            'Select a destination further from shore',
-            'Small harbors and marinas may not be recognized',
-            'Try selecting a point in deeper water near your intended destination'
+            t('chart.route_end_on_land_s1'),
+            t('chart.route_end_on_land_s2'),
+            t('chart.route_end_on_land_s3')
           ]
         };
       case 'NO_PATH_FOUND':
         return {
-          title: 'No Water Route Found',
-          message: 'Unable to find a navigable water route between these points. Land appears to block the path.',
+          title: t('chart.route_no_path_title'),
+          message: t('chart.route_no_path_msg'),
           suggestions: [
-            'The route may require going around a landmass',
-            'Try breaking the journey into shorter segments',
-            'Check if there is actually a water connection between these points'
+            t('chart.route_no_path_s1'),
+            t('chart.route_no_path_s2'),
+            t('chart.route_no_path_s3')
           ]
         };
       case 'DISTANCE_TOO_LONG':
         return {
-          title: 'Route Too Long',
-          message: 'The distance between these points is too long for automatic route calculation.',
+          title: t('chart.route_too_long_title'),
+          message: t('chart.route_too_long_msg'),
           suggestions: [
-            'Try breaking the journey into shorter segments (under 100 NM each)',
-            'Navigate to an intermediate waypoint first',
-            'For ocean crossings, create waypoints manually'
+            t('chart.route_too_long_s1'),
+            t('chart.route_too_long_s2'),
+            t('chart.route_too_long_s3')
           ]
         };
       case 'NARROW_CHANNEL':
         return {
-          title: 'Channel Too Narrow',
-          message: 'The route may pass through channels that are too narrow to be detected.',
+          title: t('chart.route_narrow_title'),
+          message: t('chart.route_narrow_msg'),
           suggestions: [
-            'Small rivers, canals, and narrow passages may not be recognized',
-            'Try navigating through wider waterways',
-            'Use local charts for navigation in tight areas'
+            t('chart.route_narrow_s1'),
+            t('chart.route_narrow_s2'),
+            t('chart.route_narrow_s3')
           ]
         };
       case 'MAX_ITERATIONS':
         return {
-          title: 'Route Calculation Timeout',
-          message: 'The route calculation took too long and was stopped.',
+          title: t('chart.route_timeout_title'),
+          message: t('chart.route_timeout_msg'),
           suggestions: [
-            'Try a shorter distance',
-            'The area may have complex coastlines requiring manual waypoints',
-            'Break the route into smaller segments'
+            t('chart.route_timeout_s1'),
+            t('chart.route_timeout_s2'),
+            t('chart.route_timeout_s3')
           ]
         };
       default:
         return {
-          title: 'Route Calculation Failed',
-          message: 'Unable to calculate a water route between these points.',
+          title: t('chart.route_failed_title'),
+          message: t('chart.route_failed_msg'),
           suggestions: [
-            'Try selecting points that are clearly in open water',
-            'Check that both start and destination are navigable'
+            t('chart.route_failed_s1'),
+            t('chart.route_failed_s2')
           ]
         };
     }
@@ -771,18 +772,6 @@ export const ChartView: React.FC<ChartViewProps> = ({
     }
   }, [contextMenu, markerContextMenu, boatContextMenu, showMarkerDialog]);
 
-  // Check if anchor is dragging
-  const isAnchorDragging = useMemo(() => {
-    if (!anchorAlarm?.active) return false;
-    const distanceToAnchor = calculateDistanceMeters(
-      position.latitude,
-      position.longitude,
-      anchorAlarm.anchorPosition.lat,
-      anchorAlarm.anchorPosition.lon
-    );
-    return distanceToAnchor > anchorAlarm.swingRadius;
-  }, [anchorAlarm, position.latitude, position.longitude]);
-
   // Calculate swing radius for placement preview
   const placementSwingRadius = useMemo(() => {
     if (!placingAnchor || anchorChainLength <= anchorDepth) return 0;
@@ -841,12 +830,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
     };
   }, []);
 
-  // Sync anchor alarm state across all clients via websocket
-  const isLocalAnchorChange = useRef(false);
-
   // Helper to update anchor alarm and broadcast to other clients
   const updateAnchorAlarm = useCallback((newAlarm: typeof anchorAlarm) => {
-    isLocalAnchorChange.current = true;
     setAnchorAlarm(newAlarm);
     wsService.emit('anchor_alarm_update', { anchorAlarm: newAlarm });
   }, []);
@@ -857,11 +842,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
       anchorAlarm: typeof anchorAlarm;
       timestamp: Date;
     }) => {
-      // Update local state with received anchor alarm
-      if (!isLocalAnchorChange.current) {
-        setAnchorAlarm(data.anchorAlarm);
-      }
-      isLocalAnchorChange.current = false;
+      setAnchorAlarm(data.anchorAlarm);
     };
 
     wsService.on('anchor_alarm_changed', handleAnchorAlarmChanged);
@@ -1511,7 +1492,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               }}
             />
             <div style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
-              Calculating route...
+              {t('chart.calculating_route')}
             </div>
             <style>{`
               @keyframes spin {
@@ -1556,14 +1537,14 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 <circle cx="12" cy="16" r="0.5" fill="#f44336" />
               </svg>
               <h3 style={{ color: '#f44336', margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
-                Navigation Data Missing
+                {t('chart.nav_data_missing')}
               </h3>
             </div>
             <p style={{ color: '#ccc', margin: '0 0 1.5rem 0', lineHeight: 1.6 }}>
               {navDataError}
             </p>
             <p style={{ color: '#999', margin: '0 0 1.5rem 0', fontSize: '0.9rem', lineHeight: 1.5 }}>
-              Go to <strong style={{ color: '#4fc3f7' }}>Settings &gt; Navigation Data</strong> to download the required ocean and lake data files.
+              {t('chart.go_to_nav_data')}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
@@ -1578,7 +1559,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   fontSize: '0.9rem',
                 }}
               >
-                Dismiss
+                {t('chart.dismiss')}
               </button>
               <button
                 onClick={() => {
@@ -1596,7 +1577,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   fontWeight: 600,
                 }}
               >
-                Go to Settings
+                {t('chart.go_to_settings')}
               </button>
             </div>
           </div>
@@ -1645,7 +1626,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
             </p>
             <div style={{ marginBottom: '1.5rem' }}>
               <p style={{ color: '#999', margin: '0 0 0.5rem 0', fontSize: '0.85rem', fontWeight: 500 }}>
-                Suggestions:
+                {t('chart.suggestions')}
               </p>
               <ul style={{ color: '#aaa', margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem', lineHeight: 1.6 }}>
                 {routeError.suggestions.map((suggestion, index) => (
@@ -1667,7 +1648,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   fontWeight: 500,
                 }}
               >
-                OK
+                {t('chart.ok')}
               </button>
             </div>
           </div>
@@ -1863,7 +1844,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 6v6l4 2" />
                 </svg>
-                <span>AUTOPILOT</span>
+                <span>{t('autopilot.autopilot')}</span>
                 {followingRoute && (
                   <>
                     <svg
@@ -1879,7 +1860,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                       <path d="M5 12h14" />
                       <path d="M12 5l7 7-7 7" />
                     </svg>
-                    <span>ROUTE</span>
+                    <span>{t('chart.route')}</span>
                   </>
                 )}
                 <span style={{ opacity: 0.9, fontWeight: 'normal' }}>
@@ -1935,7 +1916,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 >
                   <path d="M17 15l1.55 1.55c-.96 1.69-3.33 3.04-5.55 3.37V11h3V9h-3V7.82C14.16 7.4 15 6.3 15 5c0-1.65-1.35-3-3-3S9 3.35 9 5c0 1.3.84 2.4 2 2.82V9H8v2h3v8.92c-2.22-.33-4.59-1.68-5.55-3.37L7 15l-4-3v3c0 3.88 4.92 7 9 7s9-3.12 9-7v-3l-4 3zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
                 </svg>
-                <span>Anchor Alarm active</span>
+                <span>{t('chart.anchor_alarm_active')}</span>
                 <span style={{ opacity: 0.9, fontWeight: 'normal' }}>
                   Radius: {anchorAlarm.swingRadius.toFixed(0)}m
                 </span>
@@ -1980,7 +1961,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               justifyContent: 'center',
               opacity: 0.6,
             }}
-            title="Dismiss"
+            title={t('chart.dismiss')}
           >
             <svg
               width="16"
@@ -1997,7 +1978,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
             </svg>
           </button>
           <div style={{ fontSize: '0.75rem', opacity: 0.8, marginBottom: '0.25rem' }}>
-            COURSE CHANGE IN
+            {t('chart.course_change_in')}
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
             {courseChangeWarning.secondsUntil}s
@@ -2046,12 +2027,12 @@ export const ChartView: React.FC<ChartViewProps> = ({
             }}
           >
             <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
-              Pan map to set anchor position
+              {t('chart.pan_to_set_anchor')}
             </div>
             {anchorPositionOverride && (
               <div style={{ fontSize: '0.9rem', color: '#4fc3f7', width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Distance from Boat:</span>
+                  <span>{t('chart.distance_from_boat')}</span>
                   <span>{calculateDistanceMeters(
                     position.latitude,
                     position.longitude,
@@ -2060,7 +2041,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   ).toFixed(0)}m</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Bearing:</span>
+                  <span>{t('chart.bearing')}</span>
                   <span>{calculateBearing(
                     position.latitude,
                     position.longitude,
@@ -2088,7 +2069,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 cursor: 'pointer',
               }}
             >
-              Confirm Position
+              {t('chart.confirm_position')}
             </button>
           </div>
         </>
@@ -2172,7 +2153,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           sidebarWidth={sidebarWidth}
           options={[
             {
-              label: 'Create Marker',
+              label: t('chart.create_marker'),
               icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#4fc3f7" stroke="#fff" strokeWidth="1">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
@@ -2181,7 +2162,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               onClick: () => setShowMarkerDialog(true),
             },
             {
-              label: 'Navigate Here',
+              label: t('chart.navigate_here'),
               icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#66bb6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="6" cy="8" r="2" fill="#66bb6a" />
@@ -2207,7 +2188,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           header={markerContextMenu.marker.name}
           options={[
             {
-              label: 'Edit Marker',
+              label: t('markers.edit_marker'),
               icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -2223,7 +2204,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               },
             },
             {
-              label: 'Navigate to Marker',
+              label: t('chart.navigate_to_marker'),
               icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#66bb6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="6" cy="8" r="2" fill="#66bb6a" />
@@ -2236,7 +2217,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               onClick: () => navigateToMarker(markerContextMenu.marker),
             },
             {
-              label: 'Delete Marker',
+              label: t('chart.delete_marker'),
               icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef5350" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
@@ -2258,10 +2239,10 @@ export const ChartView: React.FC<ChartViewProps> = ({
           x={boatContextMenu.x}
           y={boatContextMenu.y}
           sidebarWidth={sidebarWidth}
-          header={vesselSettings.name || 'Your Boat'}
+          header={vesselSettings.name || t('chart.your_boat')}
           options={[
             {
-              label: 'Vessel Details',
+              label: t('chart.vessel_details'),
               icon: (
                 <svg width="18" height="18" viewBox="-12 -18 24 28" fill="none">
                   {/* Hull - flat stern (left), pointy bow (right) */}
@@ -2298,7 +2279,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               },
             },
             {
-              label: 'Anchor Alarm',
+              label: t('anchor.anchor_alarm'),
               icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="5" r="3" />
@@ -2508,7 +2489,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
             color: '#fff',
             zIndex: 1000,
           }}
-          title={autoCenter ? 'Auto-centering ON' : 'Click to recenter'}
+          title={autoCenter ? t('chart.auto_centering_on') : t('chart.click_to_recenter')}
         >
           <svg
             width="24"

@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { theme } from '../../styles/theme';
 import { useSettings, windConversions, speedConversions, depthConversions, temperatureConversions } from '../../context/SettingsContext';
+import { CustomSelect, SelectOption } from '../ui/CustomSelect';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { ALERT_SOUNDS } from '../../utils/audio';
 import {
   AlertDefinition,
@@ -8,15 +10,16 @@ import {
   AlertOperator,
   AlertSeverity,
   AlertTone,
-  DATA_SOURCE_LABELS,
   DATA_SOURCE_OPERATORS,
   OPERATOR_LABELS,
-  OPERATOR_SPOKEN_LABELS,
   SNOOZE_OPTIONS,
   PREMADE_ALERTS,
-  TONE_LABELS,
   isWeatherDataSource,
   getUnitForDataSource,
+  getDataSourceLabel,
+  getToneLabel,
+  getOperatorSpokenLabel,
+  getSeverityLabel,
 } from '../../types/alerts';
 
 interface AlertEditDialogProps {
@@ -24,141 +27,6 @@ interface AlertEditDialogProps {
   onSave: (alert: AlertDefinition | Omit<AlertDefinition, 'id'>) => void;
   onDelete?: () => void;
   onClose: () => void;
-}
-
-// Custom Select Component
-interface SelectOption<T> {
-  value: T;
-  label: string;
-}
-
-interface CustomSelectProps<T extends string | number> {
-  value: T;
-  options: SelectOption<T>[];
-  onChange: (value: T) => void;
-  placeholder?: string;
-}
-
-function CustomSelect<T extends string | number>({
-  value,
-  options,
-  onChange,
-  placeholder = 'Select...',
-}: CustomSelectProps<T>) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const selectedOption = options.find((opt) => opt.value === value);
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          width: '100%',
-          padding: theme.space.md,
-          background: theme.colors.bgCardActive,
-          border: `1px solid ${isOpen ? theme.colors.primary : theme.colors.border}`,
-          borderRadius: theme.radius.md,
-          color: selectedOption ? theme.colors.textPrimary : theme.colors.textMuted,
-          fontSize: theme.fontSize.md,
-          cursor: 'pointer',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          textAlign: 'left',
-          transition: `border-color ${theme.transition.fast}`,
-        }}
-      >
-        <span>{selectedOption?.label ?? placeholder}</span>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          style={{
-            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: `transform ${theme.transition.fast}`,
-            opacity: 0.5,
-          }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            marginTop: '4px',
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radius.md,
-            boxShadow: theme.shadow.lg,
-            zIndex: 1000,
-            maxHeight: '200px',
-            overflowY: 'auto',
-          }}
-        >
-          {options.map((option) => (
-            <button
-              key={String(option.value)}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              style={{
-                width: '100%',
-                padding: `${theme.space.sm} ${theme.space.md}`,
-                background: option.value === value ? theme.colors.primaryLight : 'transparent',
-                border: 'none',
-                color: option.value === value ? theme.colors.primary : theme.colors.textPrimary,
-                fontSize: theme.fontSize.md,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: `background ${theme.transition.fast}`,
-              }}
-              onMouseEnter={(e) => {
-                if (option.value !== value) {
-                  e.currentTarget.style.background = theme.colors.bgCardHover;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (option.value !== value) {
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 const DATA_SOURCES: AlertDataSource[] = [
@@ -209,6 +77,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
     depthUnit,
     temperatureUnit,
   } = useSettings();
+  const { t } = useLanguage();
 
   const isNew = alert === null;
   const isPremade = alert?.isPremade ?? false;
@@ -253,22 +122,22 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
   // Prepare options for selects
   const dataSourceOptions: SelectOption<AlertDataSource>[] = DATA_SOURCES.map((source) => ({
     value: source,
-    label: DATA_SOURCE_LABELS[source],
+    label: getDataSourceLabel(source, t),
   }));
 
   const operatorOptions: SelectOption<AlertOperator>[] = validOperators.map((op) => ({
     value: op,
-    label: OPERATOR_SPOKEN_LABELS[op],
+    label: getOperatorSpokenLabel(op, t),
   }));
 
   const snoozeOptions: SelectOption<number>[] = SNOOZE_OPTIONS.map((mins) => ({
     value: mins,
-    label: `${mins} minutes`,
+    label: `${mins} ${t('alerts.minutes')}`,
   }));
 
-  const toneOptions: SelectOption<AlertTone>[] = TONES.map((t) => ({
-    value: t,
-    label: TONE_LABELS[t],
+  const toneOptions: SelectOption<AlertTone>[] = TONES.map((tone) => ({
+    value: tone,
+    label: getToneLabel(tone, t),
   }));
 
   // Update operator when data source changes
@@ -391,7 +260,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
               color: theme.colors.textPrimary,
             }}
           >
-            {isNew ? 'Create Alert' : 'Edit Alert'}
+            {isNew ? t('alerts.create_alert') : t('alerts.edit_alert')}
           </h2>
           <button
             onClick={onClose}
@@ -429,13 +298,13 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Alert Name
+              {t('alerts.alert_name')}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter alert name..."
+              placeholder={t('alerts.alert_name_placeholder')}
               style={{
                 width: '100%',
                 padding: theme.space.md,
@@ -458,7 +327,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Data Source
+              {t('alerts.data_source')}
             </label>
             <CustomSelect
               value={dataSource}
@@ -477,7 +346,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Condition
+              {t('alerts.condition')}
             </label>
             <CustomSelect
               value={operator}
@@ -503,7 +372,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                   marginBottom: theme.space.xs,
                 }}
               >
-                Threshold ({currentUnit})
+                {t('alerts.threshold')} ({currentUnit})
               </label>
               <input
                 type="text"
@@ -547,7 +416,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                     marginBottom: theme.space.xs,
                   }}
                 >
-                  Forecast Window (hours)
+                  {t('alerts.forecast_window')}
                 </label>
                 <input
                   type="number"
@@ -581,7 +450,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Snooze Duration
+              {t('alerts.snooze_duration')}
             </label>
             <CustomSelect
               value={snoozeDuration}
@@ -600,7 +469,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Severity
+              {t('alerts.severity')}
             </label>
             <div style={{ display: 'flex', gap: theme.space.sm }}>
               {SEVERITIES.map((s) => (
@@ -628,7 +497,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                     transition: `all ${theme.transition.fast}`,
                   }}
                 >
-                  {s}
+                  {getSeverityLabel(s, t)}
                 </button>
               ))}
             </div>
@@ -644,7 +513,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Sound
+              {t('alerts.sound')}
             </label>
             <div style={{ display: 'flex', gap: theme.space.sm }}>
               <div style={{ flex: 1 }}>
@@ -667,7 +536,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                     cursor: 'pointer',
                   }}
                 >
-                  Preview
+                  {t('alerts.preview')}
                 </button>
               )}
             </div>
@@ -683,13 +552,13 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 marginBottom: theme.space.xs,
               }}
             >
-              Message Template
+              {t('alerts.message_template')}
             </label>
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="e.g. Wind exceeds {threshold}"
+              placeholder={t('alerts.message_placeholder')}
               style={{
                 width: '100%',
                 padding: theme.space.md,
@@ -709,12 +578,12 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
               }}
             >
               <div style={{ marginBottom: theme.space.xs }}>
-                <strong>Placeholders:</strong>
+                <strong>{t('alerts.placeholders')}</strong>
               </div>
               <div style={{ display: 'flex', gap: theme.space.lg, flexWrap: 'wrap' }}>
-                <span><code style={{ background: theme.colors.bgCard, padding: '2px 4px', borderRadius: '3px' }}>{'{value}'}</code> measured value with unit</span>
-                <span><code style={{ background: theme.colors.bgCard, padding: '2px 4px', borderRadius: '3px' }}>{'{threshold}'}</code> threshold with unit</span>
-                <span><code style={{ background: theme.colors.bgCard, padding: '2px 4px', borderRadius: '3px' }}>{'{condition}'}</code> condition ({OPERATOR_LABELS[operator]})</span>
+                <span><code style={{ background: theme.colors.bgCard, padding: '2px 4px', borderRadius: '3px' }}>{'{value}'}</code> {t('alerts.value_desc')}</span>
+                <span><code style={{ background: theme.colors.bgCard, padding: '2px 4px', borderRadius: '3px' }}>{'{threshold}'}</code> {t('alerts.threshold_desc')}</span>
+                <span><code style={{ background: theme.colors.bgCard, padding: '2px 4px', borderRadius: '3px' }}>{'{condition}'}</code> {t('alerts.condition_desc')} ({OPERATOR_LABELS[operator]})</span>
               </div>
             </div>
             {/* Live preview */}
@@ -734,7 +603,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                   marginBottom: theme.space.xs,
                 }}
               >
-                Preview:
+                {t('alerts.preview_label')}
               </div>
               <div
                 style={{
@@ -775,7 +644,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                Reset to Default
+                {t('alerts.reset_to_default')}
               </button>
             )}
             {onDelete && !isPremade && (
@@ -791,7 +660,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                Delete
+                {t('common.delete')}
               </button>
             )}
           </div>
@@ -808,7 +677,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 cursor: 'pointer',
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -827,7 +696,7 @@ export const AlertEditDialog: React.FC<AlertEditDialogProps> = ({
                 cursor: name.trim() && !thresholdError && thresholdInput.trim() !== '' ? 'pointer' : 'not-allowed',
               }}
             >
-              {isNew ? 'Create' : 'Save'}
+              {isNew ? t('alerts.create') : t('common.save')}
             </button>
           </div>
         </div>

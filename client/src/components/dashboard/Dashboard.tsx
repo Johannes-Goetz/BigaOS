@@ -21,6 +21,7 @@ import {
   WeatherForecastItem,
 } from './items';
 import { theme } from '../../styles/theme';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const LAYOUT_STORAGE_KEY = 'bigaos-dashboard-layout';
 const GRID_CONFIG_KEY = 'bigaos-grid-config';
@@ -57,6 +58,23 @@ const migrateItems = (items: DashboardItemConfig[]): DashboardItemConfig[] => {
 };
 
 export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) => {
+  const { t } = useLanguage();
+
+  const getItemTypeLabel = (type: DashboardItemType): string => {
+    const labelKeys: Record<DashboardItemType, string> = {
+      'speed': 'dashboard.speed',
+      'heading': 'dashboard.heading',
+      'depth': 'dashboard.depth',
+      'wind': 'dashboard.wind',
+      'position': 'dashboard.position',
+      'battery': 'dashboard.battery',
+      'cog': 'dashboard.cog',
+      'chart-mini': 'dashboard.chart',
+      'weather-forecast': 'dashboard.weather',
+    };
+    return t(labelKeys[type]);
+  };
+
   const [items, setItems] = useState<DashboardItemConfig[]>(() => {
     const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
     if (saved) {
@@ -563,7 +581,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
                 >
                   {gridCols}
                 </button>
-                <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Width</span>
+                <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>{t('dashboard.width')}</span>
               </div>
               <span style={{ fontSize: theme.fontSize.xl, color: theme.colors.textSecondary, fontWeight: theme.fontWeight.bold, marginBottom: '20px' }}>×</span>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: theme.space.xs }}>
@@ -588,7 +606,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
                 >
                   {gridRows}
                 </button>
-                <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Height</span>
+                <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>{t('dashboard.height')}</span>
               </div>
             </div>
 
@@ -634,7 +652,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </div>
-              <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>Edit</span>
+              <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>{t('common.edit')}</span>
             </button>
           </div>
 
@@ -843,7 +861,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
               marginBottom: '20px',
               textAlign: 'center',
             }}>
-              Add Widget
+              {t('dashboard.add_widget')}
             </div>
             <div style={{
               display: 'grid',
@@ -893,7 +911,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
                     fontWeight: theme.fontWeight.medium,
                     marginTop: '4px',
                   }}>
-                    {ITEM_TYPE_CONFIG[type].label}
+                    {getItemTypeLabel(type)}
                   </div>
                 </button>
               ))}
@@ -934,7 +952,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
             }}
           >
             <div style={{ fontSize: theme.fontSize.lg, color: theme.colors.textMuted, textAlign: 'center', marginBottom: '20px' }}>
-              Select Columns
+              {t('dashboard.select_columns')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px' }}>
               {Array.from({ length: 32 }, (_, i) => i + 1).map((n) => (
@@ -996,7 +1014,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
             }}
           >
             <div style={{ fontSize: theme.fontSize.lg, color: theme.colors.textMuted, textAlign: 'center', marginBottom: '20px' }}>
-              Select Rows
+              {t('dashboard.select_rows')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px' }}>
               {Array.from({ length: 32 }, (_, i) => i + 1).map((n) => (

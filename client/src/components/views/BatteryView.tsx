@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TimeSeriesChart, TimeSeriesDataPoint } from '../charts';
 import { sensorAPI } from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface BatteryViewProps {
   voltage: number;
@@ -28,6 +29,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
   batteryId = 'house',
   onClose,
 }) => {
+  const { t } = useLanguage();
   const [voltageHistory, setVoltageHistory] = useState<TimeSeriesDataPoint[]>([]);
   const [chargeHistory, setChargeHistory] = useState<TimeSeriesDataPoint[]>([]);
   const [timeframe, setTimeframe] = useState<TimeframeOption>('15m');
@@ -84,9 +86,8 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
     return () => clearInterval(interval);
   }, [fetchHistory]);
 
-  // Chart data from server
-  const voltageChartData = React.useMemo(() => voltageHistory, [voltageHistory]);
-  const chargeChartData = React.useMemo(() => chargeHistory, [chargeHistory]);
+  const voltageChartData = voltageHistory;
+  const chargeChartData = chargeHistory;
 
   // Render battery icon
   const renderBatteryIcon = () => {
@@ -143,7 +144,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </button>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>Battery</h1>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{t('battery.battery')}</h1>
       </div>
 
       {/* Main battery display */}
@@ -160,7 +161,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
           fontSize: '0.9rem',
           opacity: 0.6,
         }}>
-          State of Charge
+          {t('battery.state_of_charge')}
         </div>
       </div>
 
@@ -178,7 +179,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
           textAlign: 'center',
         }}>
           <div style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
-            Voltage
+            {t('battery.voltage')}
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffa726' }}>
             {voltage.toFixed(1)}V
@@ -192,7 +193,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
           textAlign: 'center',
         }}>
           <div style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
-            Current
+            {t('battery.current')}
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: current >= 0 ? '#66bb6a' : '#ef5350' }}>
             {current >= 0 ? '+' : ''}{current.toFixed(1)}A
@@ -206,7 +207,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
           textAlign: 'center',
         }}>
           <div style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
-            Temperature
+            {t('battery.temperature')}
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: getTemperatureColor(temperature) }}>
             {temperature.toFixed(0)}°C
@@ -220,10 +221,10 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
           textAlign: 'center',
         }}>
           <div style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
-            Status
+            {t('battery.status')}
           </div>
           <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: current > 0.5 ? '#66bb6a' : current < -0.5 ? '#ff7043' : '#64b5f6' }}>
-            {current > 0.5 ? 'Charging' : current < -0.5 ? 'Discharging' : 'Idle'}
+            {current > 0.5 ? t('battery.charging') : current < -0.5 ? t('battery.discharging') : t('battery.idle')}
           </div>
         </div>
       </div>
@@ -272,7 +273,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
           }}>
-            Voltage History
+            {t('battery.voltage_history')}
           </div>
           <div style={{
             flex: 1,
@@ -290,7 +291,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
                 opacity: 0.5,
                 fontSize: '0.8rem',
               }}>
-                Loading...
+                {t('common.loading')}
               </div>
             )}
             <TimeSeriesChart
@@ -313,7 +314,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
           }}>
-            Charge History
+            {t('battery.charge_history')}
           </div>
           <div style={{
             flex: 1,
@@ -331,7 +332,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
                 opacity: 0.5,
                 fontSize: '0.8rem',
               }}>
-                Loading...
+                {t('common.loading')}
               </div>
             )}
             <TimeSeriesChart

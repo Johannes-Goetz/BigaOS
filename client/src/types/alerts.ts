@@ -200,6 +200,68 @@ export const OPERATOR_SPOKEN_LABELS: Record<AlertOperator, string> = {
   not_equals: '!= (not equals)',
 };
 
+// i18n-aware getter functions
+// These accept a translation function t(key) and return translated labels
+
+export const getDataSourceLabel = (source: AlertDataSource, t: (key: string) => string): string => {
+  const KEY_MAP: Record<AlertDataSource, string> = {
+    wind_speed: 'alert.ds.wind_speed',
+    speed_over_ground: 'alert.ds.speed_over_ground',
+    depth: 'alert.ds.depth',
+    battery_voltage: 'alert.ds.battery_voltage',
+    battery_soc: 'alert.ds.battery_soc',
+    wind_gusts: 'alert.ds.wind_gusts',
+    wave_height: 'alert.ds.wave_height',
+    temperature_air: 'alert.ds.temperature_air',
+    temperature_water: 'alert.ds.temperature_water',
+    wind_forecast: 'alert.ds.wind_forecast',
+    wave_forecast: 'alert.ds.wave_forecast',
+  };
+  return t(KEY_MAP[source]);
+};
+
+export const getToneLabel = (tone: AlertTone, t: (key: string) => string): string => {
+  const KEY_MAP: Record<AlertTone, string> = {
+    none: 'alert.tone.none',
+    beep: 'alert.tone.beep',
+    notification: 'alert.tone.notification',
+    alarm: 'alert.tone.alarm',
+    chime: 'alert.tone.chime',
+    warning: 'alert.tone.warning',
+    sonar: 'alert.tone.sonar',
+    bell: 'alert.tone.bell',
+    siren: 'alert.tone.siren',
+    gentle: 'alert.tone.gentle',
+    urgent: 'alert.tone.urgent',
+    foghorn: 'alert.tone.foghorn',
+    triple: 'alert.tone.triple',
+    ascending: 'alert.tone.ascending',
+    ding: 'alert.tone.ding',
+  };
+  return t(KEY_MAP[tone]);
+};
+
+export const getOperatorSpokenLabel = (op: AlertOperator, t: (key: string) => string): string => {
+  const KEY_MAP: Record<AlertOperator, string> = {
+    greater_than: 'alert.op.greater_than',
+    greater_or_equal: 'alert.op.greater_or_equal',
+    less_than: 'alert.op.less_than',
+    less_or_equal: 'alert.op.less_or_equal',
+    equals: 'alert.op.equals',
+    not_equals: 'alert.op.not_equals',
+  };
+  return t(KEY_MAP[op]);
+};
+
+export const getSeverityLabel = (severity: AlertSeverity, t: (key: string) => string): string => {
+  const KEY_MAP: Record<AlertSeverity, string> = {
+    info: 'alert.severity.info',
+    warning: 'alert.severity.warning',
+    critical: 'alert.severity.critical',
+  };
+  return t(KEY_MAP[severity]);
+};
+
 // Weather data sources (all support forecast hours)
 export const WEATHER_DATA_SOURCES: AlertDataSource[] = [
   'wind_gusts',
@@ -243,7 +305,7 @@ export interface TriggeredAlert {
   alertId: string;
   alertName?: string;
   triggeredAt: Date;
-  currentValue: number; // Display units
+  currentValue?: number; // Display units
   threshold?: number; // Display units
   message: string; // Already resolved with display units
   severity?: AlertSeverity;

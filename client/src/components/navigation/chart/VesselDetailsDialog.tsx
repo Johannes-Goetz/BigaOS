@@ -1,5 +1,6 @@
 import React from 'react';
 import { VesselSettings } from '../../../context/SettingsContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface VesselDetailsDialogProps {
   vesselSettings: VesselSettings;
@@ -12,6 +13,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
   onClose,
   onOpenSettings,
 }) => {
+  const { t } = useLanguage();
   const hasIdentification = vesselSettings.registrationNumber || vesselSettings.callSign ||
     vesselSettings.mmsi || vesselSettings.homePort || vesselSettings.flag;
 
@@ -116,7 +118,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
             fontWeight: 'bold',
             color: '#fff',
           }}>
-            {vesselSettings.name || 'My Vessel'}
+            {vesselSettings.name || t('chart.my_vessel')}
           </div>
           {vesselSettings.homePort && (
             <div style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.5)', marginTop: '0.25rem' }}>
@@ -135,11 +137,11 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               letterSpacing: '0.1em',
               marginBottom: '0.5rem',
             }}>
-              Identification
+              {t('chart.identification')}
             </div>
-            <InfoRow label="Registration" value={vesselSettings.registrationNumber} />
-            <InfoRow label="Call Sign" value={vesselSettings.callSign} />
-            <InfoRow label="MMSI" value={vesselSettings.mmsi} />
+            <InfoRow label={t('chart.registration')} value={vesselSettings.registrationNumber} />
+            <InfoRow label={t('chart.call_sign')} value={vesselSettings.callSign} />
+            <InfoRow label={t('chart.mmsi')} value={vesselSettings.mmsi} />
           </div>
         )}
 
@@ -152,7 +154,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
             letterSpacing: '0.1em',
             marginBottom: '0.5rem',
           }}>
-            Dimensions
+            {t('chart.dimensions')}
           </div>
           <div style={{
             display: 'grid',
@@ -165,7 +167,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               padding: '0.5rem',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>Length</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>{t('chart.length')}</div>
               <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{vesselSettings.length}m</div>
             </div>
             <div style={{
@@ -174,7 +176,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               padding: '0.5rem',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>Beam</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>{t('chart.beam')}</div>
               <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{vesselSettings.beam}m</div>
             </div>
             <div style={{
@@ -183,7 +185,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               padding: '0.5rem',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>Draft</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>{t('chart.draft')}</div>
               <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{vesselSettings.draft}m</div>
             </div>
             <div style={{
@@ -192,7 +194,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               padding: '0.5rem',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>Displacement</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>{t('chart.displacement')}</div>
               <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{vesselSettings.displacement}t</div>
             </div>
             <div style={{
@@ -201,7 +203,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               padding: '0.5rem',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>Freeboard</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>{t('chart.freeboard')}</div>
               <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{vesselSettings.freeboardHeight}m</div>
             </div>
             <div style={{
@@ -210,7 +212,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               padding: '0.5rem',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>WL Length</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)' }}>{t('chart.wl_length')}</div>
               <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{vesselSettings.waterlineLength}m</div>
             </div>
           </div>
@@ -241,7 +243,7 @@ export const VesselDetailsDialog: React.FC<VesselDetailsDialogProps> = ({
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
-            Edit Vessel Details
+            {t('chart.edit_vessel')}
           </button>
         )}
       </div>

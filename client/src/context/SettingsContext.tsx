@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { wsService } from '../services/websocket';
 import type { WeatherSettings, AlertSettings } from '../types';
 import { DEFAULT_ALERT_SETTINGS } from '../types/alerts';
+import type { LanguageCode } from '../i18n/languages';
+import { DEFAULT_LANGUAGE } from '../i18n/languages';
 
 export type SpeedUnit = 'kt' | 'km/h' | 'mph' | 'm/s';
 export type WindUnit = 'kt' | 'km/h' | 'mph' | 'm/s' | 'bft';
@@ -368,6 +370,10 @@ interface SettingsContextType {
   demoMode: boolean;
   setDemoMode: (enabled: boolean) => void;
 
+  // Language
+  language: LanguageCode;
+  setLanguage: (lang: LanguageCode) => void;
+
   // Sync status
   isSynced: boolean;
 }
@@ -422,6 +428,7 @@ const defaultSettings = {
   depthAlarm: null as number | null,
   soundAlarmEnabled: false,
   demoMode: true,
+  language: DEFAULT_LANGUAGE as LanguageCode,
   vesselSettings: defaultVesselSettings,
   weatherSettings: defaultWeatherSettings,
   alertSettings: DEFAULT_ALERT_SETTINGS,
@@ -450,6 +457,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
   const [demoMode, setDemoModeState] = useState<boolean>(defaultSettings.demoMode);
+  const [language, setLanguageState] = useState<LanguageCode>(defaultSettings.language);
   const [mapTileUrls, setMapTileUrlsState] = useState<MapTileUrls>(defaultSettings.mapTileUrls);
   const [apiUrls, setApiUrlsState] = useState<ApiUrls>(defaultSettings.apiUrls);
   const [vesselSettings, setVesselSettingsState] = useState<VesselSettings>(defaultSettings.vesselSettings);
@@ -490,14 +498,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (data.settings.dateFormat) {
         setDateFormatState(data.settings.dateFormat);
       }
-      if (data.settings.depthAlarm !== undefined) {
-        setDepthAlarmState(data.settings.depthAlarm);
-      }
-      if (data.settings.soundAlarmEnabled !== undefined) {
-        setSoundAlarmEnabledState(data.settings.soundAlarmEnabled);
-      }
+      // depthAlarm and soundAlarmEnabled are NOT loaded from settings_sync.
+      // They come from the dedicated depth_alarm_sync event (AlertService is authoritative).
       if (data.settings.demoMode !== undefined) {
         setDemoModeState(data.settings.demoMode);
+      }
+      if (data.settings.language) {
+        setLanguageState(data.settings.language);
       }
       if (data.settings.mapTileUrls) {
         setMapTileUrlsState(data.settings.mapTileUrls);
@@ -511,9 +518,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (data.settings.weatherSettings) {
         setWeatherSettingsState(data.settings.weatherSettings);
       }
-      if (data.settings.alertSettings) {
-        setAlertSettingsState(data.settings.alertSettings);
-      }
+      // alertSettings is NOT loaded from settings_sync.
+      // It comes from the dedicated alert_settings_sync event with proper unit conversion.
 
       isApplyingServerSettings.current = false;
       setIsSynced(true);
@@ -557,6 +563,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'demoMode':
           setDemoModeState(data.value);
+          break;
+        case 'language':
+          setLanguageState(data.value);
           break;
         case 'mapTileUrls':
           setMapTileUrlsState(data.value);
@@ -616,20 +625,37 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     wsService.emit('depth_alarm_update', newValues);
   }, [depthAlarm, soundAlarmEnabled, depthUnit, isSynced]);
 
-  // Listen for depth alarm cleared event from server
+  // Listen for depth alarm sync from server (authoritative source on connect)
   useEffect(() => {
+    const handleDepthAlarmSync = (data: { threshold: number | null; soundEnabled: boolean }) => {
+      isApplyingServerSettings.current = true;
+      // threshold from server is in meters, convert to user's display unit
+      if (data.threshold !== null) {
+        const displayValue = depthUnit === 'ft'
+          ? data.threshold * depthConversions.ft.factor
+          : data.threshold;
+        setDepthAlarmState(displayValue);
+      } else {
+        setDepthAlarmState(null);
+      }
+      setSoundAlarmEnabledState(data.soundEnabled);
+      isApplyingServerSettings.current = false;
+    };
+
     const handleDepthAlarmCleared = () => {
       isApplyingServerSettings.current = true;
       setDepthAlarmState(null);
       isApplyingServerSettings.current = false;
     };
 
+    wsService.on('depth_alarm_sync', handleDepthAlarmSync);
     wsService.on('depth_alarm_cleared', handleDepthAlarmCleared);
 
     return () => {
+      wsService.off('depth_alarm_sync', handleDepthAlarmSync);
       wsService.off('depth_alarm_cleared', handleDepthAlarmCleared);
     };
-  }, []);
+  }, [depthUnit]);
 
   // Helper to send setting update to server
   const updateServerSetting = useCallback((key: string, value: any) => {
@@ -695,6 +721,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setDemoMode = useCallback((enabled: boolean) => {
     setDemoModeState(enabled);
     updateServerSetting('demoMode', enabled);
+  }, [updateServerSetting]);
+
+  const setLanguage = useCallback((lang: LanguageCode) => {
+    setLanguageState(lang);
+    updateServerSetting('language', lang);
   }, [updateServerSetting]);
 
   const setMapTileUrls = useCallback((urls: MapTileUrls) => {
@@ -811,6 +842,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     isDepthAlarmTriggered,
     demoMode,
     setDemoMode,
+    language,
+    setLanguage,
     convertSpeed,
     convertWind,
     convertDepth,

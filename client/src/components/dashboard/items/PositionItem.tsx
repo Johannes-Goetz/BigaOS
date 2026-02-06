@@ -1,12 +1,14 @@
 import React from 'react';
 import { GeoPosition } from '../../../types';
 import { theme } from '../../../styles/theme';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface PositionItemProps {
   position: GeoPosition;
 }
 
 export const PositionItem: React.FC<PositionItemProps> = ({ position }) => {
+  const { t } = useLanguage();
   const formatCoord = (value: number, isLat: boolean): string => {
     const dir = isLat ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W');
     const abs = Math.abs(value);
@@ -30,7 +32,7 @@ export const PositionItem: React.FC<PositionItemProps> = ({ position }) => {
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
       }}>
-        Position
+        {t('dashboard.position')}
       </div>
       <div style={{
         marginTop: theme.space.sm,

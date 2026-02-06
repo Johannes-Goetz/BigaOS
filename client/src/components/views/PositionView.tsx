@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GeoPosition } from '../../types';
 import { useSettings, distanceConversions } from '../../context/SettingsContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PositionHistoryPoint {
   timestamp: number;
@@ -16,6 +17,7 @@ const POSITION_HISTORY_MAX_POINTS = 300;
 
 export const PositionView: React.FC<PositionViewProps> = ({ position, onClose }) => {
   const { distanceUnit, convertDistance } = useSettings();
+  const { t } = useLanguage();
   const [positionHistory, setPositionHistory] = useState<PositionHistoryPoint[]>([]);
   const lastReadingTime = useRef<number>(0);
 
@@ -83,7 +85,7 @@ export const PositionView: React.FC<PositionViewProps> = ({ position, onClose })
           opacity: 0.5,
           fontSize: '0.9rem',
         }}>
-          Collecting position data...
+          {t('position.collecting_data')}
         </div>
       );
     }
@@ -205,7 +207,7 @@ export const PositionView: React.FC<PositionViewProps> = ({ position, onClose })
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </button>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>Position</h1>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{t('position.position')}</h1>
       </div>
 
       {/* Main position display */}
@@ -254,7 +256,7 @@ export const PositionView: React.FC<PositionViewProps> = ({ position, onClose })
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
           }}>
-            Recent Track
+            {t('position.recent_track')}
           </div>
           {renderTrackPlot()}
         </div>
@@ -273,7 +275,7 @@ export const PositionView: React.FC<PositionViewProps> = ({ position, onClose })
             padding: '1rem',
           }}>
             <div style={{ fontSize: '0.75rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
-              Distance Traveled
+              {t('position.distance_traveled')}
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#66bb6a' }}>
               {convertDistance(totalDistance).toFixed(2)} {distanceConversions[distanceUnit].label}
@@ -286,7 +288,7 @@ export const PositionView: React.FC<PositionViewProps> = ({ position, onClose })
             padding: '1rem',
           }}>
             <div style={{ fontSize: '0.75rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
-              Track Points
+              {t('position.track_points')}
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#64b5f6' }}>
               {positionHistory.length}
@@ -308,7 +310,7 @@ export const PositionView: React.FC<PositionViewProps> = ({ position, onClose })
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
         }}>
-          Decimal Coordinates
+          {t('position.decimal_coordinates')}
         </div>
         <div style={{
           display: 'flex',

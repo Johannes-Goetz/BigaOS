@@ -1,6 +1,7 @@
 import React from 'react';
 import { ViewType } from '../../types/dashboard';
 import { theme } from '../../styles/theme';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface DashboardItemProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
   editMode = false,
   onDelete,
 }) => {
+  const { t } = useLanguage();
   const handleClick = () => {
     if (editMode) {
       return;
@@ -90,7 +92,7 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
             zIndex: theme.zIndex.tooltip,
             boxShadow: theme.shadow.md,
           }}
-          title="Delete widget"
+          title={t('dashboard.delete_widget')}
         >
           <svg
             width="20"

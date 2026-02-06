@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSettings, speedConversions } from '../../context/SettingsContext';
 import { TimeSeriesChart, TimeSeriesDataPoint } from '../charts';
 import { sensorAPI } from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   ViewLayout,
   MainValueDisplay,
@@ -34,6 +35,7 @@ const getSpeedColor = (speedInKnots: number): string => {
 
 export const SpeedView: React.FC<SpeedViewProps> = ({ speed, onClose }) => {
   const { speedUnit, convertSpeed } = useSettings();
+  const { t } = useLanguage();
   const [historyData, setHistoryData] = useState<TimeSeriesDataPoint[]>([]);
   const [timeframe, setTimeframe] = useState<TimeframeOption>('5m');
   const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +89,7 @@ export const SpeedView: React.FC<SpeedViewProps> = ({ speed, onClose }) => {
   );
 
   return (
-    <ViewLayout title="Speed" onClose={onClose}>
+    <ViewLayout title={t('speed.speed')} onClose={onClose}>
       <MainValueDisplay
         value={convertedSpeed.toFixed(1)}
         unit={speedConversions[speedUnit].label}
@@ -96,9 +98,9 @@ export const SpeedView: React.FC<SpeedViewProps> = ({ speed, onClose }) => {
 
       <StatsRow
         stats={[
-          { label: 'Avg', value: stats.avg.toFixed(1), color: '#64b5f6' },
-          { label: 'Max', value: stats.max.toFixed(1), color: '#66bb6a' },
-          { label: 'Min', value: stats.min.toFixed(1), color: '#ffa726' },
+          { label: t('speed.avg'), value: stats.avg.toFixed(1), color: '#64b5f6' },
+          { label: t('speed.max'), value: stats.max.toFixed(1), color: '#66bb6a' },
+          { label: t('speed.min'), value: stats.min.toFixed(1), color: '#ffa726' },
         ]}
       />
 
@@ -108,7 +110,7 @@ export const SpeedView: React.FC<SpeedViewProps> = ({ speed, onClose }) => {
             options={timeframeOptions}
             selected={timeframe}
             onSelect={(key) => setTimeframe(key as TimeframeOption)}
-            title="Speed History"
+            title={t('speed.speed_history')}
           />
         </div>
         <div style={{ flex: 1 }}>

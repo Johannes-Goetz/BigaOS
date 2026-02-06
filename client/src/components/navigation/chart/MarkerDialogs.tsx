@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { CustomMarker, markerIcons, markerColors } from './map-icons';
 import { VesselSettings, ChainType, useSettings } from '../../../context/SettingsContext';
 import { weatherAPI, WeatherForecastResponse } from '../../../services/api';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 // Chain length recommendation calculator using catenary-based approach
 // Based on research from:
@@ -196,10 +197,12 @@ const IconSelector: React.FC<{
   selectedIcon: string;
   selectedColor: string;
   onSelect: (icon: string) => void;
-}> = ({ selectedIcon, selectedColor, onSelect }) => (
+}> = ({ selectedIcon, selectedColor, onSelect }) => {
+  const { t } = useLanguage();
+  return (
   <>
     <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-      ICON
+      {t('markers.icon')}
     </div>
     <div
       style={{
@@ -247,15 +250,18 @@ const IconSelector: React.FC<{
       ))}
     </div>
   </>
-);
+  );
+};
 
 const ColorSelector: React.FC<{
   selectedColor: string;
   onSelect: (color: string) => void;
-}> = ({ selectedColor, onSelect }) => (
+}> = ({ selectedColor, onSelect }) => {
+  const { t } = useLanguage();
+  return (
   <>
     <div style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-      COLOR
+      {t('markers.color')}
     </div>
     <div
       style={{
@@ -286,7 +292,8 @@ const ColorSelector: React.FC<{
       ))}
     </div>
   </>
-);
+  );
+};
 
 const DialogOverlay: React.FC<{
   onClick: () => void;
@@ -331,12 +338,14 @@ const DialogOverlay: React.FC<{
 const NameInput: React.FC<{
   value: string;
   onChange: (value: string) => void;
-}> = ({ value, onChange }) => (
+}> = ({ value, onChange }) => {
+  const { t } = useLanguage();
+  return (
   <input
     type="text"
     value={value}
     onChange={(e) => onChange(e.target.value)}
-    placeholder="Marker name..."
+    placeholder={t('markers.name_placeholder')}
     autoFocus
     style={{
       width: '100%',
@@ -350,7 +359,8 @@ const NameInput: React.FC<{
       outline: 'none',
     }}
   />
-);
+  );
+};
 
 export const MarkerDialog: React.FC<MarkerDialogProps> = ({
   marker,
@@ -364,6 +374,7 @@ export const MarkerDialog: React.FC<MarkerDialogProps> = ({
   onClose,
   onSave,
 }) => {
+  const { t } = useLanguage();
   const isEditing = !!marker;
   const lat = marker?.lat ?? position?.lat ?? 0;
   const lon = marker?.lon ?? position?.lon ?? 0;
@@ -379,7 +390,7 @@ export const MarkerDialog: React.FC<MarkerDialogProps> = ({
           textAlign: 'center',
         }}
       >
-        {isEditing ? 'Edit Marker' : 'Add Marker'}
+        {isEditing ? t('markers.edit_marker') : t('markers.add_marker')}
       </div>
       <NameInput value={markerName} onChange={setMarkerName} />
       <IconSelector
@@ -410,7 +421,7 @@ export const MarkerDialog: React.FC<MarkerDialogProps> = ({
           opacity: markerName.trim() ? 1 : 0.5,
         }}
       >
-        {isEditing ? 'Save' : 'Add Marker'}
+        {isEditing ? t('common.save') : t('markers.add_marker')}
       </button>
     </DialogOverlay>
   );
@@ -426,6 +437,7 @@ const ChainCalculationInfoDialog: React.FC<{
   forecastMaxGust?: number;
   windUnit?: string;
 }> = ({ depth, vesselSettings, onClose, onToggleFormula, forecastMaxWind, forecastMaxGust, windUnit = 'kt' }) => {
+  const { t } = useLanguage();
   const effectiveBoatLength = vesselSettings?.length || 10;
   const effectiveDisplacement = vesselSettings?.displacement || 5;
   const chainDiameterMm = vesselSettings?.chainDiameter || 8;
@@ -510,7 +522,7 @@ const ChainCalculationInfoDialog: React.FC<{
         </button>
 
         <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-          Chain Length Calculation
+          {t('chart.chain_calculation')}
         </div>
 
         {/* How we calculate - explanation */}
@@ -521,7 +533,7 @@ const ChainCalculationInfoDialog: React.FC<{
           marginBottom: '0.75rem',
           fontSize: '0.8rem',
         }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>How recommendations are calculated</div>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t('chart.how_calculated')}</div>
           <div style={{ opacity: 0.85, lineHeight: 1.4 }}>
             {useCatenary && useWindLoa ? (
               <>We calculate chain length using <b>both methods</b> for each wind condition and take the <b>higher value</b>.</>
@@ -547,21 +559,21 @@ const ChainCalculationInfoDialog: React.FC<{
               borderRadius: '4px',
               padding: '0.5rem',
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '0.3rem', color: '#4fc3f7' }}>Your Vessel</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.3rem', color: '#4fc3f7' }}>{t('chart.your_vessel')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.2rem 0.5rem' }}>
-                <span style={{ opacity: 0.7 }}>Length (LOA):</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.length_loa')}:</span>
                 <span>{effectiveBoatLength}m</span>
-                <span style={{ opacity: 0.7 }}>WL Length:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.wl_length')}:</span>
                 <span>{effectiveWaterlineLength}m</span>
-                <span style={{ opacity: 0.7 }}>Freeboard:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.freeboard')}:</span>
                 <span>{effectiveFreeboardHeight}m</span>
-                <span style={{ opacity: 0.7 }}>Displacement:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.displacement')}:</span>
                 <span>{effectiveDisplacement}t</span>
-                <span style={{ opacity: 0.7 }}>Chain Ø:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.chain_diameter')}:</span>
                 <span>{chainDiameterMm}mm {chainType === 'stainless-steel' ? 'SS' : 'Galv'}</span>
-                <span style={{ opacity: 0.7 }}>Windage area:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.windage_area')}:</span>
                 <span>~{windageArea.toFixed(1)}m²</span>
-                <span style={{ opacity: 0.7 }}>Chain weight:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.chain_weight')}:</span>
                 <span>{chainWeightPerMeter.toFixed(2)} kg/m</span>
               </div>
             </div>
@@ -572,11 +584,11 @@ const ChainCalculationInfoDialog: React.FC<{
               borderRadius: '4px',
               padding: '0.5rem',
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>Wind Forecast</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>{t('chart.wind_forecast')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.15rem 0.5rem' }}>
-                <span style={{ color: '#66bb6a' }}>Minimum:</span>
+                <span style={{ color: '#66bb6a' }}>{t('chart.minimum')}:</span>
                 <span>{forecastMaxWind !== undefined ? `${Math.round(forecastMaxWind)} ${windUnit} (max wind)` : 'No forecast'}</span>
-                <span style={{ color: '#ffa726' }}>Recommended:</span>
+                <span style={{ color: '#ffa726' }}>{t('chart.recommended')}:</span>
                 <span>{forecastMaxGust !== undefined ? `${Math.round(forecastMaxGust)} ${windUnit} (max gust)` : 'No forecast'}</span>
               </div>
             </div>
@@ -610,7 +622,7 @@ const ChainCalculationInfoDialog: React.FC<{
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
               <div style={{ fontWeight: 'bold', color: useCatenary ? '#ffa726' : 'rgba(255, 255, 255, 0.5)' }}>
-                Method 1: Catenary Equation
+                {t('chart.method_catenary')}
               </div>
               {onToggleFormula && (
                 <button
@@ -626,7 +638,7 @@ const ChainCalculationInfoDialog: React.FC<{
                     cursor: 'pointer',
                   }}
                 >
-                  {useCatenary ? 'ON' : 'OFF'}
+                  {useCatenary ? t('chart.on_upper') : t('chart.off_upper')}
                 </button>
               )}
             </div>
@@ -672,7 +684,7 @@ const ChainCalculationInfoDialog: React.FC<{
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
               <div style={{ fontWeight: 'bold', color: useWindLoa ? '#66bb6a' : 'rgba(255, 255, 255, 0.5)' }}>
-                Method 2: Wind + LOA Rule
+                {t('chart.method_wind_loa')}
               </div>
               {onToggleFormula && (
                 <button
@@ -688,7 +700,7 @@ const ChainCalculationInfoDialog: React.FC<{
                     cursor: 'pointer',
                   }}
                 >
-                  {useWindLoa ? 'ON' : 'OFF'}
+                  {useWindLoa ? t('chart.on_upper') : t('chart.off_upper')}
                 </button>
               )}
             </div>
@@ -758,6 +770,7 @@ const ScopeVisualization: React.FC<{
   showRecommendations?: boolean;
   onUpdateVesselSettings?: (settings: VesselSettings) => void;
 }> = ({ chainLength, depth, vesselSettings, showRecommendations = false, onUpdateVesselSettings }) => {
+  const { t } = useLanguage();
   const [showCalcInfo, setShowCalcInfo] = React.useState(false);
 
   const handleToggleFormula = (formula: 'catenary' | 'windLoa', enabled: boolean) => {
@@ -1174,7 +1187,7 @@ const ScopeVisualization: React.FC<{
                 borderRadius: '3px',
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>Minimum</div>
+                <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>{t('chart.minimum')}</div>
                 <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{recommendations.min}m</div>
               </div>
               <div style={{
@@ -1183,7 +1196,7 @@ const ScopeVisualization: React.FC<{
                 borderRadius: '3px',
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>Recommended</div>
+                <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>{t('chart.recommended')}</div>
                 <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{recommendations.recommended}m</div>
               </div>
               <div style={{
@@ -1192,7 +1205,7 @@ const ScopeVisualization: React.FC<{
                 borderRadius: '3px',
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>Storm</div>
+                <div style={{ fontSize: '0.55rem', opacity: 0.7 }}>{t('chart.storm')}</div>
                 <div style={{ fontWeight: 'bold', fontSize: '0.75rem' }}>{recommendations.storm}m</div>
               </div>
             </div>
@@ -1205,7 +1218,7 @@ const ScopeVisualization: React.FC<{
               marginTop: '0.2rem',
               cursor: 'pointer',
             }} onClick={() => setShowCalcInfo(true)}>
-              Tap for calculation details
+              {t('chart.tap_for_details')}
             </div>
 
             {/* Total chain warning */}
@@ -1418,6 +1431,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
   onAnchorPositionChange,
   weatherEnabled = true,
 }) => {
+  const { t } = useLanguage();
   const setChainLength = onChainLengthChange;
   const depth = anchorDepth;
   const setDepth = onAnchorDepthChange;
@@ -1514,13 +1528,13 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
           textAlign: 'center',
         }}
       >
-        Anchor Alarm
+        {t('anchor.anchor_alarm')}
       </div>
 
       {/* Chain Length Input */}
       <div style={{ marginBottom: '0.6rem' }}>
         <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.3rem' }}>
-          Chain out (meters)
+          {t('anchor.chain_out')}
         </div>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.4rem' }}>
           <button
@@ -1589,7 +1603,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
       {/* Depth Input */}
       <div style={{ marginBottom: '0.6rem' }}>
         <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.3rem' }}>
-          Depth (meters)
+          {t('anchor.depth_meters')}
         </div>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.4rem' }}>
           <button
@@ -1698,7 +1712,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
           <line x1="18" y1="12" x2="22" y2="12" />
           <circle cx="12" cy="12" r="3" fill="currentColor" />
         </svg>
-        Adjust Anchor Position
+        {t('anchor.adjust_position')}
       </button>
 
       {/* Scope Visualization */}
@@ -1715,7 +1729,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
         <div style={{ marginBottom: '0.5rem' }}>
           {/* Planned Stay Duration Selector */}
           <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.3rem' }}>
-            Planned stay
+            {t('anchor.planned_stay')}
           </div>
           <div style={{
             display: 'flex',
@@ -1761,7 +1775,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
                   borderRadius: '4px',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>Minimum chain</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>{t('anchor.min_chain')}</div>
                   <div style={{
                     width: '2.5rem',
                     height: '1.1rem',
@@ -1777,7 +1791,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
                   borderRadius: '4px',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>Recommended chain</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>{t('anchor.recommended_chain')}</div>
                   <div style={{
                     width: '2.5rem',
                     height: '1.1rem',
@@ -1790,7 +1804,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
               {/* Skeleton for wind/gust row */}
               <div style={{ display: 'flex', gap: '0.3rem' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.15rem' }}>
-                  <div style={{ fontSize: '0.65rem', opacity: 0.4 }}>Max Wind</div>
+                  <div style={{ fontSize: '0.65rem', opacity: 0.4 }}>{t('anchor.max_wind')}</div>
                   <div style={{
                     width: '2rem',
                     height: '0.7rem',
@@ -1799,7 +1813,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
                   }} />
                 </div>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.15rem' }}>
-                  <div style={{ fontSize: '0.65rem', opacity: 0.4 }}>Max Gust</div>
+                  <div style={{ fontSize: '0.65rem', opacity: 0.4 }}>{t('anchor.max_gust')}</div>
                   <div style={{
                     width: '2rem',
                     height: '0.7rem',
@@ -1876,11 +1890,11 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
                       borderRadius: '4px',
                       textAlign: 'center',
                     }}>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Minimum chain</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{t('anchor.min_chain')}</div>
                       {depth > 0 ? (
                         <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{minChain}m</div>
                       ) : (
-                        <div style={{ fontSize: '0.55rem', opacity: 0.5 }}>Set depth</div>
+                        <div style={{ fontSize: '0.55rem', opacity: 0.5 }}>{t('anchor.set_depth')}</div>
                       )}
                     </div>
 
@@ -1892,11 +1906,11 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
                       borderRadius: '4px',
                       textAlign: 'center',
                     }}>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Recommended chain</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{t('anchor.recommended_chain')}</div>
                       {depth > 0 ? (
                         <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{recommendedChain}m</div>
                       ) : (
-                        <div style={{ fontSize: '0.55rem', opacity: 0.5 }}>Set depth</div>
+                        <div style={{ fontSize: '0.55rem', opacity: 0.5 }}>{t('anchor.set_depth')}</div>
                       )}
                     </div>
                   </div>
@@ -1904,13 +1918,13 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
                   {/* Wind/Gust values below boxes */}
                   <div style={{ display: 'flex', gap: '0.3rem' }}>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.15rem' }}>
-                      <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>Max Wind</div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{t('anchor.max_wind')}</div>
                       <div style={{ fontWeight: 'bold', fontSize: '0.65rem' }}>
                         {Math.round(convertWind(weatherForecast.maxWind))}{windUnit}
                       </div>
                     </div>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.15rem' }}>
-                      <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>Max Gust</div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{t('anchor.max_gust')}</div>
                       <div style={{ fontWeight: 'bold', fontSize: '0.65rem' }}>
                         {Math.round(convertWind(weatherForecast.maxGusts))}{windUnit}
                       </div>
@@ -1960,7 +1974,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
           fontSize: '0.7rem',
           color: '#ef5350',
         }}>
-          Chain length must be greater than depth
+          {t('anchor.chain_gt_depth')}
         </div>
       )}
 
@@ -1980,7 +1994,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
             fontSize: '0.9rem',
           }}
         >
-          {isEditing ? 'Delete' : 'Cancel'}
+          {isEditing ? t('common.delete') : t('common.cancel')}
         </button>
         <button
           onClick={() => canActivate && onActivate(chainLength, depth, swingRadius)}
@@ -2001,7 +2015,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
             opacity: canActivate ? 1 : 0.5,
           }}
         >
-          {isEditing ? 'Save' : 'Activate'}
+          {isEditing ? t('common.save') : t('anchor.activate')}
         </button>
       </div>
     </DialogOverlay>

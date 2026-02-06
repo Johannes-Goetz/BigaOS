@@ -2,6 +2,7 @@ import React from 'react';
 import { SearchResult } from '../../../services/geocoding';
 import { CustomMarker, markerIcons } from './map-icons';
 import { useSettings, windConversions, depthConversions, temperatureConversions } from '../../../context/SettingsContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 interface DepthSettingsPanelProps {
   sidebarWidth: number;
@@ -22,6 +23,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
   onSetSoundAlarm,
   onClose,
 }) => {
+  const { t } = useLanguage();
   const settingsPanelWidth = 180;
   const alarmOptions = depthUnit === 'm' ? [1, 2, 3, 5, 10] : [3, 6, 10, 15, 30];
 
@@ -45,7 +47,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
         }}
       >
         <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.75rem' }}>
-          DEPTH ALARM
+          {t('depth.depth_alarm_upper')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button
@@ -64,7 +66,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
               textAlign: 'left',
             }}
           >
-            Off
+            {t('common.off')}
           </button>
           {alarmOptions.map((alarmDepth) => (
             <button
@@ -97,7 +99,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
             marginTop: '1rem',
           }}
         >
-          SOUND
+          {t('depth.sound')}
         </div>
         <button
           onClick={() => onSetSoundAlarm(!soundAlarmEnabled)}
@@ -115,7 +117,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
             textAlign: 'left',
           }}
         >
-          {soundAlarmEnabled ? 'On' : 'Off'}
+          {soundAlarmEnabled ? t('common.on') : t('common.off')}
         </button>
       </div>
 
@@ -175,6 +177,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
   onToggleFollowRoute,
   onClose,
 }) => {
+  const { t } = useLanguage();
   const settingsPanelWidth = 200;
 
   const adjustHeading = (delta: number) => {
@@ -208,7 +211,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
         }}
       >
         <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.75rem' }}>
-          AUTOPILOT
+          {t('autopilot.autopilot')}
         </div>
 
         {/* Heading display */}
@@ -223,7 +226,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
           }}
         >
           <div style={{ fontSize: '0.65rem', opacity: 0.6, marginBottom: '0.25rem' }}>
-            SET COURSE
+            {t('autopilot.set_course')}
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
             {targetHeading.toFixed(0)}°
@@ -310,7 +313,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
           >
             <div>
               <div style={{ fontSize: '0.9rem' }}>
-                Follow Route
+                {t('autopilot.follow_route')}
               </div>
               <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>
                 {currentBearing.toFixed(0)}°
@@ -359,7 +362,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
             fontSize: '0.9rem',
           }}
         >
-          {isActive ? 'DEACTIVATE' : 'ACTIVATE'}
+          {isActive ? t('autopilot.deactivate') : t('autopilot.activate')}
         </button>
       </div>
 
@@ -433,6 +436,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
 }) => {
   const settingsPanelWidth = 320;
   const { windUnit, depthUnit, temperatureUnit, timeFormat, dateFormat } = useSettings();
+  const { t } = useLanguage();
 
   // Custom time dialog state
   const [showCustomDialog, setShowCustomDialog] = React.useState(false);
@@ -454,9 +458,9 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
     const timeStr = forecastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
 
     if (dayDiff === 0) {
-      return `Today ${timeStr}`;
+      return `${t('common.today')} ${timeStr}`;
     } else if (dayDiff === 1) {
-      return `Tomorrow ${timeStr}`;
+      return `${t('common.tomorrow')} ${timeStr}`;
     } else {
       // Format date based on user's date format preference
       const day = forecastDate.getDate().toString().padStart(2, '0');
@@ -540,7 +544,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
         }}
       >
         <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-          MARINE FORECAST
+          {t('weather.marine_forecast')}
         </div>
 
         {/* Display mode selector - 2 rows */}
@@ -550,27 +554,36 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           gap: '0.4rem',
           marginBottom: '0.75rem',
         }}>
-          {DISPLAY_MODES.map(({ mode, label }) => (
-            <button
-              key={mode}
-              onClick={() => {
-                onSetDisplayMode(mode);
-                if (!enabled) onToggleEnabled();
-              }}
-              style={{
-                padding: '0.9rem 0.4rem',
-                borderRadius: '4px',
-                border: 'none',
-                background: displayMode === mode && enabled ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
-                color: '#fff',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                fontWeight: displayMode === mode && enabled ? 'bold' : 'normal',
-              }}
-            >
-              {label}
-            </button>
-          ))}
+          {DISPLAY_MODES.map(({ mode }) => {
+            const modeLabels: Record<WeatherDisplayMode, string> = {
+              'wind': t('weather.wind'),
+              'waves': t('weather.waves'),
+              'swell': t('weather.swell'),
+              'current': t('weather.current'),
+              'water-temp': t('weather.temp'),
+            };
+            return (
+              <button
+                key={mode}
+                onClick={() => {
+                  onSetDisplayMode(mode);
+                  if (!enabled) onToggleEnabled();
+                }}
+                style={{
+                  padding: '0.9rem 0.4rem',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: displayMode === mode && enabled ? 'rgba(25, 118, 210, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  fontWeight: displayMode === mode && enabled ? 'bold' : 'normal',
+                }}
+              >
+                {modeLabels[mode]}
+              </button>
+            );
+          })}
           <button
             onClick={() => { if (enabled) onToggleEnabled(); }}
             style={{
@@ -584,7 +597,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
               fontWeight: !enabled ? 'bold' : 'normal',
             }}
           >
-            Off
+            {t('common.off')}
           </button>
         </div>
 
@@ -613,20 +626,20 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
                   animation: 'weather-spin 1s linear infinite',
                 }}
               />
-              <span style={{ color: '#4FC3F7' }}>Loading...</span>
+              <span style={{ color: '#4FC3F7' }}>{t('weather.loading')}</span>
             </>
           ) : error ? (
             <span style={{ color: '#FF9800', fontSize: '0.65rem', textAlign: 'center' }}>{error}</span>
           ) : enabled ? (
             <span style={{ color: '#4FC3F7' }}>{getForecastTime()}</span>
           ) : (
-            <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Select a time below</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{t('weather.select_time')}</span>
           )}
         </div>
 
         {/* TIME section header */}
         <div style={{ fontSize: '0.7rem', opacity: 0.5, marginBottom: '0.4rem', marginTop: '0.25rem' }}>
-          TIME
+          {t('weather.time')}
         </div>
 
         {/* Time preset buttons + Custom */}
@@ -650,7 +663,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
                 cursor: 'pointer',
               }}
             >
-              {opt.label}
+              {opt.hour === 0 ? t('weather.now') : opt.label}
             </button>
           ))}
           <button
@@ -666,7 +679,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
               fontWeight: !isPresetSelected && enabled ? 'bold' : 'normal',
             }}
           >
-            Custom
+            {t('weather.custom')}
           </button>
         </div>
 
@@ -678,7 +691,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           {displayMode === 'wind' ? (
             <>
               <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-                Wind speed ({unitLabel})
+                {t('weather.wind_speed')} ({unitLabel})
               </div>
               <div style={{
                 display: 'flex',
@@ -712,7 +725,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           ) : displayMode === 'waves' || displayMode === 'swell' ? (
             <>
               <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-                {displayMode === 'swell' ? 'Swell' : 'Wave'} height ({depthConversions[depthUnit].label}) + period (s)
+                {displayMode === 'swell' ? t('weather.swell_height') : t('weather.wave_height')} ({depthConversions[depthUnit].label}) + period (s)
               </div>
               <div style={{
                 display: 'flex',
@@ -773,7 +786,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           ) : displayMode === 'current' ? (
             <>
               <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-                Current speed (kt)
+                {t('weather.current_speed')} (kt)
               </div>
               <div style={{
                 display: 'flex',
@@ -807,7 +820,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           ) : (
             <>
               <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.5rem' }}>
-                Sea temperature ({temperatureConversions[temperatureUnit].label})
+                {t('weather.sea_temperature')} ({temperatureConversions[temperatureUnit].label})
               </div>
               <div style={{
                 display: 'flex',
@@ -877,7 +890,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           opacity: 0.5,
           textAlign: 'center',
         }}>
-          Powered by Open-Meteo.com
+          {t('weather.powered_by')}
         </div>
 
         <style>{`
@@ -905,12 +918,12 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           }}
         >
           <div style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1rem' }}>
-            CUSTOM TIME
+            {t('weather.custom_time')}
           </div>
 
           {/* Days selector */}
           <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '0.4rem' }}>Days from now</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '0.4rem' }}>{t('weather.days_from_now')}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
                 onClick={() => setCustomDays(Math.max(0, customDays - 1))}
@@ -955,7 +968,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
 
           {/* Hours selector */}
           <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '0.4rem' }}>Hours</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '0.4rem' }}>{t('weather.hours')}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
                 onClick={() => setCustomHours(Math.max(0, customHours - 1))}
@@ -1019,9 +1032,9 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
               const timeStr = forecastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
 
               if (dayDiff === 0) {
-                return `Today ${timeStr}`;
+                return `${t('common.today')} ${timeStr}`;
               } else if (dayDiff === 1) {
-                return `Tomorrow ${timeStr}`;
+                return `${t('common.tomorrow')} ${timeStr}`;
               } else {
                 const weekday = forecastDate.toLocaleDateString([], { weekday: 'short' });
                 const day = forecastDate.getDate().toString().padStart(2, '0');
@@ -1046,7 +1059,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
                 cursor: 'pointer',
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleApplyCustomTime}
@@ -1062,7 +1075,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
                 fontWeight: 'bold',
               }}
             >
-              Apply
+              {t('common.apply')}
             </button>
           </div>
         </div>
@@ -1116,6 +1129,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   onMarkerClick,
   onClose,
 }) => {
+  const { t } = useLanguage();
   const getMatchingMarkers = (query: string): CustomMarker[] => {
     const lowerQuery = query.toLowerCase().trim();
     if (lowerQuery.length < 2) return [];
@@ -1148,7 +1162,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         }}
       >
         <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.25rem' }}>
-          SEARCH LOCATIONS
+          {t('search.search_locations')}
         </div>
 
         {/* Offline notice */}
@@ -1184,7 +1198,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
               <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
               <line x1="12" y1="20" x2="12.01" y2="20" />
             </svg>
-            Offline - only marker search available
+            {t('search.offline_marker_only')}
           </div>
         )}
 
@@ -1194,7 +1208,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Type to search (min 2 chars)..."
+            placeholder={t('search.type_to_search')}
             style={{
               width: '100%',
               padding: '0.75rem',
@@ -1248,7 +1262,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                   marginTop: '0.25rem',
                 }}
               >
-                YOUR MARKERS
+                {t('search.your_markers')}
               </div>
               {matchingMarkers.map((marker) => (
                 <button
@@ -1301,7 +1315,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                 marginTop: '0.5rem',
               }}
             >
-              LOCATIONS
+              {t('search.locations')}
             </div>
           )}
           {searchLoading && searchQuery && (
@@ -1326,7 +1340,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                   }}
                 />
                 <div style={{ opacity: 0.6, fontSize: '0.85rem' }}>
-                  Searching...
+                  {t('search.searching')}
                 </div>
               </div>
             )}
@@ -1342,7 +1356,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                   padding: '1rem',
                 }}
               >
-                No results found
+                {t('search.no_results')}
               </div>
             )}
           {searchResults.map((result, index) => (
@@ -1384,7 +1398,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           opacity: 0.5,
           textAlign: 'center',
         }}>
-          Search powered by Photon (© OpenStreetMap)
+          {t('chart.search_attribution')}
         </div>
       </div>
 

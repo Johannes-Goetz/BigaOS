@@ -4,6 +4,7 @@ import type { Map as LeafletMap } from 'leaflet';
 import { theme } from '../../styles/theme';
 import { offlineMapsAPI, OfflineRegion, Bounds, TileEstimate, StorageStats } from '../../services/api';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import 'leaflet/dist/leaflet.css';
 
 // Hardcoded server proxy URLs for tiles - client always fetches through server
@@ -67,6 +68,7 @@ const BoundsTracker: React.FC<{
 };
 
 export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }) => {
+  const { t } = useLanguage();
   const [regions, setRegions] = useState<OfflineRegion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBounds, setSelectedBounds] = useState<Bounds | null>(null);
@@ -234,10 +236,10 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
 
   const handleDeleteRegion = async (region: OfflineRegion) => {
     const confirmed = await confirm({
-      title: `Delete "${region.name}"?`,
-      message: 'This will remove all downloaded tiles for this region.',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('offline_maps.delete_region', { name: region.name }),
+      message: t('offline_maps.delete_region_desc'),
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
     });
     if (!confirmed) return;
 
@@ -289,15 +291,15 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
   const getStatusText = (region: OfflineRegion): string => {
     switch (region.status) {
       case 'complete':
-        return 'Complete';
+        return t('offline_maps.complete');
       case 'downloading':
-        return `Downloading... ${getProgressPercent(region)}%`;
+        return t('offline_maps.downloading', { percent: getProgressPercent(region) });
       case 'pending':
-        return 'Starting...';
+        return t('common.starting');
       case 'error':
-        return region.error || 'Error';
+        return region.error || t('offline_maps.error');
       default:
-        return 'Unknown';
+        return t('common.unknown');
     }
   };
 
@@ -312,7 +314,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Download New Region
+        {t('offline_maps.download_new_region')}
       </div>
 
       {/* Horizontal layout: Map on left, controls on right */}
@@ -382,7 +384,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
               color: theme.colors.textSecondary,
               zIndex: 1001,
             }}>
-            Pan & zoom
+            {t('offline_maps.pan_and_zoom')}
           </div>
         </div>
 
@@ -441,7 +443,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
           {/* Region name input */}
           <input
             type="text"
-            placeholder="Region name (e.g., 'Baltic Sea')"
+            placeholder={t('offline_maps.region_name_placeholder')}
             value={regionName}
             onChange={(e) => setRegionName(e.target.value)}
             style={{
@@ -468,7 +470,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
             justifyContent: 'space-between',
           }}>
             {estimateLoading ? (
-              <div style={{ color: theme.colors.textMuted }}>Calculating...</div>
+              <div style={{ color: theme.colors.textMuted }}>{t('offline_maps.calculating')}</div>
             ) : estimate ? (
               (() => {
                 // Calculate per-layer sizes
@@ -490,7 +492,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                         borderBottom: `1px solid ${theme.colors.border}`,
                       }}>
                         <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textPrimary }}>
-                          Street Maps
+                          {t('offline_maps.street_maps')}
                         </span>
                         <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>
                           ~{formatFileSize(streetBytes)}
@@ -511,7 +513,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                           gap: theme.space.sm,
                         }}>
                           <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textPrimary }}>
-                            Satellite
+                            {t('offline_maps.satellite')}
                           </span>
                           {/* Toggle switch */}
                           <button
@@ -553,7 +555,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                     padding: `${theme.space.xs} 0`,
                   }}>
                     <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textPrimary }}>
-                          Sea Charts
+                          {t('offline_maps.sea_charts')}
                     </span>
                     <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.textSecondary }}>
                           ~{formatFileSize(nauticalBytes)}
@@ -571,7 +573,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                   alignItems: 'center',
                 }}>
                   <span style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.bold }}>
-                        Total
+                        {t('offline_maps.total')}
                   </span>
                   <span style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.bold }}>
                         ~{formatFileSize(totalBytes)}
@@ -581,7 +583,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                 );
               })()
             ) : (
-              <div style={{ color: theme.colors.textMuted }}>Move the map to see estimate</div>
+              <div style={{ color: theme.colors.textMuted }}>{t('offline_maps.move_map_estimate')}</div>
             )}
           </div>
 
@@ -614,7 +616,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Download Region
+            {t('offline_maps.download_region')}
           </button>
         </div>
       </div>
@@ -628,7 +630,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
           gap: theme.space.sm,
         }}>
           <span style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted, whiteSpace: 'nowrap' }}>
-            Storage: {storageStats.deviceStorage.availableFormatted} free
+            {t('offline_maps.storage_free', { available: storageStats.deviceStorage.availableFormatted })}
           </span>
           <div style={{
             flex: 1,
@@ -660,12 +662,12 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        Saved Regions ({regions.length})
+        {t('offline_maps.saved_regions', { count: regions.length })}
       </div>
 
       {loading ? (
         <div style={{ color: theme.colors.textMuted, padding: theme.space.lg }}>
-          Loading...
+          {t('offline_maps.loading')}
         </div>
       ) : regions.length === 0 ? (
         <div style={{
@@ -676,7 +678,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
           borderRadius: theme.radius.md,
           border: `1px solid ${theme.colors.border}`,
         }}>
-          No offline regions saved yet
+          {t('offline_maps.no_regions')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space.md }}>
@@ -738,7 +740,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                     <span style={{
                       fontSize: '10px',
                       color: region.layers?.includes('satellite') ? theme.colors.success : theme.colors.error,
-                    }}>Satellite</span>
+                    }}>{t('offline_maps.satellite')}</span>
                   </div>
                 </div>
               </div>
@@ -789,7 +791,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                       cursor: 'pointer',
                     }}
                   >
-                    Cancel Download
+                    {t('offline_maps.cancel_download')}
                   </button>
                 ) : region.status === 'complete' ? (
                   <>
@@ -809,7 +811,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Downloaded{region.storageBytes > 0 ? ` (${formatFileSize(region.storageBytes)})` : ''}
+                      {t('offline_maps.downloaded')}{region.storageBytes > 0 ? ` (${formatFileSize(region.storageBytes)})` : ''}
                     </div>
                     <button
                       onClick={() => handleDeleteRegion(region)}
@@ -852,7 +854,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
                       </svg>
-                      Retry
+                      {t('offline_maps.retry')}
                     </button>
                     <button
                       onClick={() => handleDeleteRegion(region)}
@@ -889,8 +891,7 @@ export const OfflineMapsTab: React.FC<OfflineMapsTabProps> = ({ formatFileSize }
         marginTop: theme.space.xl,
         lineHeight: 1.5,
       }}>
-        <strong>Offline Maps:</strong> Downloaded regions include street map, satellite imagery, and nautical overlay tiles (zoom 0-16).
-        Tiles are served from your local server when available.
+        {t('offline_maps.info')}
       </div>
     </div>
   );

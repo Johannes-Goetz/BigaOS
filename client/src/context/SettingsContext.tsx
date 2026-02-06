@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { wsService } from '../services/websocket';
-import type { WeatherSettings } from '../types';
+import type { WeatherSettings, AlertSettings } from '../types';
+import { DEFAULT_ALERT_SETTINGS } from '../types/alerts';
 
 export type SpeedUnit = 'kt' | 'km/h' | 'mph' | 'm/s';
 export type WindUnit = 'kt' | 'km/h' | 'mph' | 'm/s' | 'bft';
@@ -339,6 +340,10 @@ interface SettingsContextType {
   weatherSettings: WeatherSettings;
   setWeatherSettings: (settings: WeatherSettings) => void;
 
+  // Alert settings
+  alertSettings: AlertSettings;
+  setAlertSettings: (settings: AlertSettings) => void;
+
   // Depth alarm
   depthAlarm: number | null; // Stored in current unit
   depthAlarmMeters: number | null; // Computed in meters
@@ -419,6 +424,7 @@ const defaultSettings = {
   demoMode: true,
   vesselSettings: defaultVesselSettings,
   weatherSettings: defaultWeatherSettings,
+  alertSettings: DEFAULT_ALERT_SETTINGS,
   mapTileUrls: {
     // All tiles go through server proxy for offline support
     streetMap: `${API_BASE_URL}/tiles/street/{z}/{x}/{y}`,
@@ -448,6 +454,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [apiUrls, setApiUrlsState] = useState<ApiUrls>(defaultSettings.apiUrls);
   const [vesselSettings, setVesselSettingsState] = useState<VesselSettings>(defaultSettings.vesselSettings);
   const [weatherSettings, setWeatherSettingsState] = useState<WeatherSettings>(defaultSettings.weatherSettings);
+  const [alertSettings, setAlertSettingsState] = useState<AlertSettings>(defaultSettings.alertSettings);
   const [currentDepth, setCurrentDepth] = useState<number>(10);
   const [isSynced, setIsSynced] = useState<boolean>(false);
   const isApplyingServerSettings = React.useRef<boolean>(false);
@@ -503,6 +510,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       if (data.settings.weatherSettings) {
         setWeatherSettingsState(data.settings.weatherSettings);
+      }
+      if (data.settings.alertSettings) {
+        setAlertSettingsState(data.settings.alertSettings);
       }
 
       isApplyingServerSettings.current = false;
@@ -560,6 +570,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         case 'weatherSettings':
           setWeatherSettingsState(data.value);
           break;
+        case 'alertSettings':
+          setAlertSettingsState(data.value);
+          break;
       }
 
       isApplyingServerSettings.current = false;
@@ -574,6 +587,47 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       wsService.off('settings_sync', handleSettingsSync);
       wsService.off('settings_changed', handleSettingsChanged);
+    };
+  }, []);
+
+  // Track last sent values to avoid sending duplicates
+  const lastSentDepthAlarm = useRef<{ threshold: number | null; soundEnabled: boolean } | null>(null);
+
+  // Send depth alarm updates to server (for server-side alert evaluation)
+  useEffect(() => {
+    if (!isSynced) return;
+
+    // Convert threshold to meters for server
+    const thresholdMeters = depthAlarm !== null
+      ? (depthUnit === 'ft' ? depthAlarm / depthConversions.ft.factor : depthAlarm)
+      : null;
+
+    // Only send if values actually changed from what we last sent
+    const newValues = { threshold: thresholdMeters, soundEnabled: soundAlarmEnabled };
+    if (
+      lastSentDepthAlarm.current &&
+      lastSentDepthAlarm.current.threshold === newValues.threshold &&
+      lastSentDepthAlarm.current.soundEnabled === newValues.soundEnabled
+    ) {
+      return; // No change, don't send
+    }
+
+    lastSentDepthAlarm.current = newValues;
+    wsService.emit('depth_alarm_update', newValues);
+  }, [depthAlarm, soundAlarmEnabled, depthUnit, isSynced]);
+
+  // Listen for depth alarm cleared event from server
+  useEffect(() => {
+    const handleDepthAlarmCleared = () => {
+      isApplyingServerSettings.current = true;
+      setDepthAlarmState(null);
+      isApplyingServerSettings.current = false;
+    };
+
+    wsService.on('depth_alarm_cleared', handleDepthAlarmCleared);
+
+    return () => {
+      wsService.off('depth_alarm_cleared', handleDepthAlarmCleared);
     };
   }, []);
 
@@ -663,6 +717,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateServerSetting('weatherSettings', settings);
   }, [updateServerSetting]);
 
+  // Note: setAlertSettings only updates local state, NOT syncing to server.
+  // Alert settings are synced via AlertContext using dedicated alert_update events
+  // which handle unit conversion properly. Syncing here would cause double-conversion.
+  const setAlertSettings = useCallback((settings: AlertSettings) => {
+    setAlertSettingsState(settings);
+  }, []);
+
   // Convert alarm threshold to meters
   const depthAlarmMeters = depthAlarm !== null
     ? (depthUnit === 'ft' ? depthAlarm / depthConversions.ft.factor : depthAlarm)
@@ -740,6 +801,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setVesselSettings,
     weatherSettings,
     setWeatherSettings,
+    alertSettings,
+    setAlertSettings,
     depthAlarm,
     depthAlarmMeters,
     setDepthAlarm,

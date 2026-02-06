@@ -6,6 +6,7 @@ import { GeoPosition } from '../../types';
 import {
   useSettings,
   distanceConversions,
+  depthConversions,
 } from '../../context/SettingsContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { SearchResult } from '../../services/geocoding';
@@ -238,9 +239,6 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
   // Refs
   const mapRef = useRef<L.Map>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const anchorAlarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Water debug grid hook
   const { gridPoints, loading: debugLoading, generateGrid, clearGrid, currentResolution } = useWaterDebugGrid(mapRef);
@@ -273,68 +271,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const convertedDepth = convertDepth(depth);
   const sidebarWidth = hideSidebar ? 0 : 100;
 
-  // Beep function for depth alarm
-  const playBeep = useCallback(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
-    }
-    const ctx = audioContextRef.current;
-
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.frequency.value = 2500;
-    osc1.type = 'square';
-    gain1.gain.value = 0.4;
-    osc1.start();
-    osc1.stop(ctx.currentTime + 0.1);
-
-    setTimeout(() => {
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.frequency.value = 3200;
-      osc2.type = 'square';
-      gain2.gain.value = 0.4;
-      osc2.start();
-      osc2.stop(ctx.currentTime + 0.1);
-    }, 120);
-  }, []);
-
-  // Urgent alarm sound for anchor dragging - phone alarm style beep-beep-beep
-  const playAnchorAlarm = useCallback(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
-    }
-    const ctx = audioContextRef.current;
-
-    // Phone alarm style - three quick beeps
-    const playBeepAt = (startTime: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = 880; // A5 note
-
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.01);
-      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.08);
-      gain.gain.linearRampToValueAtTime(0, startTime + 0.1);
-
-      osc.start(startTime);
-      osc.stop(startTime + 0.1);
-    };
-
-    // Three beeps in quick succession
-    playBeepAt(ctx.currentTime);
-    playBeepAt(ctx.currentTime + 0.15);
-    playBeepAt(ctx.currentTime + 0.3);
-  }, []);
+  // Sound is now handled centrally by AlertContainer via unified notification system
 
   // Get depth color based on value
   const getDepthColor = useCallback(
@@ -853,47 +790,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
     return horizontalDistance * 1.2; // 20% safety margin
   }, [placingAnchor, anchorChainLength, anchorDepth]);
 
-  // Handle depth alarm sound (respects soundAlarmEnabled setting)
-  useEffect(() => {
-    if (isDepthAlarmTriggered && soundAlarmEnabled) {
-      if (!beepIntervalRef.current) {
-        playBeep();
-        beepIntervalRef.current = setInterval(playBeep, 500);
-      }
-    } else {
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-        beepIntervalRef.current = null;
-      }
-    }
-    return () => {
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-        beepIntervalRef.current = null;
-      }
-    };
-  }, [isDepthAlarmTriggered, soundAlarmEnabled, playBeep]);
-
-  // Handle anchor dragging alarm sound (always enabled)
-  useEffect(() => {
-    if (isAnchorDragging) {
-      if (!anchorAlarmIntervalRef.current) {
-        playAnchorAlarm();
-        anchorAlarmIntervalRef.current = setInterval(playAnchorAlarm, 600);
-      }
-    } else {
-      if (anchorAlarmIntervalRef.current) {
-        clearInterval(anchorAlarmIntervalRef.current);
-        anchorAlarmIntervalRef.current = null;
-      }
-    }
-    return () => {
-      if (anchorAlarmIntervalRef.current) {
-        clearInterval(anchorAlarmIntervalRef.current);
-        anchorAlarmIntervalRef.current = null;
-      }
-    };
-  }, [isAnchorDragging, playAnchorAlarm]);
+  // Depth and anchor alarms are now evaluated server-side
+  // The server receives settings via websocket and broadcasts alerts to all clients
 
   // Track boat positions when anchor alarm is active
   const lastTrackPointRef = useRef<{ lat: number; lon: number } | null>(null);
@@ -970,6 +868,20 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
     return () => {
       wsService.off('anchor_alarm_changed', handleAnchorAlarmChanged);
+    };
+  }, []);
+
+  // Listen for anchor alarm cleared event from server (when dismissed on any client)
+  useEffect(() => {
+    const handleAnchorAlarmCleared = () => {
+      setAnchorAlarm(null);
+      setAnchorWatchTrack([]);
+    };
+
+    wsService.on('anchor_alarm_cleared', handleAnchorAlarmCleared);
+
+    return () => {
+      wsService.off('anchor_alarm_cleared', handleAnchorAlarmCleared);
     };
   }, []);
 
@@ -2110,38 +2022,6 @@ export const ChartView: React.FC<ChartViewProps> = ({
         </div>
       )}
 
-      {/* Depth Alarm Notification */}
-      {isDepthAlarmTriggered && !navigationTarget && !autopilotActive && (
-        <button
-          onClick={() => setDepthAlarm(null)}
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(239, 83, 80, 0.95)',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '0.75rem 1.5rem',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            zIndex: 1002,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            animation: 'pulse 1s infinite',
-          }}
-        >
-          <span>SHALLOW WATER</span>
-          <span style={{ opacity: 0.8, fontWeight: 'normal' }}>
-            Tap to dismiss
-          </span>
-        </button>
-      )}
-
       {/* Anchor Placement Mode - Info panel */}
       {placingAnchor && (
         <>
@@ -2213,54 +2093,6 @@ export const ChartView: React.FC<ChartViewProps> = ({
           </div>
         </>
       )}
-
-      {/* Anchor Alarm Alert */}
-      {anchorAlarm?.active && (() => {
-        const distanceToAnchor = calculateDistanceMeters(
-          position.latitude,
-          position.longitude,
-          anchorAlarm.anchorPosition.lat,
-          anchorAlarm.anchorPosition.lon
-        );
-        const isDragging = distanceToAnchor > anchorAlarm.swingRadius;
-
-        if (isDragging) {
-          return (
-            <button
-              onClick={() => updateAnchorAlarm(null)}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgb(239, 83, 80)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '0.75rem 1.5rem',
-                color: '#fff',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                zIndex: 1002,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                animation: 'pulse 1s infinite',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 15l1.55 1.55c-.96 1.69-3.33 3.04-5.55 3.37V11h3V9h-3V7.82C14.16 7.4 15 6.3 15 5c0-1.65-1.35-3-3-3S9 3.35 9 5c0 1.3.84 2.4 2 2.82V9H8v2h3v8.92c-2.22-.33-4.59-1.68-5.55-3.37L7 15l-4-3v3c0 3.88 4.92 7 9 7s9-3.12 9-7v-3l-4 3zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
-              </svg>
-              <span>ANCHOR DRAGGING!</span>
-              <span style={{ opacity: 0.8, fontWeight: 'normal' }}>
-                +{(distanceToAnchor - anchorAlarm.swingRadius).toFixed(0)}m
-              </span>
-            </button>
-          );
-        }
-        return null;
-      })()}
 
       {/* Depth Settings Panel */}
       {depthSettingsOpen && (

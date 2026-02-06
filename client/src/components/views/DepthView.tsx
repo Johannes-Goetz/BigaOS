@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSettings, depthConversions } from '../../context/SettingsContext';
 import { TimeSeriesChart, TimeSeriesDataPoint } from '../charts';
 import { sensorAPI } from '../../services/api';
@@ -32,61 +32,9 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
   const [historyData, setHistoryData] = useState<TimeSeriesDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const beepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const convertedDepth = convertDepth(depth);
 
-  // Beep function
-  const playBeep = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioContextRef.current;
-
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.frequency.value = 2500;
-    osc1.type = 'square';
-    gain1.gain.value = 0.4;
-    osc1.start();
-    osc1.stop(ctx.currentTime + 0.1);
-
-    setTimeout(() => {
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.frequency.value = 3200;
-      osc2.type = 'square';
-      gain2.gain.value = 0.4;
-      osc2.start();
-      osc2.stop(ctx.currentTime + 0.1);
-    }, 120);
-  };
-
-  // Handle sound alarm
-  useEffect(() => {
-    if (isDepthAlarmTriggered && soundAlarmEnabled) {
-      if (!beepIntervalRef.current) {
-        playBeep();
-        beepIntervalRef.current = setInterval(playBeep, 500);
-      }
-    } else {
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-        beepIntervalRef.current = null;
-      }
-    }
-    return () => {
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-        beepIntervalRef.current = null;
-      }
-    };
-  }, [isDepthAlarmTriggered, soundAlarmEnabled]);
+  // Sound is handled by AlertContainer via unified notification system
 
   const getDepthColor = (depthInMeters: number) => {
     if (isDepthAlarmTriggered) return '#ef5350';
@@ -202,19 +150,6 @@ export const DepthView: React.FC<DepthViewProps> = ({ depth, onClose }) => {
         }}>
           {depthConversions[depthUnit].label}
         </div>
-        {isDepthAlarmTriggered && (
-          <div style={{
-            marginTop: '1rem',
-            padding: '0.75rem 1.5rem',
-            background: 'rgba(239, 83, 80, 0.9)',
-            borderRadius: '8px',
-            display: 'inline-block',
-            fontWeight: 'bold',
-            animation: 'pulse 1s infinite',
-          }}>
-            SHALLOW WATER ALARM
-          </div>
-        )}
       </div>
 
       {/* Depth history graph */}

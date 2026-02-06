@@ -288,12 +288,9 @@ if (parentPort) {
       switch (message.type) {
         case 'init':
           initialize(message.data.dbPath);
-          // Start periodic flush
+          // Start periodic flush (silent)
           flushInterval = setInterval(() => {
-            const flushed = flushSensorData();
-            if (flushed > 0) {
-              console.log(`[DB Worker] Periodic flush: ${flushed} records`);
-            }
+            flushSensorData();
           }, FLUSH_INTERVAL);
           break;
 

@@ -7,6 +7,7 @@ import { navigationDataController } from '../controllers/navigation-data.control
 import { tilesController } from '../controllers/tiles.controller';
 import { autopilotController } from '../controllers/autopilot.controller';
 import { weatherController } from '../controllers/weather.controller';
+import { unifiedDataController } from '../controllers/unified-data.controller';
 
 const router = Router();
 
@@ -51,6 +52,22 @@ router.get('/autopilot/status', autopilotController.getStatus.bind(autopilotCont
 router.post('/autopilot/heading', autopilotController.setHeading.bind(autopilotController));
 router.post('/autopilot/activate', autopilotController.activate.bind(autopilotController));
 router.post('/autopilot/deactivate', autopilotController.deactivate.bind(autopilotController));
+
+// Unified data routes (DataController API)
+router.get('/unified', unifiedDataController.getSnapshot);
+router.get('/unified/sensors', unifiedDataController.getSensors);
+router.get('/unified/sensors/:path(*)', unifiedDataController.getSensorValue);
+router.get('/unified/weather', unifiedDataController.getWeather);
+router.get('/unified/alerts', unifiedDataController.getAlerts);
+router.get('/unified/alerts/:id', unifiedDataController.getAlert);
+router.put('/unified/alerts', unifiedDataController.upsertAlert);
+router.delete('/unified/alerts/:id', unifiedDataController.deleteAlert);
+router.post('/unified/alerts/:id/snooze', unifiedDataController.snoozeAlert);
+router.post('/unified/alerts/:id/dismiss', unifiedDataController.dismissAlert);
+router.post('/unified/alerts/:id/reset', unifiedDataController.resetPremadeAlert);
+router.put('/unified/alerts/global', unifiedDataController.setGlobalEnabled);
+router.get('/unified/units', unifiedDataController.getUnits);
+router.put('/unified/units', unifiedDataController.updateUnits);
 
 // Navigation data management routes
 router.get('/data/status', navigationDataController.getStatus.bind(navigationDataController));

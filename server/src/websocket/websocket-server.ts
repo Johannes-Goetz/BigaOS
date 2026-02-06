@@ -1,13 +1,28 @@
+/**
+ * WebSocket Server - Thin transport layer
+ *
+ * This server:
+ * - Subscribes to DataController events
+ * - Broadcasts data to connected clients (already in display units)
+ * - Routes client messages to appropriate services
+ * - Handles connection lifecycle
+ *
+ * All data is converted to user's display units by the DataController
+ * before being sent here, so this layer just forwards data.
+ */
+
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import { dummyDataService } from '../services/dummy-data.service';
+import { DataController, getDataController } from '../services/data.controller';
 import { dbWorker } from '../services/database-worker.service';
-import { weatherService } from '../services/weather.service';
-import { WeatherUpdateEvent } from '../types/weather.types';
+import { connectivityService } from '../services/connectivity.service';
+import { DisplaySensorData } from '../types/data.types';
+import { TriggeredAlert, AlertSettings } from '../types/alert.types';
+import { UserUnitPreferences } from '../types/units.types';
 
 export class WebSocketServer {
   private io: SocketIOServer;
-  private updateInterval: NodeJS.Timeout | null = null;
+  private dataController: DataController | null = null;
   private storageCounter: number = 0;
   private readonly STORAGE_INTERVAL: number = 1; // Store to DB every second
 
@@ -15,77 +30,96 @@ export class WebSocketServer {
     this.io = new SocketIOServer(httpServer, {
       cors: {
         origin: '*',
-        methods: ['GET', 'POST']
+        methods: ['GET', 'POST'],
       },
-      // Faster ping/pong for quicker disconnect detection
-      pingTimeout: 5000,    // Time to wait for pong response before considering connection dead
-      pingInterval: 3000,   // How often to send ping
+      pingTimeout: 5000,
+      pingInterval: 3000,
     });
-
-    // Initialize demo mode from database
-    this.initializeDemoMode();
 
     this.setupEventHandlers();
-    this.startDataBroadcast();
-
-    // Initialize weather service with boat position callback
-    this.initializeWeatherService();
   }
 
-  private initializeWeatherService() {
-    // Set up weather update callback
-    weatherService.setUpdateCallback((event: WeatherUpdateEvent) => {
-      this.broadcastWeatherUpdate(event);
+  /**
+   * Initialize with DataController (called after DataController is ready)
+   */
+  async initialize(): Promise<void> {
+    this.dataController = getDataController();
+    this.subscribeToDataController();
+    console.log('[WebSocketServer] Initialized and subscribed to DataController');
+  }
+
+  /**
+   * Subscribe to DataController events
+   */
+  private subscribeToDataController(): void {
+    if (!this.dataController) return;
+
+    // Sensor data updates (already in display units)
+    this.dataController.on('sensor_update', (data: DisplaySensorData) => {
+      this.broadcastSensorUpdate(data);
     });
 
-    // Start auto-fetching weather based on boat position
-    weatherService.startAutoFetch(() => {
-      const sensorData = dummyDataService.generateSensorData();
-      if (sensorData.navigation?.position) {
-        return {
-          lat: sensorData.navigation.position.latitude,
-          lon: sensorData.navigation.position.longitude,
-        };
-      }
-      return null;
+    // Weather updates (already in display units)
+    this.dataController.on('weather_update', (data: any) => {
+      this.broadcastWeatherUpdate(data);
+    });
+
+    // Alert events
+    this.dataController.on('alert_triggered', (alert: TriggeredAlert) => {
+      this.io.emit('alert_triggered', {
+        type: 'alert_triggered',
+        alert,
+        timestamp: new Date(),
+      });
+    });
+
+    this.dataController.on('alert_cleared', (alertId: string) => {
+      this.io.emit('alert_cleared', {
+        type: 'alert_cleared',
+        alertId,
+        timestamp: new Date(),
+      });
+    });
+
+    this.dataController.on('alert_snoozed', (data: { alertId: string; snoozedUntil: string }) => {
+      this.io.emit('alert_snoozed', {
+        type: 'alert_snoozed',
+        ...data,
+        timestamp: new Date(),
+      });
+    });
+
+    // Alert settings updates
+    this.dataController.getAlertService().on('settings_updated', (settings: AlertSettings) => {
+      this.io.emit('alert_settings_sync', {
+        settings,
+        timestamp: new Date(),
+      });
+    });
+
+    // Special alarm cleared events
+    this.dataController.getAlertService().on('depth_alarm_cleared', () => {
+      this.io.emit('depth_alarm_cleared', {
+        timestamp: new Date(),
+      });
+    });
+
+    this.dataController.getAlertService().on('anchor_alarm_cleared', () => {
+      this.io.emit('anchor_alarm_cleared', {
+        timestamp: new Date(),
+      });
     });
   }
 
-  private async initializeDemoMode() {
-    try {
-      const demoModeSetting = await dbWorker.getSetting('demoMode');
-      if (demoModeSetting && demoModeSetting !== 'undefined') {
-        const enabled = JSON.parse(demoModeSetting);
-        dummyDataService.setDemoMode(enabled);
-        console.log(`Demo mode initialized: ${enabled}`);
-      } else {
-        // Default to true if not set
-        dummyDataService.setDemoMode(true);
-        console.log('Demo mode initialized: true (default)');
-      }
-    } catch (error) {
-      console.error('Error initializing demo mode:', error);
-      // Default to true on error
-      dummyDataService.setDemoMode(true);
-    }
-  }
-
-  private setupEventHandlers() {
+  /**
+   * Set up client connection handlers
+   */
+  private setupEventHandlers(): void {
     this.io.on('connection', (socket) => {
       console.log(`Client connected: ${socket.id}`);
 
       // Send initial data
-      socket.emit('sensor_update', dummyDataService.generateSensorData());
-      socket.emit('state_change', {
-        currentState: dummyDataService.getCurrentState(),
-        timestamp: new Date()
-      });
-
-      // Send current settings
-      this.sendSettings(socket);
-
-      // Send current weather if available
-      this.sendWeather(socket);
+      this.sendInitialData(socket);
 
       // Handle client subscriptions
       socket.on('subscribe', (data) => {
@@ -93,30 +127,9 @@ export class WebSocketServer {
         socket.emit('subscription_confirmed', { paths: data.paths });
       });
 
-      // Handle settings update
+      // Handle settings updates
       socket.on('settings_update', (data) => {
-        console.log('Settings update received:', data);
-
-        // Save setting to database (async, fire-and-forget for non-critical settings)
-        if (data.key && data.value !== undefined) {
-          dbWorker.setSetting(data.key, JSON.stringify(data.value), data.description)
-            .catch((error) => {
-              console.error('Error saving setting:', error);
-              socket.emit('settings_error', { error: 'Failed to save setting' });
-            });
-
-          // Update dummy data service demo mode when demoMode setting changes
-          if (data.key === 'demoMode') {
-            dummyDataService.setDemoMode(data.value);
-          }
-        }
-
-        // Broadcast to ALL clients (including sender) so everyone stays in sync
-        this.io.emit('settings_changed', {
-          key: data.key,
-          value: data.value,
-          timestamp: new Date()
-        });
+        this.handleSettingsUpdate(data, socket);
       });
 
       // Handle request for all settings
@@ -126,31 +139,62 @@ export class WebSocketServer {
 
       // Handle control commands
       socket.on('control', (data) => {
-        console.log('Control command received:', data);
+        this.handleControlCommand(data, socket);
+      });
 
-        if (data.type === 'set_state') {
-          dummyDataService.changeState(data.state);
-          this.io.emit('state_change', {
-            currentState: data.state,
-            previousState: null,
-            timestamp: new Date()
-          });
+      // Handle anchor alarm updates - forward to alert service AND broadcast
+      socket.on('anchor_alarm_update', (data) => {
+        if (this.dataController) {
+          // Send to alert service for server-side evaluation
+          this.dataController.getAlertService().updateAnchorAlarm(data.anchorAlarm);
         }
-
-        socket.emit('control_response', {
-          success: true,
-          command: data
+        // Broadcast to other clients
+        this.io.emit('anchor_alarm_changed', {
+          ...data,
+          timestamp: new Date(),
         });
       });
 
-      // Handle anchor alarm updates - broadcast to all clients for global state
-      socket.on('anchor_alarm_update', (data) => {
-        console.log('Anchor alarm update:', data);
-        // Broadcast to ALL clients (including sender) so everyone stays in sync
-        this.io.emit('anchor_alarm_changed', {
-          ...data,
-          timestamp: new Date()
-        });
+      // Handle depth alarm updates - forward to alert service
+      socket.on('depth_alarm_update', (data: { threshold: number | null; soundEnabled: boolean }) => {
+        if (this.dataController) {
+          this.dataController.getAlertService().updateDepthAlarm(data.threshold, data.soundEnabled);
+        }
+      });
+
+      // Handle alert actions
+      socket.on('alert_snooze', (data: { alertId: string; minutes?: number }) => {
+        if (this.dataController) {
+          this.dataController.getAlertService().snoozeAlert(data.alertId, data.minutes);
+        }
+      });
+
+      socket.on('alert_dismiss', (data: { alertId: string }) => {
+        if (this.dataController) {
+          this.dataController.getAlertService().dismissAlert(data.alertId);
+        }
+      });
+
+      socket.on('alert_update', async (data: any) => {
+        if (this.dataController) {
+          try {
+            await this.dataController.getAlertService().upsertAlert(data);
+          } catch (error) {
+            socket.emit('alert_error', { error: 'Failed to update alert' });
+          }
+        }
+      });
+
+      socket.on('alert_delete', async (data: { alertId: string }) => {
+        if (this.dataController) {
+          await this.dataController.getAlertService().deleteAlert(data.alertId);
+        }
+      });
+
+      socket.on('alert_global_enable', async (data: { enabled: boolean }) => {
+        if (this.dataController) {
+          await this.dataController.getAlertService().setGlobalEnabled(data.enabled);
+        }
       });
 
       socket.on('disconnect', () => {
@@ -159,7 +203,131 @@ export class WebSocketServer {
     });
   }
 
-  private async sendSettings(socket: any) {
+  /**
+   * Send initial data to newly connected client
+   */
+  private async sendInitialData(socket: any): Promise<void> {
+    if (this.dataController) {
+      // Send current sensor data
+      const sensorData = this.dataController.getSensorDataForDisplay();
+      if (sensorData) {
+        socket.emit('sensor_update', {
+          type: 'sensor_update',
+          data: sensorData,
+          timestamp: new Date(),
+        });
+      }
+
+      // Send current state
+      const sensorService = this.dataController.getSensorService();
+      socket.emit('state_change', {
+        currentState: sensorService.getCurrentState(),
+        timestamp: new Date(),
+      });
+
+      // Send current triggered alerts
+      const triggeredAlerts = this.dataController.getAlertService().getTriggeredAlerts();
+      if (triggeredAlerts.length > 0) {
+        socket.emit('alerts_sync', {
+          alerts: triggeredAlerts,
+          timestamp: new Date(),
+        });
+      }
+
+      // Send alert settings (converted to display units)
+      const alertSettings = this.dataController.getAlertService().getSettingsForDisplay();
+      socket.emit('alert_settings_sync', {
+        settings: alertSettings,
+        timestamp: new Date(),
+      });
+
+      // Send current anchor alarm state if active
+      const anchorAlarmState = this.dataController.getAlertService().getAnchorAlarmState();
+      if (anchorAlarmState?.active) {
+        socket.emit('anchor_alarm_changed', {
+          anchorAlarm: anchorAlarmState,
+          timestamp: new Date(),
+        });
+      }
+    }
+
+    // Send settings
+    await this.sendSettings(socket);
+
+    // Send weather
+    await this.sendWeather(socket);
+  }
+
+  /**
+   * Handle settings update from client
+   */
+  private async handleSettingsUpdate(data: any, socket: any): Promise<void> {
+    console.log('Settings update received:', data);
+
+    if (data.key && data.value !== undefined) {
+      // Save to database
+      try {
+        await dbWorker.setSetting(data.key, JSON.stringify(data.value), data.description);
+      } catch (error) {
+        console.error('Error saving setting:', error);
+        socket.emit('settings_error', { error: 'Failed to save setting' });
+        return;
+      }
+
+      // Handle special settings
+      if (data.key === 'demoMode' && this.dataController) {
+        this.dataController.getSensorService().setDemoMode(data.value);
+      }
+
+      // Handle unit preference changes
+      if (['speedUnit', 'windUnit', 'depthUnit', 'temperatureUnit'].includes(data.key)) {
+        if (this.dataController) {
+          const preferences: Partial<UserUnitPreferences> = {};
+          preferences[data.key as keyof UserUnitPreferences] = data.value;
+          this.dataController.updateUserPreferences(preferences);
+          this.dataController.getAlertService().updateUserUnits(preferences);
+        }
+      }
+
+      // Broadcast to ALL clients
+      this.io.emit('settings_changed', {
+        key: data.key,
+        value: data.value,
+        timestamp: new Date(),
+      });
+    }
+  }
+
+  /**
+   * Handle control commands
+   */
+  private handleControlCommand(data: any, socket: any): void {
+    console.log('Control command received:', data);
+
+    if (data.type === 'set_state' && this.dataController) {
+      this.dataController.getSensorService().changeState(data.state);
+      this.io.emit('state_change', {
+        currentState: data.state,
+        previousState: null,
+        timestamp: new Date(),
+      });
+    }
+
+    // Handle demo navigation updates
+    if (data.type === 'demo_navigation' && this.dataController) {
+      this.dataController.getSensorService().setDemoNavigation(data);
+    }
+
+    socket.emit('control_response', {
+      success: true,
+      command: data,
+    });
+  }
+
+  /**
+   * Send all settings to a client
+   */
+  private async sendSettings(socket: any): Promise<void> {
     try {
       const allSettings = await dbWorker.getAllSettings();
       const settingsObj: Record<string, any> = {};
@@ -174,54 +342,77 @@ export class WebSocketServer {
 
       socket.emit('settings_sync', {
         settings: settingsObj,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Error sending settings:', error);
     }
   }
 
-  private async sendWeather(socket: any) {
+  /**
+   * Send current weather to a client
+   */
+  private async sendWeather(socket: any): Promise<void> {
+    if (!this.dataController) return;
+
+    const weatherService = this.dataController.getWeatherService();
     const current = await weatherService.getCachedCurrent();
     const forecast = await weatherService.getCachedForecast();
 
     if (current) {
-      socket.emit('weather_update', {
-        current,
-        forecast: forecast.slice(0, 48),
-        lastUpdated: new Date().toISOString(),
-        timestamp: new Date()
-      });
+      // Convert to display units
+      const weatherData = this.dataController.getWeatherData();
+      if (weatherData) {
+        const displayWeather = this.dataController.convertWeatherToDisplay(weatherData);
+        socket.emit('weather_update', {
+          current: displayWeather.current,
+          forecast: displayWeather.hourly.slice(0, 48),
+          lastUpdated: new Date().toISOString(),
+          timestamp: new Date(),
+        });
+      }
     }
   }
 
-  private startDataBroadcast() {
-    // Broadcast sensor data every second
-    this.updateInterval = setInterval(() => {
-      const sensorData = dummyDataService.generateSensorData();
+  /**
+   * Broadcast sensor update to all clients
+   */
+  private broadcastSensorUpdate(data: DisplaySensorData): void {
+    this.io.emit('sensor_update', {
+      type: 'sensor_update',
+      data: data,
+      timestamp: new Date(),
+    });
 
-      this.io.emit('sensor_update', {
-        type: 'sensor_update',
-        data: sensorData,
-        timestamp: new Date()
-      });
-
-      // Store sensor data to database every STORAGE_INTERVAL seconds
-      this.storageCounter++;
-      if (this.storageCounter >= this.STORAGE_INTERVAL) {
-        this.storageCounter = 0;
-        this.storeSensorData(sensorData);
-      }
-    }, 1000);
+    // Store to database periodically
+    this.storageCounter++;
+    if (this.storageCounter >= this.STORAGE_INTERVAL) {
+      this.storageCounter = 0;
+      this.storeSensorData(data);
+    }
   }
 
-  private storeSensorData(sensorData: any) {
-    // Collect all sensor readings into a batch
+  /**
+   * Broadcast weather update to all clients
+   */
+  private broadcastWeatherUpdate(data: any): void {
+    this.io.emit('weather_update', {
+      current: data.current,
+      forecast: data.hourly?.slice(0, 48) ?? [],
+      lastUpdated: new Date().toISOString(),
+      timestamp: new Date(),
+    });
+  }
+
+  /**
+   * Store sensor data to database (in display units for historical queries)
+   */
+  private storeSensorData(data: DisplaySensorData): void {
     const readings: Array<{ category: string; sensorName: string; value: number; unit?: string }> = [];
 
     // Navigation data
-    if (sensorData.navigation) {
-      const nav = sensorData.navigation;
+    if (data.navigation) {
+      const nav = data.navigation;
       if (nav.position) {
         readings.push({ category: 'navigation', sensorName: 'latitude', value: nav.position.latitude, unit: 'deg' });
         readings.push({ category: 'navigation', sensorName: 'longitude', value: nav.position.longitude, unit: 'deg' });
@@ -232,128 +423,65 @@ export class WebSocketServer {
       if (nav.courseOverGround !== undefined) {
         readings.push({ category: 'navigation', sensorName: 'courseOverGround', value: nav.courseOverGround, unit: 'deg' });
       }
-      // Handle both heading and headingMagnetic
-      const heading = nav.heading ?? nav.headingMagnetic;
-      if (heading !== undefined) {
-        readings.push({ category: 'navigation', sensorName: 'heading', value: heading, unit: 'deg' });
+      if (nav.headingMagnetic !== undefined) {
+        readings.push({ category: 'navigation', sensorName: 'heading', value: nav.headingMagnetic, unit: 'deg' });
       }
     }
 
     // Environment data
-    if (sensorData.environment) {
-      const env = sensorData.environment;
-      // Handle nested depth object (depth.belowTransducer) or direct depth value
-      const depthValue = env.depth?.belowTransducer ?? env.depth;
-      if (typeof depthValue === 'number') {
-        readings.push({ category: 'environment', sensorName: 'depth', value: depthValue, unit: 'm' });
+    if (data.environment) {
+      const env = data.environment;
+      if (env.depth?.belowTransducer !== undefined) {
+        readings.push({ category: 'environment', sensorName: 'depth', value: env.depth.belowTransducer, unit: 'm' });
       }
-      if (env.waterTemperature !== undefined) {
-        readings.push({ category: 'environment', sensorName: 'waterTemperature', value: env.waterTemperature, unit: 'C' });
+      if (env.wind?.speedApparent !== undefined) {
+        readings.push({ category: 'environment', sensorName: 'windSpeed', value: env.wind.speedApparent, unit: 'kt' });
       }
-      // Handle wind data - might be nested
-      const windSpeed = env.wind?.speedApparent ?? env.windSpeed;
-      const windDirection = env.wind?.angleApparent ?? env.windDirection;
-      if (windSpeed !== undefined) {
-        readings.push({ category: 'environment', sensorName: 'windSpeed', value: windSpeed, unit: 'kt' });
-      }
-      if (windDirection !== undefined) {
-        readings.push({ category: 'environment', sensorName: 'windDirection', value: windDirection, unit: 'deg' });
+      if (env.wind?.angleApparent !== undefined) {
+        readings.push({ category: 'environment', sensorName: 'windDirection', value: env.wind.angleApparent, unit: 'deg' });
       }
     }
 
-    // Electrical data - handle both singular 'battery' and plural 'batteries'
-    if (sensorData.electrical) {
-      const elec = sensorData.electrical;
-
-      // Handle singular battery object
-      if (elec.battery) {
-        const battery = elec.battery;
-        if (battery.voltage !== undefined) {
-          readings.push({ category: 'electrical', sensorName: 'house_voltage', value: battery.voltage, unit: 'V' });
-        }
-        if (battery.current !== undefined) {
-          readings.push({ category: 'electrical', sensorName: 'house_current', value: battery.current, unit: 'A' });
-        }
-        if (battery.stateOfCharge !== undefined) {
-          readings.push({ category: 'electrical', sensorName: 'house_stateOfCharge', value: battery.stateOfCharge, unit: '%' });
-        }
-        if (battery.temperature !== undefined) {
-          readings.push({ category: 'electrical', sensorName: 'house_temperature', value: battery.temperature, unit: 'C' });
-        }
+    // Electrical data
+    if (data.electrical?.battery) {
+      const battery = data.electrical.battery;
+      if (battery.voltage !== undefined) {
+        readings.push({ category: 'electrical', sensorName: 'house_voltage', value: battery.voltage, unit: 'V' });
       }
-
-      // Handle plural batteries object
-      if (elec.batteries) {
-        for (const [batteryId, battery] of Object.entries(elec.batteries) as [string, any][]) {
-          if (battery.voltage !== undefined) {
-            readings.push({ category: 'electrical', sensorName: `${batteryId}_voltage`, value: battery.voltage, unit: 'V' });
-          }
-          if (battery.current !== undefined) {
-            readings.push({ category: 'electrical', sensorName: `${batteryId}_current`, value: battery.current, unit: 'A' });
-          }
-          if (battery.stateOfCharge !== undefined) {
-            readings.push({ category: 'electrical', sensorName: `${batteryId}_stateOfCharge`, value: battery.stateOfCharge, unit: '%' });
-          }
-          if (battery.temperature !== undefined) {
-            readings.push({ category: 'electrical', sensorName: `${batteryId}_temperature`, value: battery.temperature, unit: 'C' });
-          }
-        }
+      if (battery.current !== undefined) {
+        readings.push({ category: 'electrical', sensorName: 'house_current', value: battery.current, unit: 'A' });
+      }
+      if (battery.stateOfCharge !== undefined) {
+        readings.push({ category: 'electrical', sensorName: 'house_stateOfCharge', value: battery.stateOfCharge, unit: '%' });
       }
     }
 
-    // Engine/Motor data
-    if (sensorData.propulsion) {
-      for (const [engineId, engine] of Object.entries(sensorData.propulsion) as [string, any][]) {
-        if (engine.rpm !== undefined) {
-          readings.push({ category: 'propulsion', sensorName: `${engineId}_rpm`, value: engine.rpm, unit: 'rpm' });
-        }
-        if (engine.temperature !== undefined) {
-          readings.push({ category: 'propulsion', sensorName: `${engineId}_temperature`, value: engine.temperature, unit: 'C' });
-        }
-        if (engine.oilPressure !== undefined) {
-          readings.push({ category: 'propulsion', sensorName: `${engineId}_oilPressure`, value: engine.oilPressure, unit: 'kPa' });
-        }
-        if (engine.fuelRate !== undefined) {
-          readings.push({ category: 'propulsion', sensorName: `${engineId}_fuelRate`, value: engine.fuelRate, unit: 'L/h' });
-        }
+    // Propulsion data
+    if (data.propulsion?.motor) {
+      const motor = data.propulsion.motor;
+      if (motor.throttle !== undefined) {
+        readings.push({ category: 'propulsion', sensorName: 'motor_throttle', value: motor.throttle, unit: '%' });
       }
     }
 
-    // Tank data
-    if (sensorData.tanks) {
-      for (const [tankId, tank] of Object.entries(sensorData.tanks) as [string, any][]) {
-        if (tank.currentLevel !== undefined) {
-          readings.push({ category: 'tanks', sensorName: `${tankId}_level`, value: tank.currentLevel, unit: '%' });
-        }
-      }
-    }
-
-    // Send all readings as a single batch to the worker (non-blocking)
+    // Send to database worker
     if (readings.length > 0) {
       dbWorker.addSensorDataBatch(readings);
     }
   }
 
-  public stop() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-    }
-    weatherService.stopAutoFetch();
-    this.io.close();
-  }
-
   /**
-   * Broadcast connectivity status change to all clients
+   * Broadcast connectivity status change
    */
   public broadcastConnectivityChange(online: boolean): void {
     this.io.emit('connectivity_change', {
       online,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
   /**
-   * Broadcast download progress to all clients
+   * Broadcast download progress
    */
   public broadcastDownloadProgress(progress: {
     fileId: string;
@@ -365,22 +493,20 @@ export class WebSocketServer {
   }): void {
     this.io.emit('download_progress', {
       ...progress,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
   /**
-   * Broadcast weather update to all clients
+   * Stop the WebSocket server
    */
-  public broadcastWeatherUpdate(event: WeatherUpdateEvent): void {
-    this.io.emit('weather_update', {
-      ...event,
-      timestamp: new Date()
-    });
+  public stop(): void {
+    this.io.close();
+    console.log('[WebSocketServer] Stopped');
   }
 }
 
-// Export a singleton reference that will be set by index.ts
+// Export singleton reference
 export let wsServerInstance: WebSocketServer | null = null;
 
 export function setWsServerInstance(instance: WebSocketServer): void {

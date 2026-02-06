@@ -342,6 +342,62 @@ class DatabaseWorkerService {
     });
   }
 
+  // ==================== WEATHER CACHE ====================
+
+  /**
+   * Get cached weather data for a location
+   */
+  async getWeatherCache(lat: number, lon: number): Promise<{ data: string; fetched_at: string; expires_at: string } | null> {
+    const result = await this.send('queryOne', {
+      sql: `SELECT data, fetched_at, expires_at FROM weather_cache WHERE lat = ? AND lon = ? AND expires_at > datetime('now')`,
+      params: [lat, lon]
+    });
+    return result || null;
+  }
+
+  /**
+   * Set cached weather data for a location
+   */
+  async setWeatherCache(lat: number, lon: number, data: string, fetchedAt: string, expiresAt: string): Promise<void> {
+    await this.send('execute', {
+      sql: `INSERT INTO weather_cache (lat, lon, data, fetched_at, expires_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(lat, lon) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at, expires_at = excluded.expires_at`,
+      params: [lat, lon, data, fetchedAt, expiresAt]
+    });
+  }
+
+  /**
+   * Clear expired weather cache entries
+   */
+  async clearExpiredWeatherCache(): Promise<number> {
+    const result = await this.send('execute', {
+      sql: `DELETE FROM weather_cache WHERE expires_at < datetime('now')`,
+      params: []
+    });
+    return result.changes || 0;
+  }
+
+  /**
+   * Clear all weather cache entries
+   */
+  async clearAllWeatherCache(): Promise<number> {
+    const result = await this.send('execute', {
+      sql: `DELETE FROM weather_cache`,
+      params: []
+    });
+    return result.changes || 0;
+  }
+
+  /**
+   * Get weather cache count (for stats)
+   */
+  async getWeatherCacheCount(): Promise<number> {
+    const result = await this.send('queryOne', {
+      sql: `SELECT COUNT(*) as count FROM weather_cache`,
+      params: []
+    });
+    return result?.count || 0;
+  }
+
   // ==================== UTILITIES ====================
 
   /**

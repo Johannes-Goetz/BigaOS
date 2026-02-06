@@ -14,6 +14,8 @@ import { BatteryView } from './components/views/BatteryView';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
+import { AlertProvider } from './context/AlertContext';
+import { AlertContainer } from './components/alerts';
 import { wsService } from './services/websocket';
 import { sensorAPI } from './services/api';
 import './styles/globals.css';
@@ -379,9 +381,12 @@ function App() {
   return (
     <NavigationProvider>
       <SettingsProvider>
-        <ConfirmDialogProvider>
-          <AppContent />
-        </ConfirmDialogProvider>
+        <AlertProvider>
+          <ConfirmDialogProvider>
+            <AppContent />
+            <AlertContainer />
+          </ConfirmDialogProvider>
+        </AlertProvider>
       </SettingsProvider>
     </NavigationProvider>
   );

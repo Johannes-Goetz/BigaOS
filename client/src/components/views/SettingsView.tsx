@@ -21,9 +21,10 @@ import { theme } from '../../styles/theme';
 import { dataAPI, DataFileInfo, DownloadProgress, offlineMapsAPI, StorageStats } from '../../services/api';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { OfflineMapsTab } from '../settings/OfflineMapsTab';
+import { AlertsTab } from '../settings/AlertsTab';
 import { wsService } from '../../services/websocket';
 
-type SettingsTab = 'general' | 'vessel' | 'units' | 'downloads' | 'offline-maps' | 'advanced';
+type SettingsTab = 'general' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'offline-maps' | 'advanced';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -376,6 +377,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg>
+      ),
+    },
+    {
+      id: 'alerts',
+      label: 'Alerts',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
       ),
     },
@@ -1755,6 +1766,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         return renderUnitsTab();
       case 'downloads':
         return renderDownloadsTab();
+      case 'alerts':
+        return <AlertsTab />;
       case 'offline-maps':
         return <OfflineMapsTab formatFileSize={formatFileSize} />;
       case 'advanced':

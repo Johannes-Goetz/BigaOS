@@ -8,6 +8,7 @@ import db from './database/database';
 import { dbWorker } from './services/database-worker.service';
 import { waterDetectionService } from './services/water-detection.service';
 import { routeWorkerService } from './services/route-worker.service';
+import { DataController } from './services/data.controller';
 
 // Load environment variables
 dotenv.config();
@@ -89,9 +90,27 @@ async function startServer() {
   // Create HTTP server
   const httpServer = createServer(app);
 
+  // Initialize DataController (central data hub)
+  const dataController = DataController.getInstance();
+  try {
+    await dataController.initialize();
+    console.log('[Server] DataController initialized');
+  } catch (error) {
+    console.error('Failed to initialize DataController:', error);
+    // Continue without DataController - fallback to legacy behavior
+  }
+
   // Initialize WebSocket server (now safe because dbWorker is ready)
   const wsServer = new WebSocketServer(httpServer);
   setWsServerInstance(wsServer);
+
+  // Connect WebSocket to DataController
+  try {
+    await wsServer.initialize();
+    console.log('[Server] WebSocket connected to DataController');
+  } catch (error) {
+    console.error('Failed to connect WebSocket to DataController:', error);
+  }
 
   // Start server
   httpServer.listen(PORT, '0.0.0.0', () => {
@@ -113,6 +132,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
   const { httpServer, wsServer } = await serverPromise;
   wsServer.stop();
+  DataController.getInstance().stop();
   await routeWorkerService.terminate();
   await dbWorker.terminate();
   db.close();
@@ -126,6 +146,7 @@ process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
   const { httpServer, wsServer } = await serverPromise;
   wsServer.stop();
+  DataController.getInstance().stop();
   await routeWorkerService.terminate();
   await dbWorker.terminate();
   db.close();

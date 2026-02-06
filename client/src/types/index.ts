@@ -164,3 +164,6 @@ export interface Camera {
   enabled: boolean;
   status: string;
 }
+
+// Alert types
+export * from './alerts';

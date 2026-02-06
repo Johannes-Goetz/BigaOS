@@ -525,16 +525,12 @@ class WeatherService {
       const roundedLat = roundCoord(lat);
       const roundedLon = roundCoord(lon);
 
-      // Use INSERT OR REPLACE to upsert
-      await dbWorker.setSetting(
-        `weather_cache_${roundedLat}_${roundedLon}`,
-        JSON.stringify({
-          lat: roundedLat,
-          lon: roundedLon,
-          data: forecast,
-          fetched_at: forecast.fetchedAt,
-          expires_at: forecast.expiresAt,
-        })
+      await dbWorker.setWeatherCache(
+        roundedLat,
+        roundedLon,
+        JSON.stringify(forecast),
+        forecast.fetchedAt,
+        forecast.expiresAt
       );
     } catch (error) {
       console.error('[Weather] Failed to save to database:', error);
@@ -549,11 +545,10 @@ class WeatherService {
       const roundedLat = roundCoord(lat);
       const roundedLon = roundCoord(lon);
 
-      const cached = await dbWorker.getSetting(`weather_cache_${roundedLat}_${roundedLon}`);
+      const cached = await dbWorker.getWeatherCache(roundedLat, roundedLon);
       if (!cached) return null;
 
-      const parsed = JSON.parse(cached);
-      return parsed.data as WeatherForecast;
+      return JSON.parse(cached.data) as WeatherForecast;
     } catch (error) {
       console.error('[Weather] Failed to load from database:', error);
       return null;
@@ -579,22 +574,13 @@ class WeatherService {
    */
   async clearCache(): Promise<number> {
     try {
-      // Get all settings and filter for weather cache keys
-      const allSettings = await dbWorker.getAllSettings();
-      const weatherCacheKeys = allSettings
-        .filter((s: { key: string }) => s.key.startsWith('weather_cache_'))
-        .map((s: { key: string }) => s.key);
-
-      // Delete each weather cache entry
-      for (const key of weatherCacheKeys) {
-        await dbWorker.setSetting(key, '', 'deleted');
-      }
+      const deleted = await dbWorker.clearAllWeatherCache();
 
       // Reset last fetched position to force refetch
       this.lastFetchedPosition = null;
 
-      console.log(`[Weather] Cleared ${weatherCacheKeys.length} cached entries`);
-      return weatherCacheKeys.length;
+      console.log(`[Weather] Cleared ${deleted} cached entries`);
+      return deleted;
     } catch (error) {
       console.error('[Weather] Failed to clear cache:', error);
       return 0;

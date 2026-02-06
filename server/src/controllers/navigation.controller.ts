@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { waterDetectionService } from '../services/water-detection.service';
 import { routeWorkerService } from '../services/route-worker.service';
-import { dummyDataService } from '../services/dummy-data.service';
+import { getDataController } from '../services/data.controller';
 
 class NavigationController {
   /**
@@ -154,16 +154,19 @@ class NavigationController {
     try {
       const { latitude, longitude, heading, speed } = req.body;
 
-      dummyDataService.setDemoNavigation({
-        latitude,
-        longitude,
-        heading,
-        speed
-      });
+      const dataController = getDataController();
+      if (dataController) {
+        dataController.getSensorService().setDemoNavigation({
+          latitude,
+          longitude,
+          heading,
+          speed
+        });
+      }
 
       res.json({
         success: true,
-        navigation: dummyDataService.getDemoNavigation()
+        navigation: dataController?.getSensorService().getDemoNavigation()
       });
     } catch (error) {
       console.error('Demo navigation update error:', error);
@@ -177,9 +180,11 @@ class NavigationController {
    */
   async getDemoNavigation(req: Request, res: Response) {
     try {
+      const dataController = getDataController();
+      const sensorService = dataController?.getSensorService();
       res.json({
-        demoMode: dummyDataService.isDemoMode(),
-        navigation: dummyDataService.getDemoNavigation()
+        demoMode: sensorService?.isDemoMode() ?? false,
+        navigation: sensorService?.getDemoNavigation()
       });
     } catch (error) {
       console.error('Demo navigation get error:', error);

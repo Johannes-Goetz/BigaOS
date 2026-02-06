@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { CustomMarker, markerIcons, markerColors } from './map-icons';
 import { VesselSettings, ChainType, useSettings } from '../../../context/SettingsContext';
 import { weatherAPI, WeatherForecastResponse } from '../../../services/api';
@@ -536,13 +536,13 @@ const ChainCalculationInfoDialog: React.FC<{
           <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t('chart.how_calculated')}</div>
           <div style={{ opacity: 0.85, lineHeight: 1.4 }}>
             {useCatenary && useWindLoa ? (
-              <>We calculate chain length using <b>both methods</b> for each wind condition and take the <b>higher value</b>.</>
+              <span dangerouslySetInnerHTML={{ __html: t('chart.calc_both_methods') }} />
             ) : useCatenary ? (
-              <>Using <b>catenary equation only</b> based on your vessel's parameters.</>
+              <span dangerouslySetInnerHTML={{ __html: t('chart.calc_catenary_only') }} />
             ) : useWindLoa ? (
-              <>Using <b>Wind + LOA rule only</b> based on empirical testing.</>
+              <span dangerouslySetInnerHTML={{ __html: t('chart.calc_wind_loa_only') }} />
             ) : (
-              <>Both methods disabled. Using <b>simple scope ratios</b> as fallback.</>
+              <span dangerouslySetInnerHTML={{ __html: t('chart.calc_fallback') }} />
             )}
           </div>
         </div>
@@ -570,7 +570,7 @@ const ChainCalculationInfoDialog: React.FC<{
                 <span style={{ opacity: 0.7 }}>{t('chart.displacement')}:</span>
                 <span>{effectiveDisplacement}t</span>
                 <span style={{ opacity: 0.7 }}>{t('chart.chain_diameter')}:</span>
-                <span>{chainDiameterMm}mm {chainType === 'stainless-steel' ? 'SS' : 'Galv'}</span>
+                <span>{chainDiameterMm}mm {chainType === 'stainless-steel' ? t('chart.chain_type_ss') : t('chart.chain_type_galv')}</span>
                 <span style={{ opacity: 0.7 }}>{t('chart.windage_area')}:</span>
                 <span>~{windageArea.toFixed(1)}m²</span>
                 <span style={{ opacity: 0.7 }}>{t('chart.chain_weight')}:</span>
@@ -587,9 +587,9 @@ const ChainCalculationInfoDialog: React.FC<{
               <div style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>{t('chart.wind_forecast')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.15rem 0.5rem' }}>
                 <span style={{ color: '#66bb6a' }}>{t('chart.minimum')}:</span>
-                <span>{forecastMaxWind !== undefined ? `${Math.round(forecastMaxWind)} ${windUnit} (max wind)` : 'No forecast'}</span>
+                <span>{forecastMaxWind !== undefined ? `${Math.round(forecastMaxWind)} ${windUnit} (${t('chart.max_wind_label')})` : t('chart.no_forecast')}</span>
                 <span style={{ color: '#ffa726' }}>{t('chart.recommended')}:</span>
-                <span>{forecastMaxGust !== undefined ? `${Math.round(forecastMaxGust)} ${windUnit} (max gust)` : 'No forecast'}</span>
+                <span>{forecastMaxGust !== undefined ? `${Math.round(forecastMaxGust)} ${windUnit} (${t('chart.max_gust_label')})` : t('chart.no_forecast')}</span>
               </div>
             </div>
 
@@ -599,15 +599,15 @@ const ChainCalculationInfoDialog: React.FC<{
               borderRadius: '4px',
               padding: '0.5rem',
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>Traditional Scope at {depth.toFixed(1)}m</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>{t('chart.traditional_scope', { depth: depth.toFixed(1) })}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.2rem 0.5rem' }}>
-                <span style={{ opacity: 0.7 }}>5:1 scope:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.scope_5_1')}</span>
                 <span>{scope5to1}m</span>
-                <span style={{ opacity: 0.7 }}>7:1 scope:</span>
+                <span style={{ opacity: 0.7 }}>{t('chart.scope_7_1')}</span>
                 <span>{scope7to1}m</span>
               </div>
               <div style={{ opacity: 0.5, fontSize: '0.65rem', marginTop: '0.2rem' }}>
-                (includes {effectiveFreeboardHeight}m freeboard)
+                {t('chart.includes_freeboard', { freeboard: effectiveFreeboardHeight.toString() })}
               </div>
             </div>
           </div>
@@ -649,10 +649,10 @@ const ChainCalculationInfoDialog: React.FC<{
               fontSize: '0.7rem',
               marginBottom: '0.3rem',
             }}>
-              <b>Uses:</b> Depth, wind force, chain weight, windage area
+              {t('chart.catenary_uses')}
             </div>
             <div style={{ opacity: 0.8, marginBottom: '0.3rem', fontSize: '0.75rem' }}>
-              Physics-based calculation of how chain hangs under load:
+              {t('chart.catenary_description')}
             </div>
             <div style={{
               fontFamily: 'monospace',
@@ -667,10 +667,10 @@ const ChainCalculationInfoDialog: React.FC<{
               F = ½ × ρ × V² × A × Cd
             </div>
             <div style={{ opacity: 0.6, fontSize: '0.65rem' }}>
-              <div><b>L</b> = chain length, <b>Y</b> = vertical ({totalVertical.toFixed(1)}m)</div>
-              <div><b>a</b> = catenary param, <b>F</b> = wind force</div>
-              <div><b>m</b> = chain mass/m, <b>ρ</b> = air density</div>
-              <div><b>V</b> = wind speed, <b>A</b> = windage, <b>Cd</b> = drag</div>
+              <div><b>L</b> = {t('chart.catenary_var_L')}, <b>Y</b> = {t('chart.catenary_var_Y')} ({totalVertical.toFixed(1)}m)</div>
+              <div><b>a</b> = {t('chart.catenary_var_a')}, <b>F</b> = {t('chart.catenary_var_F')}</div>
+              <div><b>m</b> = {t('chart.catenary_var_m')}, <b>ρ</b> = {t('chart.catenary_var_rho')}</div>
+              <div><b>V</b> = {t('chart.catenary_var_V')}, <b>A</b> = {t('chart.catenary_var_A')}, <b>Cd</b> = {t('chart.catenary_var_Cd')}</div>
             </div>
           </div>
 
@@ -711,10 +711,10 @@ const ChainCalculationInfoDialog: React.FC<{
               fontSize: '0.7rem',
               marginBottom: '0.3rem',
             }}>
-              <b>Uses:</b> Wind speed, boat length, depth
+              {t('chart.wind_loa_uses')}
             </div>
             <div style={{ opacity: 0.8, marginBottom: '0.3rem', fontSize: '0.75rem' }}>
-              Empirical rule from extensive real-world testing:
+              {t('chart.wind_loa_description')}
             </div>
             <div style={{
               fontFamily: 'monospace',
@@ -724,14 +724,14 @@ const ChainCalculationInfoDialog: React.FC<{
               fontSize: '0.7rem',
               marginBottom: '0.3rem',
             }}>
-              Chain = (Wind + LOA) × Depth Factor
+              {t('chart.wind_loa_formula')}
             </div>
             <div style={{ opacity: 0.6, fontSize: '0.65rem', marginBottom: '0.3rem' }}>
-              <div><b>Wind</b> = wind speed in knots</div>
-              <div><b>LOA</b> = boat length ({effectiveBoatLength}m)</div>
+              <div><b>Wind</b> = {t('chart.wind_loa_var_wind')}</div>
+              <div><b>LOA</b> = {t('chart.wind_loa_var_loa')} ({effectiveBoatLength}m)</div>
             </div>
             <div style={{ opacity: 0.8, marginBottom: '0.15rem', fontWeight: 'bold', fontSize: '0.7rem' }}>
-              Depth factors:
+              {t('chart.depth_factors')}:
             </div>
             <div style={{
               fontFamily: 'monospace',
@@ -740,9 +740,9 @@ const ChainCalculationInfoDialog: React.FC<{
               borderRadius: '3px',
               fontSize: '0.65rem',
             }}>
-              ×1.0 for 0-8m<br />
-              ×1.5 for 8-15m<br />
-              ×2.0 for 15m+
+              {t('chart.depth_factor_shallow')}<br />
+              {t('chart.depth_factor_medium')}<br />
+              {t('chart.depth_factor_deep')}
             </div>
           </div>
         </div>
@@ -755,7 +755,7 @@ const ChainCalculationInfoDialog: React.FC<{
           borderTop: '1px solid rgba(255,255,255,0.1)',
           paddingTop: '0.4rem',
         }}>
-          Sources: Yachting Monthly, trimaran-san.de, BoatUS, Rocna KB
+          {t('chart.sources')}
         </div>
       </div>
     </>
@@ -1098,7 +1098,7 @@ const ScopeVisualization: React.FC<{
 
         {/* Chain length label */}
         <text x={svgWidth - 10} y={waterLevel + 15} fill="rgba(255,255,255,0.6)" fontSize="9" textAnchor="end">
-          Chain: {chainLength.toFixed(0)}m
+          {t('chart.chain_label', { length: chainLength.toFixed(0) })}
         </text>
         </g>
       </svg>
@@ -1239,7 +1239,7 @@ const ScopeVisualization: React.FC<{
                   <line x1="12" y1="9" x2="12" y2="13" />
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
-                {Math.round(chainLength / totalChain * 100)}% of total chain ({totalChain}m)
+                {t('chart.total_chain_warning', { percent: Math.round(chainLength / totalChain * 100).toString(), total: totalChain.toString() })}
               </div>
             )}
           </div>
@@ -1277,14 +1277,27 @@ const useAnchorWeatherForecast = (lat: number, lon: number, enabled: boolean, ho
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchForecast = useCallback(async () => {
-    if (!enabled || !lat || !lon) return;
+  // Round coordinates to 2 decimal places (~1km) to prevent refetching on every GPS update
+  const stableLat = Math.round(lat * 100) / 100;
+  const stableLon = Math.round(lon * 100) / 100;
 
-    setLoading(true);
+  // Track previous hours to detect user-initiated changes vs GPS-triggered refetches
+  const prevHoursRef = useRef(hours);
+  const hasFetched = useRef(false);
+
+  const fetchForecast = useCallback(async () => {
+    if (!enabled || !stableLat || !stableLon) return;
+
+    // Show loading skeleton on first fetch or when user changes forecast period
+    // Skip loading for GPS coordinate updates (prevents flickering)
+    const hoursChanged = prevHoursRef.current !== hours;
+    if (!hasFetched.current || hoursChanged) setLoading(true);
+
+    prevHoursRef.current = hours;
     setError(null);
 
     try {
-      const response = await weatherAPI.getForecast(lat, lon, hours);
+      const response = await weatherAPI.getForecast(stableLat, stableLon, hours);
       const data: WeatherForecastResponse = response.data;
 
       if (data.hourly && data.hourly.length > 0) {
@@ -1316,13 +1329,14 @@ const useAnchorWeatherForecast = (lat: number, lon: number, enabled: boolean, ho
           waveHeight: maxWaveHeight > 0 ? maxWaveHeight : undefined,
         });
       }
+      hasFetched.current = true;
     } catch (err) {
       console.error('Failed to fetch weather forecast for anchor:', err);
       setError('Unable to load forecast');
     } finally {
       setLoading(false);
     }
-  }, [lat, lon, enabled, hours]);
+  }, [stableLat, stableLon, enabled, hours]);
 
   useEffect(() => {
     fetchForecast();
@@ -1595,7 +1609,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
         </div>
         {chainHasError && (
           <div style={{ fontSize: '0.65rem', color: '#ef5350', marginTop: '0.2rem' }}>
-            Please enter a valid number
+            {t('validation.invalid_number')}
           </div>
         )}
       </div>
@@ -1670,7 +1684,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
         </div>
         {depthHasError && (
           <div style={{ fontSize: '0.65rem', color: '#ef5350', marginTop: '0.2rem' }}>
-            Please enter a valid number
+            {t('validation.invalid_number')}
           </div>
         )}
       </div>
@@ -1935,7 +1949,7 @@ export const AnchorAlarmDialog: React.FC<AnchorAlarmDialogProps> = ({
               );
             })()
           ) : (
-            <div style={{ fontSize: '0.65rem', opacity: 0.5, textAlign: 'center' }}>Forecast unavailable</div>
+            <div style={{ fontSize: '0.65rem', opacity: 0.5, textAlign: 'center' }}>{t('chart.forecast_unavailable')}</div>
           )}
         </div>
       )}

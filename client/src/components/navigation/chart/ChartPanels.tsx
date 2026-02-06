@@ -436,7 +436,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
 }) => {
   const settingsPanelWidth = 320;
   const { windUnit, depthUnit, temperatureUnit, timeFormat, dateFormat } = useSettings();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Custom time dialog state
   const [showCustomDialog, setShowCustomDialog] = React.useState(false);
@@ -455,7 +455,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
     const forecastDay = new Date(forecastDate.getFullYear(), forecastDate.getMonth(), forecastDate.getDate());
     const dayDiff = Math.round((forecastDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
 
-    const timeStr = forecastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
+    const timeStr = forecastDate.toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
 
     if (dayDiff === 0) {
       return `${t('common.today')} ${timeStr}`;
@@ -465,7 +465,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
       // Format date based on user's date format preference
       const day = forecastDate.getDate().toString().padStart(2, '0');
       const month = (forecastDate.getMonth() + 1).toString().padStart(2, '0');
-      const weekday = forecastDate.toLocaleDateString([], { weekday: 'short' });
+      const weekday = forecastDate.toLocaleDateString(language, { weekday: 'short' });
 
       let dateStr: string;
       switch (dateFormat) {
@@ -1029,14 +1029,14 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
               const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
               const forecastDay = new Date(forecastDate.getFullYear(), forecastDate.getMonth(), forecastDate.getDate());
               const dayDiff = Math.round((forecastDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-              const timeStr = forecastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
+              const timeStr = forecastDate.toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' });
 
               if (dayDiff === 0) {
                 return `${t('common.today')} ${timeStr}`;
               } else if (dayDiff === 1) {
                 return `${t('common.tomorrow')} ${timeStr}`;
               } else {
-                const weekday = forecastDate.toLocaleDateString([], { weekday: 'short' });
+                const weekday = forecastDate.toLocaleDateString(language, { weekday: 'short' });
                 const day = forecastDate.getDate().toString().padStart(2, '0');
                 const month = (forecastDate.getMonth() + 1).toString().padStart(2, '0');
                 return `${weekday} ${day}/${month} ${timeStr}`;

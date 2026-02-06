@@ -292,6 +292,10 @@ export class WebSocketServer {
       // Handle language change
       if (data.key === 'language') {
         setI18nLanguage(data.value);
+        // Refresh messages for any active alerts so they display in the new language
+        if (this.dataController) {
+          this.dataController.getAlertService().refreshAlertMessages();
+        }
       }
 
       // Handle unit preference changes

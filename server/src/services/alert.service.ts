@@ -41,6 +41,7 @@ import {
   depthToStandard,
   temperatureToStandard,
 } from '../types/units.types';
+import { lang } from '../i18n/lang';
 
 // Special alarm settings
 interface DepthAlarmSettings {
@@ -133,6 +134,35 @@ export class AlertService extends EventEmitter {
    */
   updateUserUnits(units: Partial<UserUnitPreferences>): void {
     this.userUnits = { ...this.userUnits, ...units };
+  }
+
+  /**
+   * Refresh alert messages for active triggered alerts (e.g. after language change).
+   * Re-generates alertName and message using current i18n language.
+   */
+  refreshAlertMessages(): void {
+    // Refresh depth alarm message
+    const depthAlert = this.triggeredAlerts.get(AlertService.DEPTH_ALERT_ID);
+    if (depthAlert && this.depthAlarm.threshold !== null) {
+      const displayDepth = convertFromStandard(depthAlert.currentValue, 'depth', this.userUnits);
+      const displayThreshold = convertFromStandard(this.depthAlarm.threshold, 'depth', this.userUnits);
+      const unitLabel = getUnitLabel('depth', this.userUnits);
+      depthAlert.alertName = lang.get('alert.depth_alarm');
+      depthAlert.message = lang.get('alert.shallow_water', {
+        displayDepth: `${displayDepth.toFixed(1)}${unitLabel}`,
+        displayThreshold: `${displayThreshold.toFixed(1)}${unitLabel}`,
+      });
+      this.emit('alert_triggered', depthAlert);
+    }
+
+    // Refresh anchor alarm message
+    const anchorAlert = this.triggeredAlerts.get(AlertService.ANCHOR_ALERT_ID);
+    if (anchorAlert) {
+      const overDistance = Math.round(anchorAlert.currentValue - this.anchorAlarm.swingRadius);
+      anchorAlert.alertName = lang.get('alert.anchor_alarm');
+      anchorAlert.message = lang.get('alert.anchor_dragging', { overDistance: overDistance.toString() });
+      this.emit('alert_triggered', anchorAlert);
+    }
   }
 
   /**
@@ -242,11 +272,14 @@ export class AlertService extends EventEmitter {
 
       const triggered: TriggeredAlert = {
         alertId: AlertService.DEPTH_ALERT_ID,
-        alertName: 'Depth Alarm',
+        alertName: lang.get('alert.depth_alarm'),
         triggeredAt: new Date().toISOString(),
         currentValue: displayDepth,
         threshold: displayThreshold,
-        message: `Shallow water! Depth ${displayDepth.toFixed(1)}${unitLabel} below ${displayThreshold.toFixed(1)}${unitLabel}`,
+        message: lang.get('alert.shallow_water', {
+          displayDepth: `${displayDepth.toFixed(1)}${unitLabel}`,
+          displayThreshold: `${displayThreshold.toFixed(1)}${unitLabel}`,
+        }),
         severity: 'critical',
         // Only play sound if soundEnabled is true
         tone: this.depthAlarm.soundEnabled ? 'alarm' : 'none',
@@ -262,7 +295,10 @@ export class AlertService extends EventEmitter {
         const displayDepth = convertFromStandard(currentDepth, 'depth', this.userUnits);
         const displayThreshold = convertFromStandard(this.depthAlarm.threshold, 'depth', this.userUnits);
         const unitLabel = getUnitLabel('depth', this.userUnits);
-        const newMessage = `Shallow water! Depth ${displayDepth.toFixed(1)}${unitLabel} below ${displayThreshold.toFixed(1)}${unitLabel}`;
+        const newMessage = lang.get('alert.shallow_water', {
+          displayDepth: `${displayDepth.toFixed(1)}${unitLabel}`,
+          displayThreshold: `${displayThreshold.toFixed(1)}${unitLabel}`,
+        });
 
         // Only emit if message changed (depth changed enough to show different number)
         if (existing.message !== newMessage) {
@@ -304,11 +340,11 @@ export class AlertService extends EventEmitter {
     if (isTriggered && !wasTriggered) {
       const triggered: TriggeredAlert = {
         alertId: AlertService.ANCHOR_ALERT_ID,
-        alertName: 'Anchor Alarm',
+        alertName: lang.get('alert.anchor_alarm'),
         triggeredAt: new Date().toISOString(),
         currentValue: distance,
         threshold: this.anchorAlarm.swingRadius,
-        message: `Anchor dragging! +${overDistance}m outside radius`,
+        message: lang.get('alert.anchor_dragging', { overDistance: overDistance.toString() }),
         severity: 'critical',
         tone: 'alarm',
       };
@@ -320,7 +356,7 @@ export class AlertService extends EventEmitter {
       // Update the message with current distance and emit update
       const existing = this.triggeredAlerts.get(AlertService.ANCHOR_ALERT_ID);
       if (existing) {
-        const newMessage = `Anchor dragging! +${overDistance}m outside radius`;
+        const newMessage = lang.get('alert.anchor_dragging', { overDistance: overDistance.toString() });
         // Only emit if message changed (distance changed enough to show different number)
         if (existing.message !== newMessage) {
           existing.currentValue = distance;

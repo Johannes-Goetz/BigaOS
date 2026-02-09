@@ -10,6 +10,17 @@ GITHUB_REPO="Johannes-Goetz/BigaOS"
 INSTALL_DIR="$HOME/BigaOS"
 SERVICE_NAME="bigaos"
 
+# ── Safety net: always restart service if it was stopped ───
+SERVICE_WAS_STOPPED=false
+cleanup_on_failure() {
+  if [ "$SERVICE_WAS_STOPPED" = true ]; then
+    echo ""
+    error "Update failed — restarting BigaOS service..."
+    sudo systemctl start "$SERVICE_NAME" 2>/dev/null || true
+  fi
+}
+trap cleanup_on_failure EXIT
+
 # ── Colors ─────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -85,6 +96,7 @@ fi
 if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
   step "Stopping BigaOS service..."
   sudo systemctl stop "$SERVICE_NAME"
+  SERVICE_WAS_STOPPED=true
 fi
 
 # ── Download and extract release ───────────────────────────
@@ -143,6 +155,7 @@ fi
 if [ "$IS_UPDATE" = false ]; then
   step "Setting up systemd service..."
 
+  NODE_BIN=$(which node)
   sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null << EOF
 [Unit]
 Description=BigaOS - Marine Navigation System
@@ -154,7 +167,7 @@ Type=simple
 User=$USER
 WorkingDirectory=$INSTALL_DIR/server
 Environment="NODE_ENV=production"
-ExecStart=$(which node) dist/index.js
+ExecStart=$NODE_BIN dist/index.js
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -183,6 +196,8 @@ fi
 rm -rf "$TEMP_DIR"
 
 # ── Start / Restart ────────────────────────────────────────
+# Clear the failure trap — we're about to start intentionally
+trap - EXIT
 step "Starting BigaOS..."
 sudo systemctl daemon-reload
 sudo systemctl start "$SERVICE_NAME"

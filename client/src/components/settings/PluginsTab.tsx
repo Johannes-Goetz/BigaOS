@@ -11,6 +11,8 @@ import { theme } from '../../styles/theme';
 import { usePlugins, PluginInfo } from '../../context/PluginContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { DriverSettingsDialog } from './DriverStreamsPanel';
+import { CustomSelect } from '../ui/CustomSelect';
 
 type SubTab = 'installed' | 'marketplace';
 
@@ -39,9 +41,19 @@ export const PluginsTab: React.FC = () => {
     uninstallPlugin,
     enablePlugin,
     disablePlugin,
+    sensorMappings,
+    debugData,
+    setMapping,
+    removeMapping,
+    refreshMappings,
   } = usePlugins();
 
   const [subTab, setSubTab] = useState<SubTab>('installed');
+  const [settingsPlugin, setSettingsPlugin] = useState<PluginInfo | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<string>('all');
+  const [marketplaceSearch, setMarketplaceSearch] = useState('');
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
 
   // Fetch registry when marketplace tab is opened
   useEffect(() => {
@@ -122,9 +134,81 @@ export const PluginsTab: React.FC = () => {
   // Installed Tab
   // ================================================================
 
+  // Build dynamic filter options from actual plugin types
+  const filterOptions = React.useMemo(() => {
+    const types = new Set(plugins.map(p => p.manifest.type));
+    const opts = [{ value: 'all', label: t('plugins.filter_all') }];
+    for (const type of Array.from(types).sort()) {
+      opts.push({ value: type, label: t(`plugins.type_${type}`) || type });
+    }
+    return opts;
+  }, [plugins, t]);
+
+  // Build dynamic marketplace filter options from registry plugin types
+  const marketplaceFilterOptions = React.useMemo(() => {
+    const types = new Set(registryPlugins.map(p => p.type));
+    const opts = [{ value: 'all', label: t('plugins.filter_all') }];
+    for (const type of Array.from(types).sort()) {
+      opts.push({ value: type, label: t(`plugins.type_${type}`) || type });
+    }
+    return opts;
+  }, [registryPlugins, t]);
+
+  // Filter marketplace plugins
+  const filteredMarketplace = registryPlugins.filter(p => {
+    const q = marketplaceSearch.toLowerCase();
+    if (q && !p.name.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q)) return false;
+    if (marketplaceFilter !== 'all' && p.type !== marketplaceFilter) return false;
+    return true;
+  });
+
+  // Filter plugins based on search and filter
+  const filteredPlugins = plugins.filter(p => {
+    const q = searchQuery.toLowerCase();
+    if (q && !p.manifest.name.toLowerCase().includes(q) && !p.manifest.description.toLowerCase().includes(q)) {
+      return false;
+    }
+    if (filter !== 'all' && p.manifest.type !== filter) return false;
+    return true;
+  });
+
   const renderInstalledTab = () => (
     <div>
-      {plugins.length === 0 && (
+      {/* Search + Filter row */}
+      <div style={{
+        display: 'flex',
+        gap: theme.space.sm,
+        marginBottom: theme.space.md,
+        alignItems: 'stretch',
+      }}>
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t('plugins.search')}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: `${theme.space.sm} ${theme.space.md}`,
+            background: theme.colors.bgCard,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.md,
+            color: theme.colors.textPrimary,
+            fontSize: theme.fontSize.base,
+            outline: 'none',
+            boxSizing: 'border-box',
+            minHeight: '48px',
+          }}
+        />
+        <div style={{ width: '140px', flexShrink: 0 }}>
+          <CustomSelect
+            value={filter}
+            options={filterOptions}
+            onChange={setFilter}
+          />
+        </div>
+      </div>
+
+      {filteredPlugins.length === 0 && (
         <div style={{
           padding: theme.space.xl,
           textAlign: 'center',
@@ -135,7 +219,7 @@ export const PluginsTab: React.FC = () => {
         </div>
       )}
 
-      {plugins.map((plugin) => (
+      {filteredPlugins.map((plugin) => (
         <div key={plugin.id} style={{
           padding: theme.space.md,
           background: theme.colors.bgCard,
@@ -175,33 +259,63 @@ export const PluginsTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Enable/Disable Toggle */}
-            <button
-              onClick={() => handleToggle(plugin)}
-              className="touch-btn"
-              style={{
-                width: '56px',
-                height: '32px',
-                borderRadius: '16px',
-                border: 'none',
-                background: plugin.enabledByUser ? theme.colors.primary : theme.colors.bgCardActive,
-                cursor: 'pointer',
-                position: 'relative',
-                transition: `background ${theme.transition.fast}`,
-                flexShrink: 0,
-              }}
-            >
-              <div style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '50%',
-                background: '#fff',
-                position: 'absolute',
-                top: '3px',
-                left: plugin.enabledByUser ? '27px' : '3px',
-                transition: `left ${theme.transition.fast}`,
-              }} />
-            </button>
+            {/* Settings + Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm, flexShrink: 0 }}>
+              {/* Settings icon button for enabled drivers */}
+              {plugin.manifest.type === 'driver' && plugin.status === 'enabled' && (
+                <button
+                  onClick={() => setSettingsPlugin(plugin)}
+                  className="touch-btn"
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    background: theme.colors.bgCardActive,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.md,
+                    color: theme.colors.textPrimary,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: `all ${theme.transition.fast}`,
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Enable/Disable Toggle */}
+              <button
+                onClick={() => handleToggle(plugin)}
+                className="touch-btn"
+                style={{
+                  width: '56px',
+                  height: '32px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  background: plugin.enabledByUser ? theme.colors.primary : theme.colors.bgCardActive,
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: `background ${theme.transition.fast}`,
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: '#fff',
+                  position: 'absolute',
+                  top: '3px',
+                  left: plugin.enabledByUser ? '27px' : '3px',
+                  transition: `left ${theme.transition.fast}`,
+                }} />
+              </button>
+            </div>
           </div>
 
           {/* Description */}
@@ -238,13 +352,14 @@ export const PluginsTab: React.FC = () => {
                 onClick={() => handleUninstall(plugin)}
                 className="touch-btn"
                 style={{
-                  padding: `${theme.space.xs} ${theme.space.md}`,
+                  padding: `${theme.space.sm} ${theme.space.md}`,
                   background: 'transparent',
                   border: `1px solid ${theme.colors.error}`,
                   borderRadius: theme.radius.sm,
                   color: theme.colors.error,
-                  fontSize: theme.fontSize.xs,
+                  fontSize: theme.fontSize.sm,
                   cursor: 'pointer',
+                  minHeight: '44px',
                 }}
               >
                 {t('plugins.uninstall')}
@@ -262,28 +377,66 @@ export const PluginsTab: React.FC = () => {
 
   const renderMarketplaceTab = () => (
     <div>
-      {/* Refresh button */}
+      {/* Search + Filter + Refresh row */}
       <div style={{
         display: 'flex',
-        justifyContent: 'flex-end',
+        gap: theme.space.sm,
         marginBottom: theme.space.md,
+        alignItems: 'stretch',
       }}>
+        <input
+          value={marketplaceSearch}
+          onChange={(e) => setMarketplaceSearch(e.target.value)}
+          placeholder={t('plugins.search')}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: `${theme.space.sm} ${theme.space.md}`,
+            background: theme.colors.bgCard,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.md,
+            color: theme.colors.textPrimary,
+            fontSize: theme.fontSize.base,
+            outline: 'none',
+            boxSizing: 'border-box',
+            minHeight: '48px',
+          }}
+        />
+        <div style={{ width: '140px', flexShrink: 0 }}>
+          <CustomSelect
+            value={marketplaceFilter}
+            options={marketplaceFilterOptions}
+            onChange={setMarketplaceFilter}
+          />
+        </div>
         <button
           onClick={() => refreshRegistry()}
           disabled={registryLoading}
           className="touch-btn"
           style={{
-            padding: `${theme.space.xs} ${theme.space.md}`,
+            padding: theme.space.md,
             background: theme.colors.bgCardActive,
             border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radius.sm,
+            borderRadius: theme.radius.md,
             color: theme.colors.textPrimary,
-            fontSize: theme.fontSize.sm,
             cursor: registryLoading ? 'default' : 'pointer',
             opacity: registryLoading ? 0.5 : 1,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {registryLoading ? t('plugins.loading_marketplace') : t('plugins.refresh')}
+          <svg
+            width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{
+              animation: registryLoading ? 'spin 1s linear infinite' : 'none',
+            }}
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
         </button>
       </div>
 
@@ -300,7 +453,7 @@ export const PluginsTab: React.FC = () => {
       )}
 
       {/* No plugins state */}
-      {!registryLoading && registryPlugins.length === 0 && (
+      {!registryLoading && filteredMarketplace.length === 0 && (
         <div style={{
           padding: theme.space.xl,
           textAlign: 'center',
@@ -312,7 +465,7 @@ export const PluginsTab: React.FC = () => {
       )}
 
       {/* Plugin cards */}
-      {registryPlugins.map((rp) => (
+      {filteredMarketplace.map((rp) => (
         <div key={rp.id} style={{
           padding: theme.space.md,
           background: theme.colors.bgCard,
@@ -433,10 +586,11 @@ export const PluginsTab: React.FC = () => {
               border: `1px solid ${subTab === tab ? theme.colors.primary : theme.colors.border}`,
               borderRadius: theme.radius.md,
               color: subTab === tab ? '#fff' : theme.colors.textMuted,
-              fontSize: theme.fontSize.sm,
+              fontSize: theme.fontSize.base,
               fontWeight: subTab === tab ? theme.fontWeight.semibold : theme.fontWeight.normal,
               cursor: 'pointer',
               transition: `all ${theme.transition.fast}`,
+              minHeight: '48px',
             }}
           >
             {t(`plugins.${tab}`)}
@@ -445,6 +599,20 @@ export const PluginsTab: React.FC = () => {
       </div>
 
       {subTab === 'installed' ? renderInstalledTab() : renderMarketplaceTab()}
+
+      {/* Driver Settings Dialog */}
+      {settingsPlugin && (
+        <DriverSettingsDialog
+          plugin={settingsPlugin}
+          sensorMappings={sensorMappings}
+          debugData={debugData}
+          allDriverPlugins={plugins.filter(p => p.manifest.type === 'driver' && p.status === 'enabled')}
+          onSetMapping={setMapping}
+          onRemoveMapping={removeMapping}
+          onRefreshMappings={refreshMappings}
+          onClose={() => setSettingsPlugin(null)}
+        />
+      )}
     </div>
   );
 };

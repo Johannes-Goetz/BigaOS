@@ -40,14 +40,14 @@ export class PluginManager extends EventEmitter {
   private pluginsDir: string;
   private dataEmitter: EventEmitter;
   private sensorMapping: SensorMappingService;
-  private registryUrl: string = '';
+  private registryUrl: string = 'https://raw.githubusercontent.com/Johannes-Goetz/BigaOS/main/plugins/registry.json';
   private cachedRegistry: PluginRegistry | null = null;
 
   constructor(dataEmitter: EventEmitter, sensorMapping: SensorMappingService, pluginsDir?: string) {
     super();
     this.dataEmitter = dataEmitter;
     this.sensorMapping = sensorMapping;
-    this.pluginsDir = pluginsDir || path.join(process.cwd(), 'plugins');
+    this.pluginsDir = pluginsDir || path.join(__dirname, '../../../plugins');
   }
 
   async initialize(): Promise<void> {
@@ -107,8 +107,7 @@ export class PluginManager extends EventEmitter {
         const manifestJson = fs.readFileSync(manifestPath, 'utf-8');
         const manifest: PluginManifest = JSON.parse(manifestJson);
 
-        // Built-in plugins are always enabled by default
-        const defaultEnabled = manifest.builtin === true;
+        const defaultEnabled = false;
 
         this.plugins.set(manifest.id, {
           manifest,

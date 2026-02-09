@@ -458,11 +458,6 @@ export class WebSocketServer {
         return;
       }
 
-      // Handle special settings
-      if (data.key === 'demoMode' && this.dataController) {
-        this.dataController.getSensorService().setDemoMode(data.value);
-      }
-
       // Handle language change
       if (data.key === 'language') {
         setI18nLanguage(data.value);

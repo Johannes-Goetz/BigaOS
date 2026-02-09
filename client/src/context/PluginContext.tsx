@@ -105,6 +105,12 @@ interface PluginContextType {
   // Installed plugins
   plugins: PluginInfo[];
 
+  // Demo mode: true when the demo driver plugin is enabled
+  isDemoActive: boolean;
+
+  // Chart-only mode: true when the chart-only plugin is enabled
+  isChartOnly: boolean;
+
   // Registry (marketplace)
   registryPlugins: RegistryPlugin[];
   registryLoading: boolean;
@@ -219,8 +225,13 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     wsService.emit('get_sensor_mappings', {});
   }, []);
 
+  const isDemoActive = plugins.some(p => p.id === 'bigaos-demo-driver' && p.status === 'enabled');
+  const isChartOnly = plugins.some(p => p.id === 'bigaos-chart-only' && p.status === 'enabled');
+
   const value: PluginContextType = {
     plugins,
+    isDemoActive,
+    isChartOnly,
     registryPlugins,
     registryLoading,
     refreshRegistry,

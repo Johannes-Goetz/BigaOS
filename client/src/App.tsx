@@ -15,7 +15,7 @@ import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { AlertProvider, useAlerts } from './context/AlertContext';
-import { PluginProvider } from './context/PluginContext';
+import { PluginProvider, usePlugins } from './context/PluginContext';
 import { AlertContainer } from './components/alerts';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { wsService } from './services/websocket';
@@ -33,7 +33,8 @@ function AppContent() {
   const [systemUpdating, setSystemUpdating] = useState(false);
   const systemUpdatingRef = useRef(false);
   const wasOfflineRef = useRef<boolean | null>(null);
-  const { setCurrentDepth, chartOnly } = useSettings();
+  const { setCurrentDepth } = useSettings();
+  const { isChartOnly: chartOnly } = usePlugins();
   const { activeView, navigationParams, navigate, goBack } = useNavigation();
   const repaintIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -175,10 +176,10 @@ function AppContent() {
     );
   }
 
-  // Demo mode indicator
+  // Demo mode indicator (shown when demo driver plugin is active)
   const DemoModeBanner = () => {
-    const { demoMode } = useSettings();
-    if (!demoMode) return null;
+    const { isDemoActive } = usePlugins();
+    if (!isDemoActive) return null;
     return (
       <div style={{
         position: 'fixed',

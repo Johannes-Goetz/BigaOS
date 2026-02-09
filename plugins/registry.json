@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-02-09T00:00:00Z",
+  "plugins": [
+    {
+      "id": "bigaos-demo-driver",
+      "name": "Demo Driver",
+      "description": "Built-in demo data source for testing and development. Generates realistic sensor data without hardware.",
+      "author": "BigaOS Team",
+      "type": "driver",
+      "flag": "official",
+      "latestVersion": "1.0.0",
+      "capabilities": ["sensor-data", "settings"],
+      "downloadUrl": "https://github.com/Johannes-Goetz/BigaOS/raw/main/plugins/bigaos-demo-driver.tar.gz",
+      "repository": "https://github.com/Johannes-Goetz/BigaOS/tree/main/plugins/bigaos-demo-driver",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloadUrl": "https://github.com/Johannes-Goetz/BigaOS/raw/main/plugins/bigaos-demo-driver.tar.gz",
+          "releaseDate": "2026-02-09",
+          "changelog": "Initial release"
+        }
+      ]
+    }
+  ]
+}

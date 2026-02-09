@@ -181,7 +181,7 @@ export class DataController extends EventEmitter {
     if (demoPlugin && demoPlugin.status === 'enabled') {
       try {
         const path = require('path');
-        const entryPoint = path.join(process.cwd(), 'plugins', 'bigaos-demo-driver', 'index.js');
+        const entryPoint = path.join(__dirname, '../../..', 'plugins', 'bigaos-demo-driver', 'index.js');
         this.demoDriverModule = require(entryPoint);
       } catch {
         this.demoDriverModule = null;

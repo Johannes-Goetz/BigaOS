@@ -3,7 +3,7 @@ import { ChartView } from './ChartView';
 import { SensorData, GeoPosition } from '../../types';
 import { wsService } from '../../services/websocket';
 import { sensorAPI, navigationAPI } from '../../services/api';
-import { useSettings } from '../../context/SettingsContext';
+import { usePlugins } from '../../context/PluginContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface MapPageProps {
@@ -14,7 +14,7 @@ interface MapPageProps {
 export const MapPage: React.FC<MapPageProps> = ({ onClose, onOpenSettings }) => {
   const { t } = useLanguage();
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
-  const { demoMode } = useSettings();
+  const { isDemoActive: demoMode } = usePlugins();
 
   // Dummy drive mode state - controlled position when in demo mode
   const [dummyLat, setDummyLat] = useState(43.45); // Default: Adriatic Sea, west of Split

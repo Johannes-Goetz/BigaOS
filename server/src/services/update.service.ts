@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import https from 'https';
+import { db } from '../database/database';
 
 const GITHUB_REPO = 'Johannes-Goetz/BigaOS';
 
@@ -14,12 +15,14 @@ export interface UpdateInfo {
   releaseNotes: string;
   publishedAt: string;
   lastChecked: string;
+  error?: string;
 }
 
 class UpdateService {
   private cachedInfo: UpdateInfo | null = null;
   private checkTimer: NodeJS.Timeout | null = null;
   private onSystemUpdating: (() => void) | null = null;
+  private onUpdateAvailable: ((version: string) => void) | null = null;
 
   /**
    * Register a callback that fires when the system starts updating.
@@ -27,6 +30,13 @@ class UpdateService {
    */
   setUpdateCallback(cb: () => void) {
     this.onSystemUpdating = cb;
+  }
+
+  /**
+   * Register a callback that fires once when a new version is first detected.
+   */
+  setUpdateAvailableCallback(cb: (version: string) => void) {
+    this.onUpdateAvailable = cb;
   }
 
   /**
@@ -77,19 +87,31 @@ class UpdateService {
         lastChecked: new Date().toISOString(),
       };
 
+      // Notify once per newly discovered version (persisted across restarts)
+      if (info.available && this.onUpdateAvailable) {
+        const notifiedVersion = db.getSetting('update_notified_version');
+        if (notifiedVersion !== latestVersion) {
+          db.setSetting('update_notified_version', latestVersion, 'Last version users were notified about');
+          this.onUpdateAvailable(latestVersion);
+        }
+      }
+
       this.cachedInfo = info;
       return info;
     } catch (error) {
       console.error('[UpdateService] Failed to check for updates:', error);
-      // Return cached or empty info
-      return this.cachedInfo || {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const info: UpdateInfo = {
         available: false,
         currentVersion,
-        latestVersion: currentVersion,
+        latestVersion: '',
         releaseNotes: '',
         publishedAt: '',
         lastChecked: new Date().toISOString(),
+        error: errorMsg,
       };
+      this.cachedInfo = info;
+      return info;
     }
   }
 

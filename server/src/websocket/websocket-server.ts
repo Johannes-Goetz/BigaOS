@@ -533,6 +533,13 @@ export class WebSocketServer {
     });
   }
 
+  public broadcastUpdateAvailable(version: string): void {
+    this.io.emit('update_available', {
+      version,
+      timestamp: new Date(),
+    });
+  }
+
   public stop(): void {
     this.io.close();
     console.log('[WebSocketServer] Stopped');

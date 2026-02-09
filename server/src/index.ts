@@ -127,6 +127,7 @@ async function startServer() {
 
   // Initialize update service
   updateService.setUpdateCallback(() => wsServer.broadcastSystemUpdating());
+  updateService.setUpdateAvailableCallback((v) => wsServer.broadcastUpdateAvailable(v));
   updateService.start();
 
   // Start server

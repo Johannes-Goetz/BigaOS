@@ -102,6 +102,9 @@ mkdir -p "$INSTALL_DIR"
 if [ -d "$INSTALL_DIR/server/data" ]; then
   cp -r "$INSTALL_DIR/server/data" "$TEMP_DIR/_data_backup"
 fi
+if [ -d "$INSTALL_DIR/server/src/data" ]; then
+  cp -r "$INSTALL_DIR/server/src/data" "$TEMP_DIR/_srcdata_backup"
+fi
 
 # Copy release files
 cp -r "$TEMP_DIR/server" "$INSTALL_DIR/"
@@ -113,9 +116,14 @@ cp "$TEMP_DIR/install.sh" "$INSTALL_DIR/" 2>/dev/null || true
 if [ -d "$TEMP_DIR/_data_backup" ]; then
   cp -r "$TEMP_DIR/_data_backup" "$INSTALL_DIR/server/data"
 fi
+if [ -d "$TEMP_DIR/_srcdata_backup" ]; then
+  mkdir -p "$INSTALL_DIR/server/src"
+  cp -r "$TEMP_DIR/_srcdata_backup" "$INSTALL_DIR/server/src/data"
+fi
 
-# Ensure data directory exists
+# Ensure data directories exist
 mkdir -p "$INSTALL_DIR/server/data"
+mkdir -p "$INSTALL_DIR/server/src/data"
 
 # ── Install server dependencies ────────────────────────────
 step "Installing dependencies..."

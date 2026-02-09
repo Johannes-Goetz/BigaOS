@@ -395,17 +395,17 @@ const defaultVesselSettings: VesselSettings = {
   flag: '',
 
   // Dimensions
-  length: 10,
-  beam: 3.5,
-  draft: 1.5,
-  displacement: 5,
-  freeboardHeight: 1.0, // typical sailboat freeboard ~1m
-  waterlineLength: 9.0, // typically 5-15% shorter than LOA
+  length: 0,
+  beam: 0,
+  draft: 0,
+  displacement: 0,
+  freeboardHeight: 0,
+  waterlineLength: 0,
 
   // Chain
-  chainDiameter: 8,
+  chainDiameter: 0,
   chainType: 'galvanized',
-  totalChainLength: 50,
+  totalChainLength: 0,
 
   // Chain calculation preferences
   useCatenaryFormula: true,

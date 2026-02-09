@@ -450,6 +450,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
 
   const renderGeneralTab = () => (
     <div>
+      {/* Language Selector */}
+      <div style={{ marginBottom: theme.space.xl }}>
+        <div style={{
+          fontSize: theme.fontSize.sm,
+          color: theme.colors.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          marginBottom: theme.space.md,
+        }}>
+          {t('language.label')}
+        </div>
+        <CustomSelect
+          value={settings.language}
+          options={Object.entries(LANGUAGES).map(([code, info]) => ({
+            value: code,
+            label: info.name,
+          }))}
+          onChange={(code) => settings.setLanguage(code as LanguageCode)}
+        />
+      </div>
+
       {/* Software Update Section */}
       <div style={{
         padding: theme.space.lg,
@@ -503,7 +524,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           </button>
         </div>
 
-        {updateInfo && !updateInfo.available && !updateChecking && (
+        {updateInfo && !updateInfo.available && !updateChecking && !updateInfo.error && (
           <div style={{
             padding: theme.space.md,
             background: `${theme.colors.success}15`,
@@ -518,6 +539,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
               <polyline points="20 6 9 17 4 12" />
             </svg>
             {t('update.up_to_date')}
+          </div>
+        )}
+
+        {updateInfo?.error && !updateChecking && (
+          <div style={{
+            padding: theme.space.md,
+            background: `${theme.colors.warning}15`,
+            borderRadius: theme.radius.sm,
+            color: theme.colors.warning,
+            fontSize: theme.fontSize.sm,
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.space.sm,
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+            </svg>
+            {t('update.check_failed')}
           </div>
         )}
 
@@ -579,27 +620,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
             </button>
           </>
         )}
-      </div>
-
-      {/* Language Selector */}
-      <div style={{ marginBottom: theme.space.xl }}>
-        <div style={{
-          fontSize: theme.fontSize.sm,
-          color: theme.colors.textMuted,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          marginBottom: theme.space.md,
-        }}>
-          {t('language.label')}
-        </div>
-        <CustomSelect
-          value={settings.language}
-          options={Object.entries(LANGUAGES).map(([code, info]) => ({
-            value: code,
-            label: info.name,
-          }))}
-          onChange={(code) => settings.setLanguage(code as LanguageCode)}
-        />
       </div>
 
       {/* Chart Only Toggle */}
@@ -1504,32 +1524,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
               </div>
             ) : file.downloadStatus && file.downloadStatus.status === 'error' ? (
               <div style={{ marginTop: theme.space.sm }}>
-                <div style={{
-                  padding: theme.space.md,
-                  background: `${theme.colors.error}10`,
-                  border: `1px solid ${theme.colors.error}40`,
-                  borderRadius: theme.radius.sm,
-                  color: theme.colors.error,
-                  fontSize: theme.fontSize.xs,
-                  marginBottom: theme.space.sm,
-                }}>
-                  {t('downloads.error_download_failed')}{file.downloadStatus.error ? `: ${file.downloadStatus.error}` : ''}
-                </div>
+                {!downloadingFiles.has(file.id) && (
+                  <div style={{
+                    padding: theme.space.md,
+                    background: `${theme.colors.error}10`,
+                    border: `1px solid ${theme.colors.error}40`,
+                    borderRadius: theme.radius.sm,
+                    color: theme.colors.error,
+                    fontSize: theme.fontSize.xs,
+                    marginBottom: theme.space.sm,
+                  }}>
+                    {t('downloads.error_download_failed')}{file.downloadStatus.error ? `: ${file.downloadStatus.error}` : ''}
+                  </div>
+                )}
                 <button
                   onClick={() => handleDownload(file)}
+                  disabled={downloadingFiles.has(file.id)}
                   style={{
                     width: '100%',
                     padding: theme.space.md,
-                    background: theme.colors.primary,
+                    background: downloadingFiles.has(file.id) ? theme.colors.bgCardActive : theme.colors.primary,
                     border: 'none',
                     borderRadius: theme.radius.sm,
                     color: '#fff',
-                    cursor: 'pointer',
+                    cursor: downloadingFiles.has(file.id) ? 'wait' : 'pointer',
                     fontSize: theme.fontSize.sm,
                     fontWeight: theme.fontWeight.bold,
+                    opacity: downloadingFiles.has(file.id) ? 0.7 : 1,
                   }}
                 >
-                  {t('downloads.retry_download')}
+                  {downloadingFiles.has(file.id) ? t('downloads.starting') : t('downloads.retry_download')}
                 </button>
               </div>
             ) : (
@@ -2095,7 +2119,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
         fontSize: theme.fontSize.xs,
         color: theme.colors.textMuted,
       }}>
-        {t('app.version')}
+        BigaOS v{updateInfo?.currentVersion || '...'}
       </div>
     </div>
   );

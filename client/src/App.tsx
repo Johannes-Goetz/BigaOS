@@ -14,7 +14,7 @@ import { BatteryView } from './components/views/BatteryView';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
-import { AlertProvider } from './context/AlertContext';
+import { AlertProvider, useAlerts } from './context/AlertContext';
 import { AlertContainer } from './components/alerts';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { wsService } from './services/websocket';
@@ -120,6 +120,14 @@ function AppContent() {
       systemUpdatingRef.current = true;
     });
 
+    // Listen for new version available (broadcast once by server per new version)
+    wsService.on('update_available', (data: { version: string }) => {
+      pushNotification({
+        message: t('update.new_version_available', { version: data.version }),
+        severity: 'info',
+      });
+    });
+
     fetchInitialData();
 
     return () => {
@@ -149,6 +157,7 @@ function AppContent() {
   // Translation hook - safe to use here since LanguageProvider wraps SettingsProvider
   const langContext = useLanguage();
   const t = langContext.t;
+  const { pushNotification } = useAlerts();
 
   if (loading || !sensorData) {
     return (

@@ -608,5 +608,7 @@ update.last_checked=Zuletzt geprüft
 update.never_checked=Nie
 update.just_now=Gerade eben
 update.ago=vor {time}
+update.check_failed=Update-Prüfung fehlgeschlagen
+update.new_version_available=BigaOS v{version} ist verfügbar
 update.overlay_title=BigaOS wird aktualisiert
 update.overlay_message=Dies kann eine Minute dauern. Die App verbindet sich automatisch neu.

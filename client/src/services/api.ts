@@ -393,6 +393,7 @@ export interface UpdateInfo {
   releaseNotes: string;
   publishedAt: string;
   lastChecked: string;
+  error?: string;
 }
 
 export const systemAPI = {

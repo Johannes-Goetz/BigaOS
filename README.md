@@ -27,4 +27,4 @@ npm run dev:client   # Terminal 2 — http://localhost:5173
 
 ## License
 
-ISC
+MIT

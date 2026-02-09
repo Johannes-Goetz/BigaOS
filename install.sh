@@ -117,19 +117,6 @@ fi
 # Ensure data directory exists
 mkdir -p "$INSTALL_DIR/server/data"
 
-# ── Generate self-signed SSL certificate (first install) ──
-SSL_DIR="$INSTALL_DIR/server/data/ssl"
-if [ ! -f "$SSL_DIR/cert.pem" ]; then
-  step "Generating SSL certificate..."
-  mkdir -p "$SSL_DIR"
-  openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-    -keyout "$SSL_DIR/key.pem" \
-    -out "$SSL_DIR/cert.pem" \
-    -subj "/CN=BigaOS" \
-    -addext "subjectAltName=DNS:bigaos,DNS:bigaos.local" 2>/dev/null
-  info "Self-signed SSL certificate created (valid 10 years)"
-fi
-
 # ── Install server dependencies ────────────────────────────
 step "Installing dependencies..."
 cd "$INSTALL_DIR/server"
@@ -208,7 +195,7 @@ if [ "$IS_UPDATE" = true ]; then
 else
   info "BigaOS ${LATEST_TAG} installed successfully!"
   echo ""
-  echo "  Open in your browser:  https://${IP}:3000"
+  echo "  Open in your browser:  http://${IP}:3000"
   echo ""
   echo "  Useful commands:"
   echo "    sudo systemctl status bigaos   - Check status"

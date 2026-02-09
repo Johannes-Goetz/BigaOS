@@ -1,9 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import fs from 'fs';
 import { createServer } from 'http';
-import { createServer as createHttpsServer } from 'https';
 import dotenv from 'dotenv';
 import routes from './routes';
 import { updateService } from './services/update.service';
@@ -103,22 +101,7 @@ async function startServer() {
     });
   });
 
-  // Create HTTP or HTTPS server depending on cert availability
-  const sslDir = path.join(__dirname, '../data/ssl');
-  const certPath = path.join(sslDir, 'cert.pem');
-  const keyPath = path.join(sslDir, 'key.pem');
-
-  let httpServer;
-  let useSSL = false;
-  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-    httpServer = createHttpsServer({
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-    }, app);
-    useSSL = true;
-  } else {
-    httpServer = createServer(app);
-  }
+  const httpServer = createServer(app);
 
   // Initialize DataController (central data hub)
   const dataController = DataController.getInstance();
@@ -147,14 +130,11 @@ async function startServer() {
   updateService.start();
 
   // Start server
-  const proto = useSSL ? 'https' : 'http';
-  const wsproto = useSSL ? 'wss' : 'ws';
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log('🚤 Biga OS Server Started');
-    if (useSSL) console.log('🔒 HTTPS enabled');
-    console.log(`📡 REST API: ${proto}://localhost:${PORT}`);
-    console.log(`🔌 WebSocket: ${wsproto}://localhost:${PORT}`);
-    console.log(`💚 Health: ${proto}://localhost:${PORT}/health`);
+    console.log(`📡 REST API: http://localhost:${PORT}`);
+    console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
+    console.log(`💚 Health: http://localhost:${PORT}/health`);
     console.log(`🌐 Network access enabled on all interfaces`);
   });
 

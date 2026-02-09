@@ -1,6 +1,6 @@
 #!/bin/bash
 # BigaOS Installer & Updater
-# Fresh install:  curl -sSL https://raw.githubusercontent.com/owner/BigaOS/main/install.sh | bash
+# Fresh install:  curl -sSL https://raw.githubusercontent.com/Johannes-Goetz/BigaOS/main/install.sh | bash
 # Update:         bash ~/BigaOS/install.sh
 
 set -e
@@ -50,9 +50,9 @@ fi
 step "Checking latest release..."
 RELEASE_JSON=$(curl -sSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")
 LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | head -1 | sed 's/.*: "//;s/".*//')
-TARBALL_URL=$(echo "$RELEASE_JSON" | grep '"tarball_url"' | head -1 | sed 's/.*: "//;s/".*//')
+ASSET_URL=$(echo "$RELEASE_JSON" | grep -o '"browser_download_url": "[^"]*\.tar\.gz"' | head -1 | sed 's/.*: "//;s/"//')
 
-if [ -z "$LATEST_TAG" ] || [ -z "$TARBALL_URL" ]; then
+if [ -z "$LATEST_TAG" ] || [ -z "$ASSET_URL" ]; then
   error "Could not fetch release info from GitHub."
   error "Check that GITHUB_REPO is set correctly: $GITHUB_REPO"
   exit 1
@@ -90,7 +90,9 @@ fi
 # ── Download and extract release ───────────────────────────
 step "Downloading ${LATEST_TAG}..."
 TEMP_DIR=$(mktemp -d)
-curl -sSL "$TARBALL_URL" | tar xz -C "$TEMP_DIR" --strip-components=1
+curl -sSL -o "$TEMP_DIR/release.tar.gz" "$ASSET_URL"
+tar xz -C "$TEMP_DIR" -f "$TEMP_DIR/release.tar.gz"
+rm "$TEMP_DIR/release.tar.gz"
 
 # ── Install files ──────────────────────────────────────────
 step "Installing files..."

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-02-09T00:00:00Z",
+  "updatedAt": "2026-02-12T00:00:00Z",
   "plugins": [
     {
       "id": "bigaos-demo-driver",
@@ -11,14 +11,34 @@
       "flag": "official",
       "latestVersion": "1.0.0",
       "capabilities": ["sensor-data", "settings"],
-      "downloadUrl": "https://github.com/Johannes-Goetz/BigaOS/raw/main/plugins/bigaos-demo-driver.tar.gz",
-      "repository": "https://github.com/Johannes-Goetz/BigaOS/tree/main/plugins/bigaos-demo-driver",
+      "downloadUrl": "https://github.com/BigaOSTeam/BigaOS/raw/main/plugins/bigaos-demo-driver.tar.gz",
+      "repository": "https://github.com/BigaOSTeam/BigaOS/tree/main/plugins/bigaos-demo-driver",
       "versions": [
         {
           "version": "1.0.0",
-          "downloadUrl": "https://github.com/Johannes-Goetz/BigaOS/raw/main/plugins/bigaos-demo-driver.tar.gz",
+          "downloadUrl": "https://github.com/BigaOSTeam/BigaOS/raw/main/plugins/bigaos-demo-driver.tar.gz",
           "releaseDate": "2026-02-09",
           "changelog": "Initial release"
+        }
+      ]
+    },
+    {
+      "id": "bigaos-macarthur-hat",
+      "name": "MacArthur HAT",
+      "description": "Read sensor data from the MacArthur HAT on Raspberry Pi. Currently supports NMEA 2000 via CAN bus.",
+      "author": "BigaOS Team",
+      "type": "driver",
+      "flag": "official",
+      "latestVersion": "1.0.0",
+      "capabilities": ["sensor-data", "settings", "alerts", "network"],
+      "downloadUrl": "https://github.com/BigaOSTeam/BigaOS/raw/main/plugins/bigaos-macarthur-hat.tar.gz",
+      "repository": "https://github.com/BigaOSTeam/BigaOS/tree/main/plugin-sources/bigaos-macarthur-hat",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloadUrl": "https://github.com/BigaOSTeam/BigaOS/raw/main/plugins/bigaos-macarthur-hat.tar.gz",
+          "releaseDate": "2026-02-12",
+          "changelog": "Initial release with NMEA 2000 support (15 PGNs)"
         }
       ]
     }

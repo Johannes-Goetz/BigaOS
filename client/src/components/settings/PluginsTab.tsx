@@ -46,6 +46,9 @@ export const PluginsTab: React.FC = () => {
     setMapping,
     removeMapping,
     refreshMappings,
+    pluginConfigs,
+    loadPluginConfig,
+    setPluginConfig,
   } = usePlugins();
 
   const [subTab, setSubTab] = useState<SubTab>('installed');
@@ -61,6 +64,16 @@ export const PluginsTab: React.FC = () => {
       refreshRegistry();
     }
   }, [subTab, refreshRegistry]);
+
+  // Load config when settings dialog opens
+  useEffect(() => {
+    if (settingsPlugin) {
+      const keys = settingsPlugin.manifest.driver?.configSchema?.map(f => f.key) || [];
+      if (keys.length > 0) {
+        loadPluginConfig(settingsPlugin.id, keys);
+      }
+    }
+  }, [settingsPlugin, loadPluginConfig]);
 
   const handleUninstall = async (plugin: PluginInfo) => {
     const confirmed = await confirm({
@@ -259,35 +272,8 @@ export const PluginsTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Settings + Toggle */}
+            {/* Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm, flexShrink: 0 }}>
-              {/* Settings icon button for enabled drivers */}
-              {plugin.manifest.type === 'driver' && plugin.status === 'enabled' && (
-                <button
-                  onClick={() => setSettingsPlugin(plugin)}
-                  className="touch-btn"
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    background: theme.colors.bgCardActive,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.radius.md,
-                    color: theme.colors.textPrimary,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: `all ${theme.transition.fast}`,
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                </button>
-              )}
-
               {/* Enable/Disable Toggle */}
               <button
                 onClick={() => handleToggle(plugin)}
@@ -332,7 +318,7 @@ export const PluginsTab: React.FC = () => {
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-end',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm }}>
               {renderStatusBadge(plugin.status)}
@@ -346,25 +332,54 @@ export const PluginsTab: React.FC = () => {
               )}
             </div>
 
-            {/* Uninstall button (not for built-in) */}
-            {!plugin.manifest.builtin && (
-              <button
-                onClick={() => handleUninstall(plugin)}
-                className="touch-btn"
-                style={{
-                  padding: `${theme.space.sm} ${theme.space.md}`,
-                  background: 'transparent',
-                  border: `1px solid ${theme.colors.error}`,
-                  borderRadius: theme.radius.sm,
-                  color: theme.colors.error,
-                  fontSize: theme.fontSize.sm,
-                  cursor: 'pointer',
-                  minHeight: '44px',
-                }}
-              >
-                {t('plugins.uninstall')}
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm }}>
+              {/* Settings button for drivers with configSchema */}
+              {plugin.manifest.type === 'driver' && plugin.manifest.driver?.configSchema && plugin.manifest.driver.configSchema.length > 0 && (
+                <button
+                  onClick={() => setSettingsPlugin(plugin)}
+                  className="touch-btn"
+                  style={{
+                    padding: `${theme.space.sm} ${theme.space.md}`,
+                    background: 'transparent',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.sm,
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSize.sm,
+                    cursor: 'pointer',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.space.xs,
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                  {t('plugins.settings')}
+                </button>
+              )}
+
+              {/* Uninstall button (not for built-in) */}
+              {!plugin.manifest.builtin && (
+                <button
+                  onClick={() => handleUninstall(plugin)}
+                  className="touch-btn"
+                  style={{
+                    padding: `${theme.space.sm} ${theme.space.md}`,
+                    background: 'transparent',
+                    border: `1px solid ${theme.colors.error}`,
+                    borderRadius: theme.radius.sm,
+                    color: theme.colors.error,
+                    fontSize: theme.fontSize.sm,
+                    cursor: 'pointer',
+                    minHeight: '44px',
+                  }}
+                >
+                  {t('plugins.uninstall')}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ))}
@@ -606,10 +621,12 @@ export const PluginsTab: React.FC = () => {
           plugin={settingsPlugin}
           sensorMappings={sensorMappings}
           debugData={debugData}
-          allDriverPlugins={plugins.filter(p => p.manifest.type === 'driver' && p.status === 'enabled')}
+          allDriverPlugins={plugins.filter(p => p.manifest.type === 'driver')}
+          pluginConfig={pluginConfigs[settingsPlugin.id] || {}}
           onSetMapping={setMapping}
           onRemoveMapping={removeMapping}
           onRefreshMappings={refreshMappings}
+          onSetConfig={(key, value) => setPluginConfig(settingsPlugin.id, key, value)}
           onClose={() => setSettingsPlugin(null)}
         />
       )}

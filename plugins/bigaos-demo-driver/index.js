@@ -10,6 +10,7 @@
 
 const KNOTS_TO_MS = 0.514444;
 const CELSIUS_TO_KELVIN = 273.15;
+const DEG_TO_RAD = Math.PI / 180;
 
 function knotsToMs(knots) {
   return knots * KNOTS_TO_MS;
@@ -27,6 +28,10 @@ function normalizeAngle(angle) {
   while (angle < 0) angle += 360;
   while (angle >= 360) angle -= 360;
   return angle;
+}
+
+function degToRad(deg) {
+  return deg * DEG_TO_RAD;
 }
 
 // ============================================================================
@@ -48,12 +53,12 @@ function pushAllStreams() {
   const position = demoPosition;
   const motorRunning = speedKnots > 0;
 
-  // Core streams
+  // Core streams (angles in radians)
   api.pushSensorValue('gps', { ...position, timestamp: new Date() });
-  api.pushSensorValue('heading', normalizeAngle(heading + 12));
+  api.pushSensorValue('heading', degToRad(normalizeAngle(heading + 12)));
   api.pushSensorValue('depth', randomVariation(8.5, 1.2));
   api.pushSensorValue('stw', knotsToMs(randomVariation(speedKnots * 0.9, 0.3)));
-  api.pushSensorValue('roll', speedKnots > 5 ? randomVariation(speedKnots * 2, 2) : randomVariation(2, 1));
+  api.pushSensorValue('roll', degToRad(speedKnots > 5 ? randomVariation(speedKnots * 2, 2) : randomVariation(2, 1)));
 
   // Electrical
   api.pushSensorValue('voltage', randomVariation(12.4, 0.2));
@@ -62,7 +67,7 @@ function pushAllStreams() {
 
   // Wind
   api.pushSensorValue('wind_speed', knotsToMs(randomVariation(8, 2)));
-  api.pushSensorValue('wind_angle', randomVariation(45, 10));
+  api.pushSensorValue('wind_angle', degToRad(randomVariation(45, 10)));
 
   // Temperatures
   api.pushSensorValue('temperature', randomVariation(22, 1));
@@ -77,7 +82,7 @@ function pushAllStreams() {
   api.pushSensorValue('rpm', motorRunning ? randomVariation(2200, 100) : 0);
 
   // Steering
-  api.pushSensorValue('rudder', randomVariation(0, 5));
+  api.pushSensorValue('rudder', degToRad(randomVariation(0, 5)));
 
   // Tanks
   api.pushSensorValue('tank_fresh', randomVariation(70, 1));
@@ -103,14 +108,14 @@ function generateLegacyPacket() {
     timestamp: new Date().toISOString(),
     navigation: {
       position: { ...position, timestamp: new Date() },
-      courseOverGround: heading,
+      courseOverGround: degToRad(heading),
       speedOverGround: knotsToMs(speedKnots),
-      headingMagnetic: heading,
-      headingTrue: normalizeAngle(heading + 12),
+      headingMagnetic: degToRad(heading),
+      headingTrue: degToRad(normalizeAngle(heading + 12)),
       attitude: {
-        roll: heelAngle,
-        pitch: randomVariation(2, 1),
-        yaw: heading,
+        roll: degToRad(heelAngle),
+        pitch: degToRad(randomVariation(2, 1)),
+        yaw: degToRad(heading),
       },
     },
     environment: {
@@ -119,9 +124,9 @@ function generateLegacyPacket() {
       },
       wind: {
         speedApparent: knotsToMs(windSpeedKnots),
-        angleApparent: randomVariation(45, 10),
+        angleApparent: degToRad(randomVariation(45, 10)),
         speedTrue: knotsToMs(randomVariation(windSpeedKnots - 1, 1)),
-        angleTrue: randomVariation(50, 10),
+        angleTrue: degToRad(randomVariation(50, 10)),
       },
       temperature: {
         engineRoom: celsiusToKelvin(randomVariation(motorRunning ? 35 : 28, 2)),

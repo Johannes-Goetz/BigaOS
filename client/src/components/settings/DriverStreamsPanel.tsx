@@ -2,12 +2,11 @@
  * DriverSettingsDialog - Per-driver settings dialog
  *
  * Opens as a full-screen dialog from a settings button on driver plugin cards.
- * Base template every driver gets automatically:
+ * Features:
+ * - Plugin config fields rendered from configSchema
  * - Stream list with status indicators, toggles, and conflict warnings
  * - Rename support for custom (non-core) sensors
  * - Collapsible debug section with raw values
- *
- * Drivers can provide additional custom settings via configSchema in the future.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -18,6 +17,7 @@ import {
   DebugDataEntry,
 } from '../../context/PluginContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { CustomSelect } from '../ui/CustomSelect';
 
 // Core sensor types used by chart/navigation - not renameable
 const CORE_SENSOR_TYPES = new Set([
@@ -36,9 +36,11 @@ interface DriverSettingsDialogProps {
   sensorMappings: SensorMappingInfo[];
   debugData: DebugDataEntry[];
   allDriverPlugins: PluginInfo[];
+  pluginConfig: Record<string, any>;
   onSetMapping: (slotType: string, pluginId: string, streamId: string) => void;
   onRemoveMapping: (slotType: string, pluginId: string, streamId: string) => void;
   onRefreshMappings: () => void;
+  onSetConfig: (key: string, value: any) => void;
   onClose: () => void;
 }
 
@@ -56,9 +58,11 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   sensorMappings,
   debugData,
   allDriverPlugins,
+  pluginConfig,
   onSetMapping,
   onRemoveMapping,
   onRefreshMappings,
+  onSetConfig,
   onClose,
 }) => {
   const { t } = useLanguage();
@@ -68,6 +72,16 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   const [customNames, setCustomNames] = useState<Record<string, string>>({});
 
   const streams: DataStream[] = plugin.manifest.driver?.dataStreams || [];
+  const configSchema = plugin.manifest.driver?.configSchema || [];
+
+  const PROTOCOL_NAMES: Record<string, string> = {
+    nmea2000: 'NMEA 2000',
+    nmea0183: 'NMEA 0183',
+    i2c: 'I\u00B2C',
+  };
+  const protocolLabel = plugin.manifest.driver?.protocol
+    ? PROTOCOL_NAMES[plugin.manifest.driver.protocol] || plugin.manifest.driver.protocol
+    : null;
 
   // Auto-refresh debug data when debug is expanded
   useEffect(() => {
@@ -104,17 +118,20 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
     return { color: theme.colors.error, label: t('plugins.data_stale') };
   }, [getMappingForStream, t]);
 
-  // Find conflicting mapping from another driver for the same data type
+  // Find conflicting mapping from another enabled driver for the same data type
   const getConflict = useCallback((stream: DataStream): { pluginName: string; isCore: boolean } | null => {
     const conflicting = sensorMappings.find(
       m => m.slotType === stream.dataType && m.active && m.pluginId !== plugin.id
     );
     if (!conflicting) return null;
 
+    // Only show conflict if the other plugin is actually enabled
     const otherPlugin = allDriverPlugins.find(p => p.id === conflicting.pluginId);
+    if (!otherPlugin || otherPlugin.status !== 'enabled') return null;
+
     const isCore = CORE_SENSOR_TYPES.has(stream.dataType);
     return {
-      pluginName: otherPlugin?.manifest.name || conflicting.pluginId,
+      pluginName: otherPlugin.manifest.name,
       isCore,
     };
   }, [sensorMappings, plugin.id, allDriverPlugins]);
@@ -208,7 +225,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
               color: theme.colors.textMuted,
               marginTop: theme.space.xs,
             }}>
-              {plugin.manifest.driver?.protocol} - v{plugin.installedVersion}
+              v{plugin.installedVersion}
             </div>
           </div>
           <button
@@ -233,6 +250,132 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
             </svg>
           </button>
         </div>
+
+        {/* Protocol section header */}
+        {protocolLabel && configSchema.length > 0 && (
+          <div style={{
+            fontSize: theme.fontSize.sm,
+            fontWeight: theme.fontWeight.semibold,
+            color: theme.colors.textMuted,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: theme.space.sm,
+          }}>
+            {protocolLabel}
+          </div>
+        )}
+
+        {/* Config Fields */}
+        {configSchema.length > 0 && (
+          <div style={{
+            background: theme.colors.bgCard,
+            borderRadius: theme.radius.md,
+            border: `1px solid ${theme.colors.border}`,
+            padding: theme.space.md,
+            marginBottom: theme.space.lg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: theme.space.md,
+          }}>
+            {configSchema.map((field) => {
+              const value = pluginConfig[field.key] ?? field.default;
+
+              return (
+                <div key={field.key}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: theme.fontSize.sm,
+                    color: theme.colors.textPrimary,
+                    marginBottom: theme.space.xs,
+                    fontWeight: theme.fontWeight.medium,
+                  }}>
+                    {field.label}
+                  </label>
+
+                  {field.type === 'boolean' ? (
+                    <button
+                      onClick={() => onSetConfig(field.key, !value)}
+                      className="touch-btn"
+                      style={{
+                        width: '56px',
+                        height: '32px',
+                        borderRadius: '16px',
+                        border: 'none',
+                        background: value ? theme.colors.primary : theme.colors.bgCardActive,
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: `background ${theme.transition.fast}`,
+                      }}
+                    >
+                      <div style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        background: '#fff',
+                        position: 'absolute',
+                        top: '3px',
+                        left: value ? '27px' : '3px',
+                        transition: `left ${theme.transition.fast}`,
+                      }} />
+                    </button>
+                  ) : field.type === 'select' && field.options ? (
+                    <CustomSelect
+                      value={String(value)}
+                      options={field.options.map(o => ({ value: o.value, label: o.label }))}
+                      onChange={(v) => onSetConfig(field.key, v)}
+                    />
+                  ) : field.type === 'number' ? (
+                    <input
+                      type="number"
+                      value={value ?? ''}
+                      onChange={(e) => onSetConfig(field.key, e.target.value === '' ? field.default : Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: `${theme.space.sm} ${theme.space.md}`,
+                        background: theme.colors.bgPrimary,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radius.sm,
+                        color: theme.colors.textPrimary,
+                        fontSize: theme.fontSize.sm,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        minHeight: '44px',
+                      }}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={value ?? ''}
+                      onChange={(e) => onSetConfig(field.key, e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: `${theme.space.sm} ${theme.space.md}`,
+                        background: theme.colors.bgPrimary,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radius.sm,
+                        color: theme.colors.textPrimary,
+                        fontSize: theme.fontSize.sm,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        minHeight: '44px',
+                      }}
+                    />
+                  )}
+
+                  {field.description && (
+                    <div style={{
+                      fontSize: theme.fontSize.xs,
+                      color: theme.colors.textMuted,
+                      marginTop: theme.space.xs,
+                    }}>
+                      {field.description}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Stream List */}
         {streams.length === 0 ? (
@@ -480,7 +623,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
                 <div style={{
                   fontSize: theme.fontSize.xs,
                   fontFamily: 'monospace',
-                  maxHeight: '200px',
+                  maxHeight: '60vh',
                   overflowY: 'auto',
                 }}>
                   {pluginDebugData.map((entry, idx) => (

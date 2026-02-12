@@ -40,7 +40,7 @@ export class PluginManager extends EventEmitter {
   private pluginsDir: string;
   private dataEmitter: EventEmitter;
   private sensorMapping: SensorMappingService;
-  private registryUrl: string = 'https://raw.githubusercontent.com/Johannes-Goetz/BigaOS/main/plugins/registry.json';
+  private registryUrl: string = 'https://raw.githubusercontent.com/BigaOSTeam/BigaOS/main/plugins/registry.json';
   private cachedRegistry: PluginRegistry | null = null;
 
   constructor(dataEmitter: EventEmitter, sensorMapping: SensorMappingService, pluginsDir?: string) {
@@ -298,6 +298,24 @@ export class PluginManager extends EventEmitter {
       const manifestPath = path.join(pluginDir, 'plugin.json');
       if (!fs.existsSync(manifestPath)) {
         throw new Error('Downloaded plugin does not contain plugin.json');
+      }
+
+      // Run npm install if package.json exists (for plugins with dependencies)
+      const packageJsonPath = path.join(pluginDir, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        console.log(`[PluginManager] Running npm install for ${registryEntry.id}...`);
+        const { execSync } = require('child_process');
+        try {
+          execSync('npm install --production', {
+            cwd: pluginDir,
+            timeout: 120000, // 2 minutes
+            stdio: 'pipe',
+          });
+          console.log(`[PluginManager] npm install completed for ${registryEntry.id}`);
+        } catch (npmErr: any) {
+          console.warn(`[PluginManager] npm install failed for ${registryEntry.id}: ${npmErr.message}`);
+          // Continue anyway - plugin may have bundled node_modules
+        }
       }
 
       // Read manifest

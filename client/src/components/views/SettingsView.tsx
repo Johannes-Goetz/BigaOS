@@ -1579,6 +1579,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
           </div>
         ))
       )}
+
+      {/* Attribution */}
+      {!loadingFiles && (
+        <div style={{
+          marginTop: theme.space.lg,
+          padding: `${theme.space.sm} ${theme.space.md}`,
+          fontSize: theme.fontSize.xs,
+          color: theme.colors.textMuted,
+          borderTop: `1px solid ${theme.colors.border}`,
+        }}>
+          <a
+            href="https://global-hydrodynamics.github.io/OSM_WaterLayer/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: theme.colors.textMuted, textDecoration: 'underline' }}
+          >
+            {t('downloads.attribution')}
+          </a>
+          {' · '}
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: theme.colors.textMuted, textDecoration: 'underline' }}
+          >
+            {t('downloads.license_link')}
+          </a>
+        </div>
+      )}
     </div>
   );
 

@@ -129,6 +129,11 @@ interface PluginContextType {
   removeMapping: (slotType: string, pluginId: string, streamId: string) => void;
   autoMapDriver: (pluginId: string) => void;
   refreshMappings: () => void;
+
+  // Plugin config
+  pluginConfigs: Record<string, Record<string, any>>;
+  loadPluginConfig: (pluginId: string, keys: string[]) => void;
+  setPluginConfig: (pluginId: string, key: string, value: any) => void;
 }
 
 // ============================================================================
@@ -143,6 +148,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [registryLoading, setRegistryLoading] = useState(false);
   const [sensorMappings, setSensorMappings] = useState<SensorMappingInfo[]>([]);
   const [debugData, setDebugData] = useState<DebugDataEntry[]>([]);
+  const [pluginConfigs, setPluginConfigs] = useState<Record<string, Record<string, any>>>({});
 
   useEffect(() => {
     const handlePluginSync = (data: { plugins: PluginInfo[] }) => {
@@ -169,11 +175,19 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setRegistryLoading(false);
     };
 
+    const handleConfigSync = (data: { pluginId: string; config: Record<string, any> }) => {
+      setPluginConfigs(prev => ({
+        ...prev,
+        [data.pluginId]: { ...(prev[data.pluginId] || {}), ...data.config },
+      }));
+    };
+
     wsService.on('plugin_sync', handlePluginSync);
     wsService.on('plugin_update', handlePluginUpdate);
     wsService.on('sensor_mappings_sync', handleMappingsSync);
     wsService.on('sensor_mappings_updated', handleMappingsUpdated);
     wsService.on('plugin_registry_sync', handleRegistrySync);
+    wsService.on('plugin_config_sync', handleConfigSync);
 
     // Request initial data
     wsService.emit('get_plugins', {});
@@ -185,6 +199,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       wsService.off('sensor_mappings_sync', handleMappingsSync);
       wsService.off('sensor_mappings_updated', handleMappingsUpdated);
       wsService.off('plugin_registry_sync', handleRegistrySync);
+      wsService.off('plugin_config_sync', handleConfigSync);
     };
   }, []);
 
@@ -225,6 +240,18 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     wsService.emit('get_sensor_mappings', {});
   }, []);
 
+  const loadPluginConfig = useCallback((pluginId: string, keys: string[]) => {
+    wsService.emit('plugin_config_get', { pluginId, keys });
+  }, []);
+
+  const setPluginConfig = useCallback((pluginId: string, key: string, value: any) => {
+    setPluginConfigs(prev => ({
+      ...prev,
+      [pluginId]: { ...(prev[pluginId] || {}), [key]: value },
+    }));
+    wsService.emit('plugin_config_set', { pluginId, key, value });
+  }, []);
+
   const isDemoActive = plugins.some(p => p.id === 'bigaos-demo-driver' && p.status === 'enabled');
   const isChartOnly = plugins.some(p => p.id === 'bigaos-chart-only' && p.status === 'enabled');
 
@@ -245,6 +272,9 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     removeMapping,
     autoMapDriver,
     refreshMappings,
+    pluginConfigs,
+    loadPluginConfig,
+    setPluginConfig,
   };
 
   return (

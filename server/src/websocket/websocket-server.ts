@@ -244,9 +244,22 @@ export class WebSocketServer {
         }
       });
 
+      socket.on('plugin_config_get', async (data: { pluginId: string; keys: string[] }) => {
+        const config: Record<string, any> = {};
+        for (const key of data.keys) {
+          const fullKey = `plugin.${data.pluginId}.${key}`;
+          const raw = await dbWorker.getSetting(fullKey);
+          if (raw) {
+            try { config[key] = JSON.parse(raw); } catch { config[key] = raw; }
+          }
+        }
+        socket.emit('plugin_config_sync', { pluginId: data.pluginId, config });
+      });
+
       socket.on('plugin_config_set', async (data: { pluginId: string; key: string; value: any }) => {
         const fullKey = `plugin.${data.pluginId}.${data.key}`;
         await dbWorker.setSetting(fullKey, JSON.stringify(data.value));
+        socket.emit('plugin_config_sync', { pluginId: data.pluginId, config: { [data.key]: data.value } });
       });
 
       // ================================================================

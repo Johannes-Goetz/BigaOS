@@ -311,6 +311,8 @@ downloads.loading_data=Datenstatus laden...
 downloads.installed_label=Installiert
 downloads.error_download_failed=Download fehlgeschlagen
 downloads.starting=Starten...
+downloads.attribution=Daten: OSM Water Layer von Dai Yamazaki (Universität Tokio)
+downloads.license_link=Lizenz (CC BY 4.0)
 
 # ==================== Erweitert ====================
 advanced.map_tiles=Kartenkacheln

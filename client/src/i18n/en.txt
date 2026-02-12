@@ -311,6 +311,8 @@ downloads.loading_data=Loading data status...
 downloads.installed_label=Installed
 downloads.error_download_failed=Download failed
 downloads.starting=Starting...
+downloads.attribution=Data: OSM Water Layer by Dai Yamazaki (University of Tokyo)
+downloads.license_link=License (CC BY 4.0)
 
 # ==================== Advanced ====================
 advanced.map_tiles=Map Tiles

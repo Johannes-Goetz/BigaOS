@@ -72,14 +72,14 @@ export type SensorSlotType =
   // Navigation
   | 'position'              // { latitude: number, longitude: number }
   | 'speed_over_ground'     // number (m/s)
-  | 'course_over_ground'    // number (degrees)
-  | 'heading_magnetic'      // number (degrees)
-  | 'heading_true'          // number (degrees)
+  | 'course_over_ground'    // number (radians)
+  | 'heading_magnetic'      // number (radians)
+  | 'heading_true'          // number (radians)
   | 'attitude'              // { roll, pitch, yaw }
   // Environment
   | 'depth'                 // number (meters)
-  | 'wind_apparent'         // { speed: number, angle: number } (m/s, degrees)
-  | 'wind_true'             // { speed: number, angle: number } (m/s, degrees)
+  | 'wind_apparent'         // { speed: number, angle: number } (m/s, radians)
+  | 'wind_true'             // { speed: number, angle: number } (m/s, radians)
   | 'temperature_engine'    // number (Kelvin)
   | 'temperature_cabin'     // number (Kelvin)
   | 'temperature_outside'   // number (Kelvin)

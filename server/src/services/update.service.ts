@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import https from 'https';
@@ -144,17 +144,17 @@ class UpdateService {
     // Give WebSocket a moment to broadcast before the process dies
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Spawn the install script detached so it survives server restart
-    const child = exec(`bash "${installScript}"`, {
+    // Use systemd-run to spawn the install script in a separate scope.
+    // This ensures the script survives when systemd stops the BigaOS service
+    // (systemd kills all processes in the service cgroup on stop).
+    const child = spawn('sudo', ['systemd-run', '--scope', 'bash', installScript], {
       cwd: path.join(__dirname, '../../..'),
       env: { ...process.env, HOME: process.env.HOME || '/home/pi' },
+      detached: true,
+      stdio: 'ignore',
     });
 
     child.unref();
-
-    // Log output for debugging
-    child.stdout?.on('data', (data) => console.log('[Update]', data.toString().trim()));
-    child.stderr?.on('data', (data) => console.error('[Update]', data.toString().trim()));
   }
 
   /**

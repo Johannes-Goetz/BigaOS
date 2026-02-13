@@ -33,6 +33,7 @@ interface PluginInstance {
   api: PluginAPI | null;
   installedVersion: string;
   enabledByUser: boolean;
+  setupMessage?: string;
 }
 
 export class PluginManager extends EventEmitter {
@@ -318,6 +319,29 @@ export class PluginManager extends EventEmitter {
         }
       }
 
+      // Run setup.sh if it exists (system-level setup like apt packages, boot config)
+      let setupMessage: string | undefined;
+      const setupScript = path.join(pluginDir, 'setup.sh');
+      if (fs.existsSync(setupScript)) {
+        console.log(`[PluginManager] Running setup.sh for ${registryEntry.id}...`);
+        const { execSync } = require('child_process');
+        try {
+          const output = execSync(`sudo bash "${setupScript}"`, {
+            cwd: pluginDir,
+            timeout: 120000,
+            stdio: 'pipe',
+          }).toString();
+          console.log(`[PluginManager] setup.sh output for ${registryEntry.id}:\n${output}`);
+          if (output.includes('REBOOT_REQUIRED')) {
+            setupMessage = 'Reboot required to enable CAN bus hardware';
+          }
+        } catch (setupErr: any) {
+          const stderr = setupErr.stderr?.toString() || setupErr.message;
+          console.warn(`[PluginManager] setup.sh failed for ${registryEntry.id}: ${stderr}`);
+          setupMessage = `System setup failed: ${stderr.split('\n')[0]}`;
+        }
+      }
+
       // Read manifest
       const manifest: PluginManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
 
@@ -329,6 +353,7 @@ export class PluginManager extends EventEmitter {
         api: null,
         installedVersion: manifest.version,
         enabledByUser: false,
+        setupMessage,
       });
 
       console.log(`[PluginManager] Installed: ${manifest.id} v${manifest.version}`);
@@ -428,6 +453,7 @@ export class PluginManager extends EventEmitter {
       error: p.error,
       enabledByUser: p.enabledByUser,
       installedVersion: p.installedVersion,
+      setupMessage: p.setupMessage,
     }));
   }
 
@@ -444,6 +470,7 @@ export class PluginManager extends EventEmitter {
       error: plugin.error,
       enabledByUser: plugin.enabledByUser,
       installedVersion: plugin.installedVersion,
+      setupMessage: plugin.setupMessage,
     };
   }
 

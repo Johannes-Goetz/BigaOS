@@ -41,6 +41,7 @@ class PGNHandlers {
   constructor(api, options = {}) {
     this.api = api;
     this.lastPush = {};  // streamId -> timestamp
+    this.pushCount = 0;
     this.pgnFilter = null;
 
     // Parse PGN whitelist filter
@@ -235,6 +236,7 @@ class PGNHandlers {
     if (now - last < limit) return;
 
     this.lastPush[streamId] = now;
+    this.pushCount++;
     this.api.pushSensorValue(streamId, value);
   }
 }

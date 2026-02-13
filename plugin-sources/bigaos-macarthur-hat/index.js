@@ -23,7 +23,9 @@ let pgnHandlers = null;
 let fromPgn = null;
 let healthCheckTimer = null;
 let frameCount = 0;
+let parsedCount = 0;
 let lastFrameTime = 0;
+let rawFrameCount = 0;
 
 /**
  * Parse a raw CAN frame into a PGN message using canboatjs.
@@ -41,6 +43,8 @@ let lastFrameTime = 0;
  */
 function processFrame(frame) {
   if (!fromPgn) return;
+
+  rawFrameCount++;
 
   const canId = frame.id;
   const src = canId & 0xFF;
@@ -79,23 +83,38 @@ function processFrame(frame) {
       pgnHandlers.handle(parsed);
     }
   } catch (err) {
-    // Parsing errors for individual frames are expected (unknown PGNs, etc.)
+    // Log first few parsing errors for diagnostics
+    if (rawFrameCount <= 5) {
+      api.log(`Parse error for PGN ${pgn}: ${err.message}`);
+    }
   }
 }
 
 function startHealthCheck() {
   let lastCount = 0;
   let noDataAlertFired = false;
+  let loggedDiag = false;
 
   healthCheckTimer = api.setInterval(() => {
     const now = Date.now();
     const receiving = frameCount > lastCount;
     lastCount = frameCount;
 
+    // Log diagnostic info on first few health checks
+    if (!loggedDiag && rawFrameCount > 0) {
+      const pushed = pgnHandlers ? pgnHandlers.pushCount : 0;
+      api.log(`Diagnostics: ${rawFrameCount} raw CAN frames, ${frameCount} parsed with fields, ${pushed} values pushed`);
+      loggedDiag = true;
+    }
+
     if (!canConnection.isConnected()) {
       api.log(`Health: CAN disconnected, waiting for reconnect...`);
       if (!noDataAlertFired) {
-        api.triggerAlert('warning', 'MacArthur HAT: CAN bus disconnected');
+        api.triggerAlert({
+          name: 'CAN Disconnected',
+          message: 'MacArthur HAT: CAN bus disconnected',
+          severity: 'warning',
+        });
         noDataAlertFired = true;
       }
       return;
@@ -104,7 +123,11 @@ function startHealthCheck() {
     if (!receiving && lastFrameTime > 0 && (now - lastFrameTime) > 10000) {
       api.log(`Health: Connected but no data for ${Math.round((now - lastFrameTime) / 1000)}s`);
       if (!noDataAlertFired) {
-        api.triggerAlert('warning', 'MacArthur HAT: No data received for 10 seconds');
+        api.triggerAlert({
+          name: 'No Data',
+          message: 'MacArthur HAT: No data received for 10 seconds',
+          severity: 'warning',
+        });
         noDataAlertFired = true;
       }
     } else if (receiving) {
@@ -136,7 +159,11 @@ module.exports = {
       api.log('canboatjs PGN parser initialized');
     } catch (err) {
       api.log(`ERROR: Failed to load canboatjs: ${err.message}`);
-      api.triggerAlert('critical', 'MacArthur HAT: Failed to load PGN parser library');
+      api.triggerAlert({
+        name: 'Parser Error',
+        message: 'MacArthur HAT: Failed to load PGN parser library',
+        severity: 'critical',
+      });
       throw err;
     }
 
@@ -196,6 +223,8 @@ module.exports = {
     fromPgn = null;
     pgnHandlers = null;
     frameCount = 0;
+    parsedCount = 0;
+    rawFrameCount = 0;
     lastFrameTime = 0;
     api = null;
   },

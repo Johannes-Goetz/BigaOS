@@ -63,6 +63,7 @@ export interface PluginInfo {
   error?: string;
   enabledByUser: boolean;
   installedVersion: string;
+  setupMessage?: string;
 }
 
 export interface RegistryPlugin {

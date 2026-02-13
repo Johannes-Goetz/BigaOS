@@ -1,0 +1,91 @@
+#!/bin/bash
+# MacArthur HAT System Setup
+# Runs with sudo during plugin installation.
+# Idempotent — safe to run multiple times.
+
+set -e
+
+BOOT_CONFIG="/boot/firmware/config.txt"
+REBOOT_NEEDED=false
+
+# Fallback for older Raspberry Pi OS
+if [ ! -f "$BOOT_CONFIG" ]; then
+  BOOT_CONFIG="/boot/config.txt"
+fi
+
+# ── Install can-utils if missing ──────────────────────────
+if ! command -v candump &> /dev/null; then
+  echo "Installing can-utils..."
+  apt-get update -qq
+  apt-get install -y -qq can-utils
+  echo "can-utils installed"
+else
+  echo "can-utils already installed"
+fi
+
+# ── Enable SPI in boot config ────────────────────────────
+if [ -f "$BOOT_CONFIG" ]; then
+  if ! grep -q "^dtparam=spi=on" "$BOOT_CONFIG"; then
+    echo "" >> "$BOOT_CONFIG"
+    echo "# MacArthur HAT - SPI enabled by BigaOS" >> "$BOOT_CONFIG"
+    echo "dtparam=spi=on" >> "$BOOT_CONFIG"
+    echo "SPI enabled in $BOOT_CONFIG"
+    REBOOT_NEEDED=true
+  else
+    echo "SPI already enabled"
+  fi
+
+  # ── Add CAN overlay ──────────────────────────────────────
+  if ! grep -q "^dtoverlay=mcp251xfd" "$BOOT_CONFIG"; then
+    echo "dtoverlay=mcp251xfd,spi0-1,oscillator=20000000,interrupt=25" >> "$BOOT_CONFIG"
+    echo "CAN overlay added to $BOOT_CONFIG"
+    REBOOT_NEEDED=true
+  else
+    echo "CAN overlay already configured"
+  fi
+else
+  echo "WARNING: Boot config not found at $BOOT_CONFIG"
+fi
+
+# ── Create systemd service for CAN interface ──────────────
+SERVICE_FILE="/etc/systemd/system/can0.service"
+if [ ! -f "$SERVICE_FILE" ]; then
+  cat > "$SERVICE_FILE" << 'EOF'
+[Unit]
+Description=CAN bus interface can0 (NMEA 2000)
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/ip link set can0 up type can bitrate 250000
+ExecStop=/sbin/ip link set can0 down
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable can0.service
+  echo "can0.service created and enabled"
+
+  # Try to start now (will fail if overlay not loaded yet)
+  if systemctl start can0.service 2>/dev/null; then
+    echo "can0 interface started"
+  else
+    echo "can0 interface will start after reboot"
+    REBOOT_NEEDED=true
+  fi
+else
+  echo "can0.service already exists"
+  # Ensure it's enabled
+  systemctl enable can0.service 2>/dev/null || true
+fi
+
+# ── Report status ─────────────────────────────────────────
+if [ "$REBOOT_NEEDED" = true ]; then
+  echo "REBOOT_REQUIRED"
+fi
+
+echo "SETUP_COMPLETE"

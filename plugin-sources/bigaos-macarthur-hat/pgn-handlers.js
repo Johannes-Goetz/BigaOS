@@ -82,31 +82,35 @@ class PGNHandlers {
   _handlePositionRapid(fields) {
     const lat = fields.Latitude;
     const lon = fields.Longitude;
-    if (lat == null || lon == null) return;
-    // canboatjs returns lat/lon in decimal degrees (geographic standard)
-    this._push('gps', { latitude: lat, longitude: lon, timestamp: new Date() });
+    if (lat != null && lon != null) {
+      this._push('gps', { latitude: lat, longitude: lon, timestamp: new Date() });
+    } else {
+      this._push('gps', null);
+    }
   }
 
   // PGN 129026 - COG & SOG, Rapid Update
   _handleCogSog(fields) {
     const cog = fields['COG'];
     const sog = fields['SOG'];
-    if (cog != null) this._push('cog', cog);       // radians
-    if (sog != null) this._push('sog', sog);       // m/s
+    this._push('cog', cog != null ? cog : null);     // radians
+    this._push('sog', sog != null ? sog : null);     // m/s
   }
 
   // PGN 127250 - Vessel Heading
   _handleHeading(fields) {
     const heading = fields.Heading;
     const ref = fields.Reference;
-    if (heading == null) return;
+    if (heading == null) {
+      this._push('heading_magnetic', null);
+      return;
+    }
 
     if (ref === 'Magnetic') {
       this._push('heading_magnetic', heading);      // radians
     } else if (ref === 'True') {
       this._push('heading_true', heading);          // radians
     } else {
-      // Unknown reference, push as magnetic by default
       this._push('heading_magnetic', heading);
     }
   }
@@ -114,14 +118,14 @@ class PGNHandlers {
   // PGN 128259 - Speed, Water Referenced
   _handleSpeedThroughWater(fields) {
     const stw = fields['Speed Water Referenced'];
-    if (stw != null) this._push('stw', stw);        // m/s
+    this._push('stw', stw != null ? stw : null);    // m/s, null = sensor connected but no data
   }
 
   // PGN 128267 - Water Depth
   _handleWaterDepth(fields) {
     const depth = fields.Depth;
     const offset = fields.Offset || 0;
-    if (depth != null) this._push('depth', depth + offset);  // meters
+    this._push('depth', depth != null ? depth + offset : null);  // meters, null = sensor connected but no data
   }
 
   // PGN 130306 - Wind Data

@@ -68,22 +68,8 @@ function processFrame(frame) {
   const dataHex = Array.from(frame.data).map(b => b.toString(16).padStart(2, '0')).join(',');
   const line = `${new Date().toISOString()},${priority},${pgn},${src},${dst},${frame.data.length},${dataHex}`;
 
-  // Log first 10 frames in detail
-  if (rawFrameCount <= 10) {
-    api.log(`[RAW] Frame #${rawFrameCount}: CAN ID=0x${canId.toString(16)}, PGN=${pgn}, src=${src}, dst=${dst}, prio=${priority}, data=[${dataHex}]`);
-    api.log(`[FMT] Actisense line: ${line}`);
-  }
-
   try {
     const parsed = fromPgn.parseString(line);
-
-    if (rawFrameCount <= 10) {
-      if (parsed) {
-        api.log(`[PARSE] Result type=${typeof parsed}, keys=${JSON.stringify(Object.keys(parsed))}, pgn=${parsed.pgn}, fields=${parsed.fields ? JSON.stringify(parsed.fields).substring(0, 200) : 'NONE'}`);
-      } else {
-        api.log(`[PARSE] Result: ${String(parsed)} (falsy)`);
-      }
-    }
 
     if (parsed && parsed.fields) {
       frameCount++;
@@ -91,9 +77,8 @@ function processFrame(frame) {
       pgnHandlers.handle(parsed);
     }
   } catch (err) {
-    api.log(`[ERROR] Parse error for PGN ${pgn} (frame #${rawFrameCount}): ${err.message}`);
-    if (rawFrameCount <= 3) {
-      api.log(`[ERROR] Stack: ${err.stack}`);
+    if (rawFrameCount <= 5) {
+      api.log(`Parse error for PGN ${pgn}: ${err.message}`);
     }
   }
 }
@@ -164,9 +149,7 @@ module.exports = {
     try {
       const { FromPgn } = require('@canboat/canboatjs');
       fromPgn = new FromPgn();
-      const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(fromPgn)).filter(m => typeof fromPgn[m] === 'function');
-      api.log(`canboatjs FromPgn initialized. Methods: ${methods.join(', ')}`);
-      api.log(`fromPgn is Transform stream: ${typeof fromPgn.write === 'function'}, is EventEmitter: ${typeof fromPgn.on === 'function'}`);
+      api.log('canboatjs PGN parser initialized');
     } catch (err) {
       api.log(`ERROR: Failed to load canboatjs: ${err.message}`);
       api.triggerAlert({

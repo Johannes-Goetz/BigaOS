@@ -17,6 +17,7 @@ import {
   DebugDataEntry,
 } from '../../context/PluginContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useSettings } from '../../context/SettingsContext';
 import { CustomSelect } from '../ui/CustomSelect';
 
 // Core sensor types used by chart/navigation - not renameable
@@ -65,7 +66,8 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   onSetConfig,
   onClose,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { timeFormat } = useSettings();
   const [debugExpanded, setDebugExpanded] = useState(false);
   const [renamingStream, setRenamingStream] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -626,24 +628,27 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
                   maxHeight: '60vh',
                   overflowY: 'auto',
                 }}>
-                  {pluginDebugData.map((entry, idx) => (
+                  {pluginDebugData.map((entry, idx) => {
+                    const streamDef = streams.find(s => s.id === entry.streamId);
+                    return (
                     <div key={idx} style={{
                       display: 'flex',
                       gap: theme.space.sm,
                       padding: `${theme.space.xs} 0`,
                       borderBottom: idx < pluginDebugData.length - 1 ? `1px solid ${theme.colors.border}20` : 'none',
                     }}>
-                      <span style={{ color: theme.colors.primary, minWidth: '80px' }}>
-                        {entry.streamId}
+                      <span style={{ color: theme.colors.primary, minWidth: '120px' }}>
+                        {entry.streamId}{streamDef ? ` (${streamDef.name})` : ''}
                       </span>
                       <span style={{ color: theme.colors.textPrimary, flex: 1 }}>
                         {formatValue(entry.value)}
                       </span>
                       <span style={{ color: theme.colors.textMuted }}>
-                        {new Date(entry.timestamp).toLocaleTimeString()}
+                        {new Date(entry.timestamp).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: timeFormat === '12h' })}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

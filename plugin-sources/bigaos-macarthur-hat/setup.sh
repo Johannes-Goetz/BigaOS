@@ -23,6 +23,16 @@ else
   echo "can-utils already installed"
 fi
 
+# ── Install i2c-tools if missing ───────────────────────────
+if ! command -v i2cdetect &> /dev/null; then
+  echo "Installing i2c-tools..."
+  apt-get update -qq
+  apt-get install -y -qq i2c-tools
+  echo "i2c-tools installed"
+else
+  echo "i2c-tools already installed"
+fi
+
 # ── Enable SPI in boot config ────────────────────────────
 if [ -f "$BOOT_CONFIG" ]; then
   if ! grep -q "^dtparam=spi=on" "$BOOT_CONFIG"; then
@@ -33,6 +43,17 @@ if [ -f "$BOOT_CONFIG" ]; then
     REBOOT_NEEDED=true
   else
     echo "SPI already enabled"
+  fi
+
+  # ── Enable I2C in boot config ──────────────────────────────
+  if ! grep -q "^dtparam=i2c_arm=on" "$BOOT_CONFIG"; then
+    echo "" >> "$BOOT_CONFIG"
+    echo "# MacArthur HAT - I2C enabled by BigaOS (for ICM-20948 IMU)" >> "$BOOT_CONFIG"
+    echo "dtparam=i2c_arm=on" >> "$BOOT_CONFIG"
+    echo "I2C enabled in $BOOT_CONFIG"
+    REBOOT_NEEDED=true
+  else
+    echo "I2C already enabled"
   fi
 
   # ── Add CAN overlay ──────────────────────────────────────

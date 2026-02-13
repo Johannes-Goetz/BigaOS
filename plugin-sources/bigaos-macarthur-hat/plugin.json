@@ -1,8 +1,8 @@
 {
   "id": "bigaos-macarthur-hat",
   "name": "MacArthur HAT",
-  "version": "1.1.4",
-  "description": "Read sensor data from the MacArthur HAT on Raspberry Pi. Currently supports NMEA 2000 via CAN bus.",
+  "version": "1.2.0",
+  "description": "Read sensor data from the MacArthur HAT on Raspberry Pi. Supports NMEA 2000 via CAN bus and ICM-20948 IMU via I2C.",
   "author": "BigaOS Team",
   "type": "driver",
   "main": "index.js",
@@ -36,7 +36,11 @@
       { "id": "water_temp", "name": "Water Temperature", "dataType": "water_temperature", "unit": "K", "updateRate": 1, "description": "Sea water temp from PGN 130310/130311" },
       { "id": "pressure", "name": "Atmospheric Pressure", "dataType": "barometric_pressure", "unit": "Pa", "updateRate": 1, "description": "Atmospheric pressure from PGN 130310/130311" },
       { "id": "humidity", "name": "Humidity", "dataType": "humidity", "unit": "%", "updateRate": 1, "description": "Humidity from PGN 130311" },
-      { "id": "fuel_level", "name": "Fuel Level", "dataType": "fuel_level", "unit": "%", "updateRate": 1, "description": "Fuel tank level from PGN 127505" }
+      { "id": "fuel_level", "name": "Fuel Level", "dataType": "fuel_level", "unit": "%", "updateRate": 1, "description": "Fuel tank level from PGN 127505" },
+      { "id": "imu_roll", "name": "Roll (IMU)", "dataType": "roll", "unit": "radians", "updateRate": 10, "description": "Roll from ICM-20948 IMU via Madgwick AHRS fusion" },
+      { "id": "imu_pitch", "name": "Pitch (IMU)", "dataType": "pitch", "unit": "radians", "updateRate": 10, "description": "Pitch from ICM-20948 IMU via Madgwick AHRS fusion" },
+      { "id": "imu_yaw", "name": "Yaw (IMU)", "dataType": "yaw", "unit": "radians", "updateRate": 10, "description": "Yaw from ICM-20948 IMU via Madgwick AHRS fusion" },
+      { "id": "imu_heading", "name": "Heading (IMU)", "dataType": "heading_magnetic", "unit": "radians", "updateRate": 10, "description": "Magnetic heading from ICM-20948 magnetometer via AHRS fusion" }
     ],
     "configSchema": [
       {
@@ -66,6 +70,27 @@
         "type": "string",
         "default": "",
         "description": "Comma-separated list of PGNs to listen for (empty = all supported)"
+      },
+      {
+        "key": "imuEnabled",
+        "label": "Enable IMU",
+        "type": "boolean",
+        "default": true,
+        "description": "Enable the ICM-20948 IMU for roll, pitch, yaw, and magnetic heading"
+      },
+      {
+        "key": "imuPollRate",
+        "label": "IMU Poll Rate (Hz)",
+        "type": "number",
+        "default": 50,
+        "description": "How often to read IMU sensors (Hz). Output is rate-limited to 10Hz."
+      },
+      {
+        "key": "imuI2CAddress",
+        "label": "IMU I2C Address",
+        "type": "string",
+        "default": "0x68",
+        "description": "I2C address of the ICM-20948 (0x68 or 0x69)"
       }
     ]
   }

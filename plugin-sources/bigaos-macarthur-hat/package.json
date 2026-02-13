@@ -1,9 +1,11 @@
 {
   "name": "bigaos-macarthur-hat",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "BigaOS driver plugin for the MacArthur HAT",
   "private": true,
   "dependencies": {
-    "@canboat/canboatjs": "^2.0.0"
+    "@canboat/canboatjs": "^2.0.0",
+    "ahrs": "^2.0.0",
+    "i2c-bus": "^5.2.3"
   }
 }

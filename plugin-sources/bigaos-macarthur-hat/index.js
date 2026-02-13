@@ -2,44 +2,46 @@
  * BigaOS MacArthur HAT Driver Plugin
  *
  * Reads sensor data from the MacArthur HAT on RPi 5.
- * Currently supports NMEA 2000 via CAN bus (candump + canboatjs).
- * Future: NMEA 0183 serial inputs, I2C sensors.
+ * Supports:
+ *   - NMEA 2000 via CAN bus (candump + canboatjs)
+ *   - ICM-20948 IMU via I2C (roll, pitch, yaw, magnetic heading)
  *
- * Data flow:
+ * Data flow (CAN):
  *   MacArthur HAT -> SocketCAN (can0) -> candump -L
  *   -> parse CAN frame -> canboatjs FromPgn -> PGN handlers
  *   -> api.pushSensorValue() -> SensorMappingService -> Client
  *
- * Zero unit conversions: canboatjs outputs radians/m/s/K/Pa,
- * matching BigaOS internal units exactly.
+ * Data flow (IMU):
+ *   MacArthur HAT -> I2C bus 1 -> ICM-20948 registers
+ *   -> raw accel/gyro/mag -> Madgwick AHRS fusion
+ *   -> api.pushSensorValue() -> SensorMappingService -> Client
  */
 
 const { CANConnection } = require('./can-connection');
 const { PGNHandlers } = require('./pgn-handlers');
+const { IMUConnection } = require('./imu-connection');
+const { IMUFusion } = require('./imu-fusion');
 
 let api = null;
 let canConnection = null;
 let pgnHandlers = null;
 let fromPgn = null;
+let imuConnection = null;
+let imuFusion = null;
 let healthCheckTimer = null;
 let frameCount = 0;
 let parsedCount = 0;
 let lastFrameTime = 0;
 let rawFrameCount = 0;
+let imuSampleCount = 0;
+let imuPushCount = 0;
+let lastImuPush = 0;
+
+// IMU push rate limiting (ms between pushes)
+const IMU_PUSH_INTERVAL = 100; // 10Hz output
 
 /**
  * Parse a raw CAN frame into a PGN message using canboatjs.
- *
- * 29-bit extended CAN ID layout:
- *   Bits 28-26: Priority (3 bits)
- *   Bit  25:    Reserved
- *   Bit  24:    Data Page
- *   Bits 23-16: PF (PDU Format)
- *   Bits 15-8:  PS (PDU Specific)
- *   Bits  7-0:  Source Address
- *
- * PF < 240: PDU1 (addressed), PGN = DP:PF:00, destination = PS
- * PF >= 240: PDU2 (broadcast), PGN = DP:PF:PS, destination = 255
  */
 function processFrame(frame) {
   if (!fromPgn) return;
@@ -55,11 +57,9 @@ function processFrame(frame) {
 
   let pgn, dst;
   if (pf < 240) {
-    // PDU1: addressed message
     pgn = (dp << 16) | (pf << 8);
     dst = ps;
   } else {
-    // PDU2: broadcast message
     pgn = (dp << 16) | (pf << 8) | ps;
     dst = 255;
   }
@@ -83,6 +83,28 @@ function processFrame(frame) {
   }
 }
 
+/**
+ * Process IMU data through fusion filter and push to streams.
+ */
+function processIMUData(data) {
+  if (!imuFusion || !api) return;
+
+  imuSampleCount++;
+
+  const attitude = imuFusion.update(data);
+
+  // Rate-limit pushes to 10Hz
+  const now = Date.now();
+  if (now - lastImuPush < IMU_PUSH_INTERVAL) return;
+  lastImuPush = now;
+  imuPushCount++;
+
+  api.pushSensorValue('imu_roll', attitude.roll);
+  api.pushSensorValue('imu_pitch', attitude.pitch);
+  api.pushSensorValue('imu_yaw', attitude.yaw);
+  api.pushSensorValue('imu_heading', attitude.heading);
+}
+
 function startHealthCheck() {
   let lastCount = 0;
   let noDataAlertFired = false;
@@ -94,9 +116,9 @@ function startHealthCheck() {
     lastCount = frameCount;
 
     // Log diagnostic info on first few health checks
-    if (!loggedDiag && rawFrameCount > 0) {
+    if (!loggedDiag && (rawFrameCount > 0 || imuSampleCount > 0)) {
       const pushed = pgnHandlers ? pgnHandlers.pushCount : 0;
-      api.log(`Diagnostics: ${rawFrameCount} raw CAN frames, ${frameCount} parsed with fields, ${pushed} values pushed`);
+      api.log(`Diagnostics: CAN ${rawFrameCount} raw/${frameCount} parsed/${pushed} pushed, IMU ${imuSampleCount} samples/${imuPushCount} pushed`);
       loggedDiag = true;
     }
 
@@ -137,13 +159,13 @@ module.exports = {
     api = pluginApi;
     api.log('MacArthur HAT driver activating...');
 
-    // Load configuration
+    // ── CAN Bus Setup ───────────────────────────────────────────
     const canInterface = await api.getSetting('canInterface') || 'can0';
     const autoReconnect = await api.getSetting('autoReconnect') !== false;
     const reconnectInterval = await api.getSetting('reconnectInterval') || 5;
     const pgnFilter = await api.getSetting('pgnFilter') || '';
 
-    api.log(`Config: interface=${canInterface}, autoReconnect=${autoReconnect}, reconnectInterval=${reconnectInterval}s`);
+    api.log(`CAN config: interface=${canInterface}, autoReconnect=${autoReconnect}, reconnectInterval=${reconnectInterval}s`);
 
     // Initialize canboatjs PGN parser
     try {
@@ -160,10 +182,8 @@ module.exports = {
       throw err;
     }
 
-    // Initialize PGN handlers
     pgnHandlers = new PGNHandlers(api, { pgnFilter });
 
-    // Create CAN connection
     canConnection = new CANConnection({
       interface: canInterface,
       autoReconnect,
@@ -173,23 +193,61 @@ module.exports = {
     canConnection.on('connected', () => {
       api.log(`Connected to CAN interface: ${canInterface}`);
     });
-
     canConnection.on('disconnected', (code) => {
       api.log(`CAN connection lost (exit code: ${code})`);
     });
-
     canConnection.on('reconnecting', () => {
       api.log(`Reconnecting to ${canInterface}...`);
     });
-
     canConnection.on('error', (err) => {
       api.log(`CAN error: ${err.message}`);
     });
-
     canConnection.on('frame', processFrame);
-
-    // Start connection
     canConnection.connect();
+
+    // ── IMU Setup (independent of CAN) ──────────────────────────
+    const imuEnabled = await api.getSetting('imuEnabled') !== false;
+
+    if (imuEnabled) {
+      const imuAddress = await api.getSetting('imuI2CAddress') || '0x68';
+      const imuPollRate = await api.getSetting('imuPollRate') || 50;
+
+      api.log(`IMU config: address=${imuAddress}, pollRate=${imuPollRate}Hz`);
+
+      imuFusion = new IMUFusion({
+        sampleInterval: Math.round(1000 / imuPollRate),
+      });
+
+      imuConnection = new IMUConnection({
+        address: imuAddress,
+        pollRate: imuPollRate,
+      });
+
+      imuConnection.on('connected', () => {
+        api.log('IMU connected: ICM-20948');
+      });
+      imuConnection.on('data', processIMUData);
+      imuConnection.on('error', (err) => {
+        api.log(`IMU error: ${err.message}`);
+      });
+      imuConnection.on('disconnected', () => {
+        api.log('IMU disconnected');
+      });
+
+      // Connect IMU (errors won't kill the plugin)
+      try {
+        await imuConnection.connect();
+      } catch (err) {
+        api.log(`IMU initialization failed: ${err.message} (CAN bus continues)`);
+        api.triggerAlert({
+          name: 'IMU Error',
+          message: `MacArthur HAT: IMU not available (${err.message})`,
+          severity: 'warning',
+        });
+      }
+    } else {
+      api.log('IMU disabled by configuration');
+    }
 
     // Start health monitoring
     startHealthCheck();
@@ -207,6 +265,12 @@ module.exports = {
       healthCheckTimer = null;
     }
 
+    if (imuConnection) {
+      imuConnection.disconnect();
+      imuConnection.removeAllListeners();
+      imuConnection = null;
+    }
+
     if (canConnection) {
       canConnection.disconnect();
       canConnection.removeAllListeners();
@@ -215,10 +279,14 @@ module.exports = {
 
     fromPgn = null;
     pgnHandlers = null;
+    imuFusion = null;
     frameCount = 0;
     parsedCount = 0;
     rawFrameCount = 0;
     lastFrameTime = 0;
+    imuSampleCount = 0;
+    imuPushCount = 0;
+    lastImuPush = 0;
     api = null;
   },
 };

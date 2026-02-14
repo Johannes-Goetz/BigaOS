@@ -374,7 +374,7 @@ export const TerminalPanel: React.FC = () => {
             {HELPFUL_COMMANDS.map(({ label, cmd }) => (
               <button
                 key={cmd}
-                onClick={() => executeCommand(cmd)}
+                onClick={() => { setCommand(cmd); inputRef.current?.focus(); }}
                 className="touch-btn"
                 title={cmd}
                 style={{

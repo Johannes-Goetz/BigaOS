@@ -13,6 +13,18 @@ if [ ! -f "$BOOT_CONFIG" ]; then
   BOOT_CONFIG="/boot/config.txt"
 fi
 
+# ── Install native module build tools (for i2c-bus) ───────
+NEED_REBUILD=false
+if ! dpkg -s build-essential &> /dev/null; then
+  echo "Installing build-essential (needed for native Node modules)..."
+  apt-get update -qq
+  apt-get install -y -qq build-essential python3
+  NEED_REBUILD=true
+  echo "build-essential installed"
+else
+  echo "build-essential already installed"
+fi
+
 # ── Install can-utils if missing ──────────────────────────
 if ! command -v candump &> /dev/null; then
   echo "Installing can-utils..."
@@ -102,6 +114,13 @@ else
   echo "can0.service already exists"
   # Ensure it's enabled
   systemctl enable can0.service 2>/dev/null || true
+fi
+
+# ── Rebuild native Node modules if build tools were just installed ──
+if [ "$NEED_REBUILD" = true ] && [ -d "node_modules/i2c-bus" ]; then
+  echo "Rebuilding native Node modules..."
+  npm rebuild i2c-bus 2>&1 || echo "WARNING: npm rebuild failed — IMU may not work"
+  echo "Native modules rebuilt"
 fi
 
 # ── Report status ─────────────────────────────────────────

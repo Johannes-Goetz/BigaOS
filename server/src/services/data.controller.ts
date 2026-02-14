@@ -330,8 +330,7 @@ export class DataController extends EventEmitter {
         position: data.navigation.position,
         courseOverGround: data.navigation.courseOverGround,
         speedOverGround: speedFromStandard(data.navigation.speedOverGround, units.speedUnit),
-        headingMagnetic: data.navigation.headingMagnetic,
-        headingTrue: data.navigation.headingTrue,
+        heading: data.navigation.heading,
         attitude: data.navigation.attitude,
       },
       environment: {

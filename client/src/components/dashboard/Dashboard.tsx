@@ -377,7 +377,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       case 'speed':
         return <SpeedItem speed={sensorData.navigation.speedOverGround} />;
       case 'heading':
-        return <HeadingItem heading={sensorData.navigation.headingMagnetic} />;
+        return <HeadingItem heading={sensorData.navigation.heading} />;
       case 'depth':
         return <DepthItem depth={sensorData.environment.depth.belowTransducer} />;
       case 'wind':
@@ -402,7 +402,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
         return (
           <ChartMiniItem
             position={sensorData.navigation.position}
-            heading={sensorData.navigation.headingMagnetic}
+            heading={sensorData.navigation.heading}
             speed={sensorData.navigation.speedOverGround}
             depth={sensorData.environment.depth.belowTransducer}
           />

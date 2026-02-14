@@ -40,7 +40,7 @@ export const MotoringView: React.FC<MotoringViewProps> = ({ sensorData }) => {
 
       <div className="grid grid-3">
         <SpeedLog speed={sensorData.navigation.speedOverGround} />
-        <Compass heading={sensorData.navigation.headingMagnetic} />
+        <Compass heading={sensorData.navigation.heading} />
         <BatteryStatus
           voltage={sensorData.electrical.battery.voltage}
           current={sensorData.electrical.battery.current}

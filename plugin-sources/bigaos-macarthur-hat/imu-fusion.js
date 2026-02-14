@@ -54,18 +54,14 @@ class IMUFusion {
     // Get Euler angles (radians)
     const euler = this.ahrs.getEulerAngles();
 
-    // euler.heading is yaw from magnetometer, euler.pitch, euler.roll
+    // euler.heading is magnetic heading from magnetometer
     // Normalize heading to [0, 2π]
     let heading = euler.heading;
     if (heading < 0) heading += 2 * Math.PI;
 
-    let yaw = euler.heading;
-    if (yaw < 0) yaw += 2 * Math.PI;
-
     return {
       roll: euler.roll,       // radians, ±π
       pitch: euler.pitch,     // radians, ±π/2
-      yaw,                    // radians, [0, 2π]
       heading,                // radians, [0, 2π] (magnetic)
     };
   }

@@ -9,8 +9,7 @@ export interface NavigationData {
   position: GeoPosition;
   courseOverGround: number;      // Radians
   speedOverGround: number;        // Knots
-  headingMagnetic: number;        // Radians
-  headingTrue: number;            // Radians
+  heading: number;                // Radians — true if GPS available, else magnetic
   attitude: AttitudeData;
 }
 

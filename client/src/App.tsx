@@ -429,7 +429,7 @@ function AppContent() {
   if (activeView === 'heading') {
     return (
       <>
-        <HeadingView heading={sensorData.navigation.headingMagnetic} onClose={handleGoBack} />
+        <HeadingView heading={sensorData.navigation.heading} onClose={handleGoBack} />
         <DemoModeBanner />
         <ConnectivityBanner />
         <ServerUnreachableBanner />

@@ -145,7 +145,7 @@ Each stream declares one output the plugin can produce. On activation, streams a
 {
   "id": "heading",
   "name": "Heading (Magnetic)",
-  "dataType": "heading_magnetic",
+  "dataType": "heading",
   "unit": "radians",
   "updateRate": 5,
   "description": "Magnetic heading from compass"
@@ -310,8 +310,7 @@ These are the `dataType` values you can use in data stream declarations:
 - `position` - `{ latitude: number, longitude: number, timestamp: Date }`
 - `speed_over_ground` - number (m/s)
 - `course_over_ground` - number (radians)
-- `heading_magnetic` - number (radians)
-- `heading_true` - number (radians)
+- `heading` - number (radians) — auto-converted from magnetic to true via GPS declination
 - `attitude` - `{ roll, pitch, yaw }` (radians)
 
 **Environment:**

@@ -335,7 +335,7 @@ advanced.geocoding_info=Geocoding: Used for location search. Default uses Photon
 advanced.weather_info=Weather: Uses Open-Meteo (free, no API key). Wind and marine data fetched automatically based on boat position.
 
 # ==================== Terminal ====================
-terminal.title=Server Terminal
+terminal.title=Server Logs
 terminal.refresh=Refresh
 terminal.follow=Follow
 terminal.following=Following

@@ -110,8 +110,7 @@ function generateLegacyPacket() {
       position: { ...position, timestamp: new Date() },
       courseOverGround: degToRad(heading),
       speedOverGround: knotsToMs(speedKnots),
-      headingMagnetic: degToRad(heading),
-      headingTrue: degToRad(normalizeAngle(heading + 12)),
+      heading: degToRad(normalizeAngle(heading + 12)),
       attitude: {
         roll: degToRad(heelAngle),
         pitch: degToRad(randomVariation(2, 1)),

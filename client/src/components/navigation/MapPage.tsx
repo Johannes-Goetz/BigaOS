@@ -232,7 +232,7 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose, onOpenSettings }) => 
 
   // Use demo values when in demo mode, otherwise use real sensor data
   const position = demoMode ? demoPosition : sensorData.navigation.position;
-  const heading = demoMode ? dummyHeading : sensorData.navigation.headingMagnetic;
+  const heading = demoMode ? dummyHeading : sensorData.navigation.heading;
   const speed = demoMode ? dummySpeed : sensorData.navigation.speedOverGround;
 
   return (

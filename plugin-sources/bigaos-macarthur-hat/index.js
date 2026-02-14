@@ -101,7 +101,6 @@ function processIMUData(data) {
 
   api.pushSensorValue('imu_roll', attitude.roll);
   api.pushSensorValue('imu_pitch', attitude.pitch);
-  api.pushSensorValue('imu_yaw', attitude.yaw);
   api.pushSensorValue('imu_heading', attitude.heading);
 }
 

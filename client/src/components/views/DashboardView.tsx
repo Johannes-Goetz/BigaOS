@@ -47,7 +47,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ state, sensorData 
       <div className="grid grid-4">
         <DepthGauge depth={sensorData.environment.depth.belowTransducer} />
         <SpeedLog speed={sensorData.navigation.speedOverGround} />
-        <Compass heading={sensorData.navigation.headingMagnetic} />
+        <Compass heading={sensorData.navigation.heading} />
         <BatteryStatus
           voltage={sensorData.electrical.battery.voltage}
           current={sensorData.electrical.battery.current}

@@ -335,7 +335,7 @@ advanced.geocoding_info=Geocoding: Wird für die Ortssuche verwendet. Standard i
 advanced.weather_info=Wetter: Verwendet Open-Meteo (kostenlos, kein API-Schlüssel). Wind- und Marinedaten werden automatisch basierend auf der Bootsposition abgerufen.
 
 # ==================== Terminal ====================
-terminal.title=Server-Terminal
+terminal.title=Server-Logs
 terminal.refresh=Aktualisieren
 terminal.follow=Folgen
 terminal.following=Folgend

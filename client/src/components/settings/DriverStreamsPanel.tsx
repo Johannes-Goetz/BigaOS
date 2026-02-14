@@ -30,8 +30,7 @@ const SLOT_LABELS: Record<string, string> = {
   position: 'GPS Position',
   course_over_ground: 'Course Over Ground',
   speed_over_ground: 'Speed Over Ground',
-  heading_magnetic: 'Heading (Magnetic)',
-  heading_true: 'Heading (True)',
+  heading: 'Heading',
   speed_through_water: 'Speed Through Water',
   depth: 'Depth',
   roll: 'Roll',
@@ -54,7 +53,7 @@ const SLOT_LABELS: Record<string, string> = {
 };
 
 const SLOT_CATEGORIES: [string, string[]][] = [
-  ['Navigation', ['position', 'course_over_ground', 'speed_over_ground', 'heading_magnetic', 'heading_true', 'speed_through_water', 'roll', 'pitch', 'yaw', 'rudder_angle']],
+  ['Navigation', ['position', 'course_over_ground', 'speed_over_ground', 'heading', 'speed_through_water', 'roll', 'pitch', 'yaw', 'rudder_angle']],
   ['Environment', ['depth', 'wind_speed_apparent', 'wind_angle_apparent', 'wind_speed_true', 'wind_angle_true', 'water_temperature', 'barometric_pressure', 'humidity']],
   ['Electrical', ['voltage', 'current', 'temperature', 'soc']],
   ['Propulsion', ['rpm', 'fuel_level']],
@@ -104,17 +103,9 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   const { t, language } = useLanguage();
   const { timeFormat } = useSettings();
   const [debugExpanded, setDebugExpanded] = useState(false);
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
 
   const configSchema = plugin.manifest.driver?.configSchema || [];
-
-  const PROTOCOL_NAMES: Record<string, string> = {
-    nmea2000: 'NMEA 2000',
-    nmea0183: 'NMEA 0183',
-    i2c: 'I\u00B2C',
-  };
-  const protocolLabel = plugin.manifest.driver?.protocol
-    ? PROTOCOL_NAMES[plugin.manifest.driver.protocol] || plugin.manifest.driver.protocol
-    : null;
 
   // Auto-refresh debug data when debug is expanded
   useEffect(() => {
@@ -317,132 +308,6 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
             </svg>
           </button>
         </div>
-
-        {/* Protocol section header */}
-        {protocolLabel && configSchema.length > 0 && (
-          <div style={{
-            fontSize: theme.fontSize.sm,
-            fontWeight: theme.fontWeight.semibold,
-            color: theme.colors.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: theme.space.sm,
-          }}>
-            {protocolLabel}
-          </div>
-        )}
-
-        {/* Config Fields */}
-        {configSchema.length > 0 && (
-          <div style={{
-            background: theme.colors.bgCard,
-            borderRadius: theme.radius.md,
-            border: `1px solid ${theme.colors.border}`,
-            padding: theme.space.md,
-            marginBottom: theme.space.lg,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: theme.space.md,
-          }}>
-            {configSchema.map((field) => {
-              const value = pluginConfig[field.key] ?? field.default;
-
-              return (
-                <div key={field.key}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: theme.fontSize.sm,
-                    color: theme.colors.textPrimary,
-                    marginBottom: theme.space.xs,
-                    fontWeight: theme.fontWeight.medium,
-                  }}>
-                    {field.label}
-                  </label>
-
-                  {field.type === 'boolean' ? (
-                    <button
-                      onClick={() => onSetConfig(field.key, !value)}
-                      className="touch-btn"
-                      style={{
-                        width: '56px',
-                        height: '32px',
-                        borderRadius: '16px',
-                        border: 'none',
-                        background: value ? theme.colors.primary : theme.colors.bgCardActive,
-                        cursor: 'pointer',
-                        position: 'relative',
-                        transition: `background ${theme.transition.fast}`,
-                      }}
-                    >
-                      <div style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '50%',
-                        background: '#fff',
-                        position: 'absolute',
-                        top: '3px',
-                        left: value ? '27px' : '3px',
-                        transition: `left ${theme.transition.fast}`,
-                      }} />
-                    </button>
-                  ) : field.type === 'select' && field.options ? (
-                    <CustomSelect
-                      value={String(value)}
-                      options={field.options.map(o => ({ value: o.value, label: o.label }))}
-                      onChange={(v) => onSetConfig(field.key, v)}
-                    />
-                  ) : field.type === 'number' ? (
-                    <input
-                      type="number"
-                      value={value ?? ''}
-                      onChange={(e) => onSetConfig(field.key, e.target.value === '' ? field.default : Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: `${theme.space.sm} ${theme.space.md}`,
-                        background: theme.colors.bgPrimary,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radius.sm,
-                        color: theme.colors.textPrimary,
-                        fontSize: theme.fontSize.sm,
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        minHeight: '44px',
-                      }}
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      value={value ?? ''}
-                      onChange={(e) => onSetConfig(field.key, e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: `${theme.space.sm} ${theme.space.md}`,
-                        background: theme.colors.bgPrimary,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radius.sm,
-                        color: theme.colors.textPrimary,
-                        fontSize: theme.fontSize.sm,
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        minHeight: '44px',
-                      }}
-                    />
-                  )}
-
-                  {field.description && (
-                    <div style={{
-                      fontSize: theme.fontSize.xs,
-                      color: theme.colors.textMuted,
-                      marginTop: theme.space.xs,
-                    }}>
-                      {field.description}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         {/* Data Sources Section */}
         <div style={{
@@ -745,6 +610,153 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
             </div>
           )}
         </div>
+
+        {/* Advanced Settings (collapsible, contains config fields) */}
+        {configSchema.length > 0 && (
+          <div style={{ marginTop: theme.space.md }}>
+            <button
+              onClick={() => setAdvancedExpanded(!advancedExpanded)}
+              className="touch-btn"
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: `${theme.space.sm} ${theme.space.md}`,
+                background: theme.colors.bgCard,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: advancedExpanded ? `${theme.radius.md} ${theme.radius.md} 0 0` : theme.radius.md,
+                color: theme.colors.textMuted,
+                fontSize: theme.fontSize.sm,
+                cursor: 'pointer',
+                minHeight: '44px',
+              }}
+            >
+              <span>{t('plugins.advanced_settings') || 'Advanced Settings'}</span>
+              <svg
+                width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2"
+                style={{
+                  transform: advancedExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {advancedExpanded && (
+              <div style={{
+                padding: theme.space.md,
+                background: theme.colors.bgCard,
+                border: `1px solid ${theme.colors.border}`,
+                borderTop: 'none',
+                borderRadius: `0 0 ${theme.radius.md} ${theme.radius.md}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: theme.space.md,
+              }}>
+                {configSchema.map((field) => {
+                  const value = pluginConfig[field.key] ?? field.default;
+
+                  return (
+                    <div key={field.key}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: theme.fontSize.sm,
+                        color: theme.colors.textPrimary,
+                        marginBottom: theme.space.xs,
+                        fontWeight: theme.fontWeight.medium,
+                      }}>
+                        {field.label}
+                      </label>
+
+                      {field.type === 'boolean' ? (
+                        <button
+                          onClick={() => onSetConfig(field.key, !value)}
+                          className="touch-btn"
+                          style={{
+                            width: '56px',
+                            height: '32px',
+                            borderRadius: '16px',
+                            border: 'none',
+                            background: value ? theme.colors.primary : theme.colors.bgCardActive,
+                            cursor: 'pointer',
+                            position: 'relative',
+                            transition: `background ${theme.transition.fast}`,
+                          }}
+                        >
+                          <div style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            background: '#fff',
+                            position: 'absolute',
+                            top: '3px',
+                            left: value ? '27px' : '3px',
+                            transition: `left ${theme.transition.fast}`,
+                          }} />
+                        </button>
+                      ) : field.type === 'select' && field.options ? (
+                        <CustomSelect
+                          value={String(value)}
+                          options={field.options.map(o => ({ value: o.value, label: o.label }))}
+                          onChange={(v) => onSetConfig(field.key, v)}
+                        />
+                      ) : field.type === 'number' ? (
+                        <input
+                          type="number"
+                          value={value ?? ''}
+                          onChange={(e) => onSetConfig(field.key, e.target.value === '' ? field.default : Number(e.target.value))}
+                          style={{
+                            width: '100%',
+                            padding: `${theme.space.sm} ${theme.space.md}`,
+                            background: theme.colors.bgPrimary,
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: theme.radius.sm,
+                            color: theme.colors.textPrimary,
+                            fontSize: theme.fontSize.sm,
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                            minHeight: '44px',
+                          }}
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={value ?? ''}
+                          onChange={(e) => onSetConfig(field.key, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: `${theme.space.sm} ${theme.space.md}`,
+                            background: theme.colors.bgPrimary,
+                            border: `1px solid ${theme.colors.border}`,
+                            borderRadius: theme.radius.sm,
+                            color: theme.colors.textPrimary,
+                            fontSize: theme.fontSize.sm,
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                            minHeight: '44px',
+                          }}
+                        />
+                      )}
+
+                      {field.description && (
+                        <div style={{
+                          fontSize: theme.fontSize.xs,
+                          color: theme.colors.textMuted,
+                          marginTop: theme.space.xs,
+                        }}>
+                          {field.description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

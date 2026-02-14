@@ -695,8 +695,8 @@ export class WebSocketServer {
       if (nav.courseOverGround !== undefined) {
         readings.push({ category: 'navigation', sensorName: 'courseOverGround', value: nav.courseOverGround, unit: 'deg' });
       }
-      if (nav.headingMagnetic !== undefined) {
-        readings.push({ category: 'navigation', sensorName: 'heading', value: nav.headingMagnetic, unit: 'deg' });
+      if (nav.heading !== undefined) {
+        readings.push({ category: 'navigation', sensorName: 'heading', value: nav.heading, unit: 'deg' });
       }
     }
 

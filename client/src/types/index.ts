@@ -30,8 +30,7 @@ export interface NavigationData {
   position: GeoPosition;
   courseOverGround: number;
   speedOverGround: number;
-  headingMagnetic: number;
-  headingTrue: number;
+  heading: number;
   attitude: AttitudeData;
 }
 

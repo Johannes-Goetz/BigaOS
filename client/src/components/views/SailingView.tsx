@@ -33,7 +33,7 @@ export const SailingView: React.FC<SailingViewProps> = ({ sensorData }) => {
 
       <div className="grid grid-4">
         <SpeedLog speed={sensorData.navigation.speedOverGround} />
-        <Compass heading={sensorData.navigation.headingMagnetic} />
+        <Compass heading={sensorData.navigation.heading} />
         <WindInstrument
           speedApparent={sensorData.environment.wind.speedApparent}
           angleApparent={sensorData.environment.wind.angleApparent}

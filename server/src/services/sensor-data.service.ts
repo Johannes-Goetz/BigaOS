@@ -163,8 +163,7 @@ export class SensorDataService extends EventEmitter {
       position: { ...position },
       courseOverGround: heading * DEG_TO_RAD,
       speedOverGround: knotsToMs(speedKnots), // Convert to m/s
-      headingMagnetic: heading * DEG_TO_RAD,
-      headingTrue: this.normalizeAngle(heading + 12) * DEG_TO_RAD, // Add magnetic variation
+      heading: heading * DEG_TO_RAD,
       attitude: {
         roll: heelAngle * DEG_TO_RAD,
         pitch: this.randomVariation(2, 1) * DEG_TO_RAD,

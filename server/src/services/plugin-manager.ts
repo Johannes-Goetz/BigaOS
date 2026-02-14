@@ -12,6 +12,7 @@
 
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import {
   PluginManifest,
@@ -110,6 +111,21 @@ export class PluginManager extends EventEmitter {
 
         const defaultEnabled = false;
 
+        // Restore persisted setup message (e.g. "Reboot required")
+        // Clear it if the system has been rebooted since the message was written
+        let setupMessage: string | undefined;
+        const setupMsgFile = path.join(this.pluginsDir, dir.name, '.setup-message');
+        if (fs.existsSync(setupMsgFile)) {
+          const fileMtime = fs.statSync(setupMsgFile).mtimeMs;
+          const bootTime = Date.now() - os.uptime() * 1000;
+          if (fileMtime < bootTime) {
+            // System was rebooted since the message was written — clear it
+            fs.unlinkSync(setupMsgFile);
+          } else {
+            setupMessage = fs.readFileSync(setupMsgFile, 'utf-8').trim();
+          }
+        }
+
         this.plugins.set(manifest.id, {
           manifest,
           status: 'installed',
@@ -117,6 +133,7 @@ export class PluginManager extends EventEmitter {
           api: null,
           installedVersion: manifest.version,
           enabledByUser: states.get(manifest.id) ?? defaultEnabled,
+          setupMessage,
         });
 
         console.log(`[PluginManager] Discovered plugin: ${manifest.id} v${manifest.version}`);
@@ -345,6 +362,14 @@ export class PluginManager extends EventEmitter {
         }
       }
 
+      // Persist setup message so it survives server restarts
+      const setupMsgFile = path.join(pluginDir, '.setup-message');
+      if (setupMessage) {
+        fs.writeFileSync(setupMsgFile, setupMessage, 'utf-8');
+      } else if (fs.existsSync(setupMsgFile)) {
+        fs.unlinkSync(setupMsgFile);
+      }
+
       // Read manifest
       const manifest: PluginManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
 
@@ -395,8 +420,26 @@ export class PluginManager extends EventEmitter {
     // Remove mappings
     await this.sensorMapping.removeMappingsForPlugin(pluginId);
 
-    // Remove plugin directory
+    // Run uninstall.sh if it exists (clean up system-level changes from setup.sh)
     const pluginDir = path.join(this.pluginsDir, pluginId);
+    const uninstallScript = path.join(pluginDir, 'uninstall.sh');
+    if (fs.existsSync(uninstallScript)) {
+      console.log(`[PluginManager] Running uninstall.sh for ${pluginId}...`);
+      const { execSync } = require('child_process');
+      try {
+        const output = execSync(`sudo bash "${uninstallScript}"`, {
+          cwd: pluginDir,
+          timeout: 60000,
+          stdio: 'pipe',
+        }).toString();
+        console.log(`[PluginManager] uninstall.sh output for ${pluginId}:\n${output}`);
+      } catch (err: any) {
+        const stderr = err.stderr?.toString() || err.message;
+        console.warn(`[PluginManager] uninstall.sh failed for ${pluginId}: ${stderr}`);
+      }
+    }
+
+    // Remove plugin directory
     if (fs.existsSync(pluginDir)) {
       fs.rmSync(pluginDir, { recursive: true, force: true });
     }

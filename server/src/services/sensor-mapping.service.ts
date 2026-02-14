@@ -30,6 +30,7 @@ import {
   StandardPropulsionData,
 } from '../types/data.types';
 import { dbWorker } from './database-worker.service';
+import { getMagneticDeclination } from '../utils/magnetic-declination';
 
 // ============================================================================
 // Source Availability Types (shared with client via WebSocket)
@@ -218,8 +219,17 @@ export class SensorMappingService extends EventEmitter {
     const position = get('position') || { latitude: 0, longitude: 0, timestamp: new Date() };
     const sog = get('speed_over_ground') ?? 0;
     const cog = get('course_over_ground') ?? 0;
-    const headingMag = get('heading_magnetic') ?? 0;
-    const headingTrue = get('heading_true') ?? headingMag;
+
+    // Heading: single slot, auto-convert magnetic→true via GPS declination
+    let heading = get('heading') ?? 0;
+    const headingSourceIsMagnetic = this.isHeadingSourceMagnetic();
+    if (headingSourceIsMagnetic && position.latitude !== 0 && position.longitude !== 0) {
+      const declination = getMagneticDeclination(position.latitude, position.longitude);
+      heading = heading + declination;
+      // Normalize to [0, 2π]
+      while (heading < 0) heading += 2 * Math.PI;
+      while (heading >= 2 * Math.PI) heading -= 2 * Math.PI;
+    }
 
     // Attitude: try combined slot first, fall back to individual components
     const attitude = get('attitude') || {
@@ -244,8 +254,7 @@ export class SensorMappingService extends EventEmitter {
       position: { ...position, timestamp: position.timestamp || new Date() },
       courseOverGround: cog,
       speedOverGround: sog,
-      headingMagnetic: headingMag,
-      headingTrue: headingTrue,
+      heading,
       attitude,
     };
 
@@ -306,6 +315,17 @@ export class SensorMappingService extends EventEmitter {
       }
     }
     return null;
+  }
+
+  /**
+   * Check if the current heading source is magnetic (needs declination correction).
+   * Sources with "true" in their streamId are true heading; everything else is magnetic.
+   */
+  private isHeadingSourceMagnetic(): boolean {
+    const winner = this.getWinnerForSlot('heading');
+    if (!winner) return false;
+    // If streamId contains 'true', it's already true heading
+    return !winner.streamId.includes('true');
   }
 
   // ================================================================
@@ -460,17 +480,25 @@ export class SensorMappingService extends EventEmitter {
 
   /**
    * Auto-map a driver's declared data streams to sensor slots.
-   * Only maps to slots that don't already have an active source.
+   * Schedules mapping after a delay so only streams that are actually
+   * sending data get mapped (avoids prefilling with dead sources).
    */
   async autoMapDriver(pluginId: string, streams: DataStreamDeclaration[]): Promise<void> {
-    for (const stream of streams) {
-      const existing = this.mappings.get(stream.dataType);
-      const hasActive = existing?.some(m => m.active);
+    // Delay auto-mapping to give streams time to start sending data
+    setTimeout(async () => {
+      for (const stream of streams) {
+        const existing = this.mappings.get(stream.dataType);
+        const hasActive = existing?.some(m => m.active);
+        if (hasActive) continue;
 
-      if (!hasActive) {
+        // Only auto-map streams that have actually sent data
+        const debugKey = `${pluginId}:${stream.id}`;
+        const debugEntry = this.debugData.get(debugKey);
+        if (!debugEntry) continue;
+
         await this.setMapping(stream.dataType, pluginId, stream.id, 0);
       }
-    }
+    }, 5000);
   }
 
   /**

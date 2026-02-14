@@ -73,8 +73,7 @@ export type SensorSlotType =
   | 'position'              // { latitude: number, longitude: number }
   | 'speed_over_ground'     // number (m/s)
   | 'course_over_ground'    // number (radians)
-  | 'heading_magnetic'      // number (radians)
-  | 'heading_true'          // number (radians)
+  | 'heading'               // number (radians) — auto-converted from magnetic to true via GPS declination
   | 'attitude'              // { roll, pitch, yaw } (combined, radians)
   | 'roll'                  // number (radians) - individual component
   | 'pitch'                 // number (radians) - individual component

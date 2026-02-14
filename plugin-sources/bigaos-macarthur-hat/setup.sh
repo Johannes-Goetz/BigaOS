@@ -68,6 +68,16 @@ if [ -f "$BOOT_CONFIG" ]; then
     echo "I2C already enabled"
   fi
 
+  # ── Ensure i2c-dev module loads at boot (creates /dev/i2c-*) ──
+  if [ ! -f /etc/modules-load.d/i2c-dev.conf ]; then
+    echo "i2c-dev" > /etc/modules-load.d/i2c-dev.conf
+    echo "i2c-dev module configured for auto-load"
+    # Load it now if not already loaded
+    modprobe i2c-dev 2>/dev/null || true
+  else
+    echo "i2c-dev module already configured"
+  fi
+
   # ── Add CAN overlay ──────────────────────────────────────
   if ! grep -q "^dtoverlay=mcp251xfd" "$BOOT_CONFIG"; then
     echo "dtoverlay=mcp251xfd,spi0-1,oscillator=20000000,interrupt=25" >> "$BOOT_CONFIG"

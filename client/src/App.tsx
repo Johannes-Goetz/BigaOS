@@ -143,7 +143,8 @@ function AppContent() {
 
     wsService.on('system_shutting_down', () => {
       setSystemShuttingDown(true);
-      startReloadPoll();
+      // Clear overlay after 5s so normal "Server Unreachable" banner takes over
+      setTimeout(() => setSystemShuttingDown(false), 5000);
     });
 
     // Listen for new version available (broadcast once by server per new version)

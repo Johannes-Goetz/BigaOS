@@ -665,6 +665,7 @@ update.never_checked=Never
 update.just_now=Just now
 update.ago={time} ago
 update.check_failed=Could not check for updates
+update.view_changelog=View changelog
 update.new_version_available=BigaOS v{version} is available
 update.overlay_title=Updating BigaOS
 update.overlay_message=This may take a minute. The app will reconnect automatically.

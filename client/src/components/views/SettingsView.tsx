@@ -590,18 +590,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
               }}>
                 {t('update.available')}: v{updateInfo.latestVersion}
               </div>
-              {updateInfo.releaseNotes && (
-                <div style={{
+              <a
+                href={`https://github.com/BigaOSTeam/BigaOS/releases/tag/v${updateInfo.latestVersion}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
                   fontSize: theme.fontSize.sm,
-                  color: theme.colors.textMuted,
-                  lineHeight: 1.5,
-                  maxHeight: '120px',
-                  overflow: 'auto',
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {updateInfo.releaseNotes}
-                </div>
-              )}
+                  color: theme.colors.primary,
+                  textDecoration: 'underline',
+                }}
+              >
+                {t('update.view_changelog')}
+              </a>
             </div>
             <button
               onClick={handleInstallUpdate}

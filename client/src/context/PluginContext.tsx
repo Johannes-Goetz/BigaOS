@@ -177,21 +177,26 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [pluginConfigs, setPluginConfigs] = useState<Record<string, Record<string, any>>>({});
 
   useEffect(() => {
-    const handlePluginSync = (data: { plugins: PluginInfo[] }) => {
-      setPlugins(data.plugins);
-    };
-
-    const handlePluginUpdate = (data: { plugins: PluginInfo[] }) => {
-      setPlugins(data.plugins);
-      // Clear installing state for plugins that are now installed
+    const clearInstallingPlugins = (plugins: PluginInfo[]) => {
       setInstallingPlugins(prev => {
-        const installedIds = new Set(data.plugins.map(p => p.id));
+        if (prev.size === 0) return prev;
+        const installedIds = new Set(plugins.map(p => p.id));
         const next = new Set(prev);
         for (const id of prev) {
           if (installedIds.has(id)) next.delete(id);
         }
         return next.size === prev.size ? prev : next;
       });
+    };
+
+    const handlePluginSync = (data: { plugins: PluginInfo[] }) => {
+      setPlugins(data.plugins);
+      clearInstallingPlugins(data.plugins);
+    };
+
+    const handlePluginUpdate = (data: { plugins: PluginInfo[] }) => {
+      setPlugins(data.plugins);
+      clearInstallingPlugins(data.plugins);
       // Refresh registry so marketplace shows updated install state
       wsService.emit('plugin_fetch_registry', {});
     };

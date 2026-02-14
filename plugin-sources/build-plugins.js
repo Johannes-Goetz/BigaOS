@@ -35,18 +35,12 @@ async function buildPlugin(pluginId) {
   // Copy source files (skip node_modules)
   copyDirSync(srcDir, stageDir, ['node_modules']);
 
-  // Install production deps if package.json exists
-  if (fs.existsSync(path.join(stageDir, 'package.json'))) {
-    console.log('  Installing dependencies...');
-    try {
-      execSync('npm install --production --silent', {
-        cwd: stageDir,
-        timeout: 120000,
-        stdio: 'pipe',
-      });
-    } catch (err) {
-      console.warn(`  Warning: npm install failed: ${err.message}`);
-    }
+  // For plugins with package.json, DON'T bundle node_modules in the tarball.
+  // The target machine (e.g. Raspberry Pi) needs to run npm install itself
+  // so native modules like i2c-bus compile for the correct platform.
+  // The plugin manager runs npm install post-extraction.
+  if (fs.existsSync(path.join(stageDir, 'node_modules'))) {
+    fs.rmSync(path.join(stageDir, 'node_modules'), { recursive: true });
   }
 
   // Create tarball using Node's tar module (works cross-platform)

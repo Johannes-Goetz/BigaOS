@@ -264,7 +264,7 @@ export class WebSocketServer {
 
       socket.on('system_reboot', () => {
         console.log('[WebSocket] System reboot requested by client');
-        this.broadcastSystemUpdating();
+        this.broadcastSystemRebooting();
         const { exec } = require('child_process');
         setTimeout(() => {
           exec('sudo /sbin/reboot', (err: any) => {
@@ -771,6 +771,12 @@ export class WebSocketServer {
    */
   public broadcastSystemUpdating(): void {
     this.io.emit('system_updating', {
+      timestamp: new Date(),
+    });
+  }
+
+  public broadcastSystemRebooting(): void {
+    this.io.emit('system_rebooting', {
       timestamp: new Date(),
     });
   }

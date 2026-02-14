@@ -665,3 +665,5 @@ update.check_failed=Could not check for updates
 update.new_version_available=BigaOS v{version} is available
 update.overlay_title=Updating BigaOS
 update.overlay_message=This may take a minute. The app will reconnect automatically.
+reboot.overlay_title=Rebooting
+reboot.overlay_message=The system is restarting. The app will reconnect automatically.

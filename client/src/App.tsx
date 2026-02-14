@@ -31,6 +31,7 @@ function AppContent() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [systemUpdating, setSystemUpdating] = useState(false);
+  const [systemRebooting, setSystemRebooting] = useState(false);
   const systemUpdatingRef = useRef(false);
   const wasOfflineRef = useRef<boolean | null>(null);
   const { setCurrentDepth } = useSettings();
@@ -116,10 +117,27 @@ function AppContent() {
       }
     });
 
-    // Listen for system update events
+    // Listen for system update/reboot events
+    const startReloadPoll = () => {
+      // Fallback: poll the server health endpoint in case WebSocket
+      // reconnection event doesn't fire reliably after a full reboot.
+      const poll = setInterval(() => {
+        fetch('/health').then(r => {
+          if (r.ok) { clearInterval(poll); window.location.reload(); }
+        }).catch(() => {});
+      }, 3000);
+    };
+
     wsService.on('system_updating', () => {
       setSystemUpdating(true);
       systemUpdatingRef.current = true;
+      startReloadPoll();
+    });
+
+    wsService.on('system_rebooting', () => {
+      setSystemRebooting(true);
+      systemUpdatingRef.current = true;
+      startReloadPoll();
     });
 
     // Listen for new version available (broadcast once by server per new version)
@@ -255,9 +273,11 @@ function AppContent() {
     return null;
   };
 
-  // System updating overlay (full screen)
+  // System updating/rebooting overlay (full screen)
   const SystemUpdatingOverlay = () => {
-    if (!systemUpdating) return null;
+    if (!systemUpdating && !systemRebooting) return null;
+    const title = systemRebooting ? t('reboot.overlay_title') : t('update.overlay_title');
+    const message = systemRebooting ? t('reboot.overlay_message') : t('update.overlay_message');
     return (
       <div style={{
         position: 'fixed',
@@ -286,7 +306,7 @@ function AppContent() {
           fontWeight: 600,
           color: '#e0e0e0',
         }}>
-          {t('update.overlay_title')}
+          {title}
         </div>
         <div style={{
           fontSize: '0.9rem',
@@ -294,7 +314,7 @@ function AppContent() {
           textAlign: 'center',
           maxWidth: '300px',
         }}>
-          {t('update.overlay_message')}
+          {message}
         </div>
       </div>
     );

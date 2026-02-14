@@ -278,10 +278,11 @@ export class PluginManager extends EventEmitter {
 
       const buffer = Buffer.from(await response.arrayBuffer());
 
-      // Create plugin directory
-      if (!fs.existsSync(pluginDir)) {
-        fs.mkdirSync(pluginDir, { recursive: true });
+      // Clean existing plugin directory (removes stale node_modules from previous install)
+      if (fs.existsSync(pluginDir)) {
+        fs.rmSync(pluginDir, { recursive: true, force: true });
       }
+      fs.mkdirSync(pluginDir, { recursive: true });
 
       // Extract tarball
       const tar = await import('tar');

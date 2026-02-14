@@ -138,6 +138,9 @@ interface PluginContextType {
   pluginConfigs: Record<string, Record<string, any>>;
   loadPluginConfig: (pluginId: string, keys: string[]) => void;
   setPluginConfig: (pluginId: string, key: string, value: any) => void;
+
+  // System actions
+  rebootSystem: () => void;
 }
 
 // ============================================================================
@@ -269,6 +272,10 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     wsService.emit('plugin_config_set', { pluginId, key, value });
   }, []);
 
+  const rebootSystem = useCallback(() => {
+    wsService.emit('system_reboot', {});
+  }, []);
+
   const isDemoActive = plugins.some(p => p.id === 'bigaos-demo-driver' && p.status === 'enabled');
   const isChartOnly = plugins.some(p => p.id === 'bigaos-chart-only' && p.status === 'enabled');
 
@@ -293,6 +300,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     pluginConfigs,
     loadPluginConfig,
     setPluginConfig,
+    rebootSystem,
   };
 
   return (

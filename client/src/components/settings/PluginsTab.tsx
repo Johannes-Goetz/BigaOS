@@ -50,6 +50,7 @@ export const PluginsTab: React.FC = () => {
     pluginConfigs,
     loadPluginConfig,
     setPluginConfig,
+    rebootSystem,
   } = usePlugins();
 
   const [subTab, setSubTab] = useState<SubTab>('installed');
@@ -361,11 +362,44 @@ export const PluginsTab: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm }}>
-              {/* Update button if registry has a newer version */}
+              {/* Update button OR Reboot button if setup requires reboot */}
               {(() => {
                 const rp = registryPlugins.find(r => r.id === plugin.id);
-                if (!rp || !rp.hasUpdate) return null;
+                const needsReboot = plugin.setupMessage?.toLowerCase().includes('reboot');
+                const hasUpdate = rp && rp.hasUpdate;
                 const isUpdating = installingPlugins.has(plugin.id);
+
+                if (needsReboot && !hasUpdate) {
+                  return (
+                    <button
+                      onClick={() => rebootSystem()}
+                      className="touch-btn"
+                      style={{
+                        padding: `${theme.space.sm} ${theme.space.md}`,
+                        background: theme.colors.warning,
+                        border: 'none',
+                        borderRadius: theme.radius.sm,
+                        color: '#000',
+                        fontSize: theme.fontSize.sm,
+                        fontWeight: theme.fontWeight.medium,
+                        cursor: 'pointer',
+                        minHeight: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: theme.space.xs,
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M23 4v6h-6" />
+                        <path d="M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                      </svg>
+                      {t('plugins.reboot')}
+                    </button>
+                  );
+                }
+
+                if (!hasUpdate) return null;
                 return (
                   <button
                     onClick={() => !isUpdating && installPlugin(plugin.id, rp.latestVersion)}

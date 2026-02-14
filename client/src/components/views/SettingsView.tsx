@@ -22,6 +22,7 @@ import { dataAPI, DataFileInfo, DownloadProgress, offlineMapsAPI, StorageStats, 
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { AlertsTab } from '../settings/AlertsTab';
 import { PluginsTab } from '../settings/PluginsTab';
+import { TerminalPanel } from '../settings/TerminalPanel';
 
 import { wsService } from '../../services/websocket';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -1614,6 +1615,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab 
   // Render Advanced Tab
   const renderAdvancedTab = () => (
     <div>
+      {/* Terminal / Server Logs */}
+      <TerminalPanel />
+
+      <div style={{
+        borderTop: `1px solid ${theme.colors.border}`,
+        margin: `${theme.space.lg} 0`,
+      }} />
+
       {/* Maps & Tiles subsection */}
       <div style={{
         fontSize: theme.fontSize.sm,

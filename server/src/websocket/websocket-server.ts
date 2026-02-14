@@ -262,6 +262,66 @@ export class WebSocketServer {
         socket.emit('plugin_config_sync', { pluginId: data.pluginId, config: { [data.key]: data.value } });
       });
 
+      socket.on('system_reboot', () => {
+        console.log('[WebSocket] System reboot requested by client');
+        this.broadcastSystemUpdating();
+        const { exec } = require('child_process');
+        setTimeout(() => {
+          exec('sudo reboot', (err: any) => {
+            if (err) console.error('[WebSocket] Reboot failed:', err.message);
+          });
+        }, 1000);
+      });
+
+      // ================================================================
+      // Terminal / Log Handlers
+      // ================================================================
+
+      socket.on('terminal_logs', (data: { lines?: number }) => {
+        const { exec } = require('child_process');
+        const lines = data?.lines || 200;
+        exec(`journalctl -u bigaos --no-pager -n ${lines} --output=short-iso`, { maxBuffer: 1024 * 512 }, (err: any, stdout: string, stderr: string) => {
+          socket.emit('terminal_logs_sync', {
+            logs: err ? `Error reading logs: ${err.message}` : stdout,
+            timestamp: new Date(),
+          });
+        });
+      });
+
+      let logTailProcess: any = null;
+      socket.on('terminal_logs_follow', (data: { follow: boolean }) => {
+        const { spawn } = require('child_process');
+        if (data.follow) {
+          if (logTailProcess) { try { logTailProcess.kill(); } catch {} }
+          logTailProcess = spawn('journalctl', ['-u', 'bigaos', '--no-pager', '-f', '--output=short-iso'], { stdio: ['ignore', 'pipe', 'pipe'] });
+          logTailProcess.stdout.on('data', (chunk: Buffer) => {
+            socket.emit('terminal_log_line', { line: chunk.toString() });
+          });
+          logTailProcess.on('close', () => { logTailProcess = null; });
+        } else {
+          if (logTailProcess) { try { logTailProcess.kill(); } catch {} logTailProcess = null; }
+        }
+      });
+
+      socket.on('terminal_exec', (data: { command: string }) => {
+        const { exec } = require('child_process');
+        const cmd = data.command?.trim();
+        if (!cmd) return;
+        exec(cmd, { timeout: 30000, maxBuffer: 1024 * 256 }, (err: any, stdout: string, stderr: string) => {
+          socket.emit('terminal_exec_result', {
+            command: cmd,
+            stdout: stdout || '',
+            stderr: stderr || '',
+            exitCode: err ? err.code || 1 : 0,
+            timestamp: new Date(),
+          });
+        });
+      });
+
+      socket.on('disconnect', () => {
+        if (logTailProcess) { try { logTailProcess.kill(); } catch {} logTailProcess = null; }
+      });
+
       // ================================================================
       // Sensor Mapping Handlers
       // ================================================================

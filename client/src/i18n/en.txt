@@ -334,6 +334,17 @@ advanced.map_tiles_info=Map Tiles: Use standard XYZ tile format with placeholder
 advanced.geocoding_info=Geocoding: Used for location search. Default uses Photon (free, CORS-enabled).
 advanced.weather_info=Weather: Uses Open-Meteo (free, no API key). Wind and marine data fetched automatically based on boat position.
 
+# ==================== Terminal ====================
+terminal.title=Server Terminal
+terminal.refresh=Refresh
+terminal.follow=Follow
+terminal.following=Following
+terminal.reboot=Reboot
+terminal.loading=Loading logs...
+terminal.placeholder=Enter command...
+terminal.run=Run
+terminal.quick_commands=Quick Commands
+
 # ==================== Offline Maps ====================
 offline_maps.download_new_region=Download New Region
 offline_maps.region_name_placeholder=Region name (e.g., 'Baltic Sea')
@@ -603,6 +614,7 @@ plugins.uninstall_title=Uninstall Plugin
 plugins.uninstall_message=Are you sure you want to uninstall this plugin? This cannot be undone.
 plugins.update=Update
 plugins.updating=Updating...
+plugins.reboot=Reboot
 plugins.installing=Installing...
 plugins.refresh=Refresh
 plugins.no_plugins=No plugins installed

@@ -334,6 +334,17 @@ advanced.map_tiles_info=Kartenkacheln: Verwenden Sie das Standard-XYZ-Kachelform
 advanced.geocoding_info=Geocoding: Wird für die Ortssuche verwendet. Standard ist Photon (kostenlos, CORS-fähig).
 advanced.weather_info=Wetter: Verwendet Open-Meteo (kostenlos, kein API-Schlüssel). Wind- und Marinedaten werden automatisch basierend auf der Bootsposition abgerufen.
 
+# ==================== Terminal ====================
+terminal.title=Server-Terminal
+terminal.refresh=Aktualisieren
+terminal.follow=Folgen
+terminal.following=Folgend
+terminal.reboot=Neustart
+terminal.loading=Lade Logs...
+terminal.placeholder=Befehl eingeben...
+terminal.run=Ausführen
+terminal.quick_commands=Schnellbefehle
+
 # ==================== Offline-Karten ====================
 offline_maps.download_new_region=Neue Region herunterladen
 offline_maps.region_name_placeholder=Regionsname (z.B. 'Ostsee')
@@ -603,6 +614,7 @@ plugins.uninstall_title=Plugin deinstallieren
 plugins.uninstall_message=Sind Sie sicher, dass Sie dieses Plugin deinstallieren möchten? Dies kann nicht rückgängig gemacht werden.
 plugins.update=Aktualisieren
 plugins.updating=Aktualisiere...
+plugins.reboot=Neustart
 plugins.installing=Installiere...
 plugins.refresh=Aktualisieren
 plugins.no_plugins=Keine Plugins installiert

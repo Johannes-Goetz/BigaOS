@@ -333,7 +333,7 @@ export class PluginManager extends EventEmitter {
           }).toString();
           console.log(`[PluginManager] setup.sh output for ${registryEntry.id}:\n${output}`);
           if (output.includes('REBOOT_REQUIRED')) {
-            setupMessage = 'Reboot required to enable CAN bus hardware';
+            setupMessage = 'Reboot required to apply hardware changes';
           }
         } catch (setupErr: any) {
           const stderr = setupErr.stderr?.toString() || setupErr.message;

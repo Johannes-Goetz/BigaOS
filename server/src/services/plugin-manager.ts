@@ -174,8 +174,9 @@ export class PluginManager extends EventEmitter {
       plugin.status = 'enabled';
       plugin.error = undefined;
 
-      // Auto-map driver streams
+      // Register stream metadata and auto-map driver streams
       if (plugin.manifest.type === 'driver' && plugin.manifest.driver?.dataStreams) {
+        this.sensorMapping.registerStreamMeta(pluginId, plugin.manifest.name, plugin.manifest.driver.dataStreams);
         await this.sensorMapping.autoMapDriver(pluginId, plugin.manifest.driver.dataStreams);
       }
 
@@ -217,8 +218,9 @@ export class PluginManager extends EventEmitter {
       plugin.api.dispose();
     }
 
-    // Clear sensor data from this plugin
+    // Clear sensor data and stream metadata from this plugin
     this.sensorMapping.clearPacketData(pluginId);
+    this.sensorMapping.clearStreamMeta(pluginId);
 
     plugin.module = null;
     plugin.api = null;

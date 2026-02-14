@@ -4,9 +4,9 @@
  * Opens as a full-screen dialog from a settings button on driver plugin cards.
  * Features:
  * - Plugin config fields rendered from configSchema
- * - Stream list with status indicators, toggles, and conflict warnings
- * - Rename support for custom (non-core) sensors
- * - Collapsible debug section with raw values
+ * - Data source selection: per-slot dropdowns showing available sources
+ * - Sources dynamically detected based on live data flow
+ * - Collapsible debug section showing ALL raw data from all interfaces
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,27 +15,70 @@ import {
   PluginInfo,
   SensorMappingInfo,
   DebugDataEntry,
+  SlotAvailability,
+  SourceInfo,
 } from '../../context/PluginContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
 import { CustomSelect } from '../ui/CustomSelect';
 
-// Core sensor types used by chart/navigation - not renameable
-const CORE_SENSOR_TYPES = new Set([
-  'position',
-  'heading',
-  'depth',
-  'speed_through_water',
-  'roll',
-  'pitch',
-  'wind_speed',
-  'wind_angle',
-]);
+// ============================================================================
+// Slot type labels and categories
+// ============================================================================
+
+const SLOT_LABELS: Record<string, string> = {
+  position: 'GPS Position',
+  course_over_ground: 'Course Over Ground',
+  speed_over_ground: 'Speed Over Ground',
+  heading_magnetic: 'Heading (Magnetic)',
+  heading_true: 'Heading (True)',
+  speed_through_water: 'Speed Through Water',
+  depth: 'Depth',
+  roll: 'Roll',
+  pitch: 'Pitch',
+  yaw: 'Yaw',
+  rudder_angle: 'Rudder Angle',
+  wind_speed_apparent: 'Wind Speed (Apparent)',
+  wind_angle_apparent: 'Wind Angle (Apparent)',
+  wind_speed_true: 'Wind Speed (True)',
+  wind_angle_true: 'Wind Angle (True)',
+  voltage: 'Battery Voltage',
+  current: 'Battery Current',
+  temperature: 'Temperature',
+  soc: 'State of Charge',
+  rpm: 'Engine RPM',
+  water_temperature: 'Water Temperature',
+  barometric_pressure: 'Atmospheric Pressure',
+  humidity: 'Humidity',
+  fuel_level: 'Fuel Level',
+};
+
+const SLOT_CATEGORIES: [string, string[]][] = [
+  ['Navigation', ['position', 'course_over_ground', 'speed_over_ground', 'heading_magnetic', 'heading_true', 'speed_through_water', 'roll', 'pitch', 'yaw', 'rudder_angle']],
+  ['Environment', ['depth', 'wind_speed_apparent', 'wind_angle_apparent', 'wind_speed_true', 'wind_angle_true', 'water_temperature', 'barometric_pressure', 'humidity']],
+  ['Electrical', ['voltage', 'current', 'temperature', 'soc']],
+  ['Propulsion', ['rpm', 'fuel_level']],
+];
+
+const INTERFACE_LABELS: Record<string, string> = {
+  nmea2000: 'NMEA 2000',
+  nmea0183: 'NMEA 0183',
+  imu: 'IMU',
+  i2c: 'I\u00B2C',
+  demo: 'Demo',
+  gps: 'GPS',
+  serial: 'Serial',
+};
+
+// ============================================================================
+// Component
+// ============================================================================
 
 interface DriverSettingsDialogProps {
   plugin: PluginInfo;
   sensorMappings: SensorMappingInfo[];
   debugData: DebugDataEntry[];
+  sourceAvailability: SlotAvailability[];
   allDriverPlugins: PluginInfo[];
   pluginConfig: Record<string, any>;
   onSetMapping: (slotType: string, pluginId: string, streamId: string) => void;
@@ -45,19 +88,11 @@ interface DriverSettingsDialogProps {
   onClose: () => void;
 }
 
-interface DataStream {
-  id: string;
-  name: string;
-  dataType: string;
-  unit: string;
-  updateRate?: number;
-  description?: string;
-}
-
 export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   plugin,
   sensorMappings,
   debugData,
+  sourceAvailability,
   allDriverPlugins,
   pluginConfig,
   onSetMapping,
@@ -69,11 +104,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   const { t, language } = useLanguage();
   const { timeFormat } = useSettings();
   const [debugExpanded, setDebugExpanded] = useState(false);
-  const [renamingStream, setRenamingStream] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const [customNames, setCustomNames] = useState<Record<string, string>>({});
 
-  const streams: DataStream[] = plugin.manifest.driver?.dataStreams || [];
   const configSchema = plugin.manifest.driver?.configSchema || [];
 
   const PROTOCOL_NAMES: Record<string, string> = {
@@ -92,90 +123,124 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
     return () => clearInterval(interval);
   }, [debugExpanded, onRefreshMappings]);
 
-  // Get the active mapping for this plugin's stream
-  const getMappingForStream = useCallback((stream: DataStream): SensorMappingInfo | undefined => {
-    return sensorMappings.find(
-      m => m.slotType === stream.dataType && m.pluginId === plugin.id && m.streamId === stream.id && m.active
-    );
-  }, [sensorMappings, plugin.id]);
+  // Auto-refresh source availability every 3 seconds when dialog is open
+  useEffect(() => {
+    const interval = setInterval(onRefreshMappings, 3000);
+    return () => clearInterval(interval);
+  }, [onRefreshMappings]);
 
-  // Check if stream is enabled (has an active mapping)
-  const isStreamEnabled = useCallback((stream: DataStream): boolean => {
-    return !!getMappingForStream(stream);
-  }, [getMappingForStream]);
+  // Build a lookup: slotType -> SlotAvailability
+  const availabilityBySlot = new Map<string, SlotAvailability>();
+  for (const slot of sourceAvailability) {
+    availabilityBySlot.set(slot.slotType, slot);
+  }
 
-  // Get status indicator for a stream
-  const getStreamStatus = useCallback((stream: DataStream) => {
-    const mapping = getMappingForStream(stream);
-    if (!mapping || !mapping.lastUpdate) {
-      return { color: theme.colors.textMuted, label: t('plugins.no_data') };
-    }
-    const age = Date.now() - new Date(mapping.lastUpdate).getTime();
-    if (age < 3000) {
-      return { color: '#22c55e', label: t('plugins.data_flowing') };
-    }
-    if (age < 10000) {
-      return { color: theme.colors.warning, label: t('plugins.data_stale') };
-    }
-    return { color: theme.colors.error, label: t('plugins.data_stale') };
-  }, [getMappingForStream, t]);
+  // Get all slot types that have at least one source
+  const availableSlotTypes = new Set(sourceAvailability.map(s => s.slotType));
 
-  // Find conflicting mapping from another enabled driver for the same data type
-  const getConflict = useCallback((stream: DataStream): { pluginName: string; isCore: boolean } | null => {
-    const conflicting = sensorMappings.find(
-      m => m.slotType === stream.dataType && m.active && m.pluginId !== plugin.id
-    );
-    if (!conflicting) return null;
+  // Get the selected source for a slot type
+  const getSelectedSource = useCallback((slotType: string): SourceInfo | null => {
+    const slot = availabilityBySlot.get(slotType);
+    if (!slot) return null;
+    return slot.sources.find(s => s.selected) ?? null;
+  }, [availabilityBySlot]);
 
-    // Only show conflict if the other plugin is actually enabled
-    const otherPlugin = allDriverPlugins.find(p => p.id === conflicting.pluginId);
-    if (!otherPlugin || otherPlugin.status !== 'enabled') return null;
+  // Get dropdown value for a slot
+  const getDropdownValue = useCallback((slotType: string): string => {
+    const selected = getSelectedSource(slotType);
+    if (!selected) return 'off';
+    return `${selected.pluginId}:${selected.streamId}`;
+  }, [getSelectedSource]);
 
-    const isCore = CORE_SENSOR_TYPES.has(stream.dataType);
-    return {
-      pluginName: otherPlugin.manifest.name,
-      isCore,
-    };
-  }, [sensorMappings, plugin.id, allDriverPlugins]);
-
-  // Toggle a stream on/off
-  const handleToggleStream = useCallback((stream: DataStream) => {
-    if (isStreamEnabled(stream)) {
-      onRemoveMapping(stream.dataType, plugin.id, stream.id);
-    } else {
-      onSetMapping(stream.dataType, plugin.id, stream.id);
-    }
-  }, [isStreamEnabled, onRemoveMapping, onSetMapping, plugin.id]);
-
-  // Start renaming a stream
-  const startRename = (stream: DataStream) => {
-    setRenamingStream(stream.id);
-    setRenameValue(customNames[stream.id] || stream.name);
+  // Get interface label
+  const getInterfaceLabel = (iface: string): string => {
+    return INTERFACE_LABELS[iface] || iface || 'Unknown';
   };
 
-  // Confirm rename
-  const confirmRename = (streamId: string) => {
-    const trimmed = renameValue.trim();
-    if (trimmed) {
-      setCustomNames(prev => ({ ...prev, [streamId]: trimmed }));
-    }
-    setRenamingStream(null);
-  };
+  // Build dropdown options for a slot
+  const getDropdownOptions = useCallback((slotType: string) => {
+    const options: { value: string; label: string }[] = [
+      { value: 'off', label: 'Off' },
+    ];
 
-  // Get display name for a stream
-  const getDisplayName = (stream: DataStream): string => {
-    return customNames[stream.id] || stream.name;
-  };
+    const slot = availabilityBySlot.get(slotType);
+    if (!slot) return options;
+
+    for (const source of slot.sources) {
+      // Show alive sources + the currently selected source (even if dead)
+      if (source.alive || source.selected) {
+        const ifaceLabel = getInterfaceLabel(source.interface);
+        const label = `${source.pluginName} (${ifaceLabel})`;
+        options.push({
+          value: `${source.pluginId}:${source.streamId}`,
+          label,
+        });
+      }
+    }
+
+    return options;
+  }, [availabilityBySlot]);
+
+  // Handle dropdown change for a slot
+  const handleSourceChange = useCallback((slotType: string, value: string) => {
+    // First, remove any existing active mapping for this slot
+    const existingMappings = sensorMappings.filter(m => m.slotType === slotType && m.active);
+    for (const mapping of existingMappings) {
+      onRemoveMapping(slotType, mapping.pluginId, mapping.streamId);
+    }
+
+    // Then set the new mapping (unless "off")
+    if (value !== 'off') {
+      const [pluginId, streamId] = value.split(':');
+      if (pluginId && streamId) {
+        onSetMapping(slotType, pluginId, streamId);
+      }
+    }
+  }, [sensorMappings, onRemoveMapping, onSetMapping]);
+
+  // Get status color for a slot
+  const getSlotStatusColor = useCallback((slotType: string): string => {
+    const selected = getSelectedSource(slotType);
+    if (!selected) return theme.colors.textMuted; // off / gray
+    if (selected.alive) return '#22c55e'; // green
+    return theme.colors.warning; // orange / stale
+  }, [getSelectedSource]);
 
   // Format debug values
   const formatValue = (value: any): string => {
     if (value === undefined || value === null) return '---';
     if (typeof value === 'object') return JSON.stringify(value);
-    if (typeof value === 'number') return value.toFixed(2);
+    if (typeof value === 'number') return value.toFixed(4);
     return String(value);
   };
 
-  const pluginDebugData = debugData.filter(d => d.pluginId === plugin.id);
+  // Get interface label for a debug entry from stream meta
+  const getDebugInterfaceLabel = (entry: DebugDataEntry): string => {
+    // Look up in source availability data
+    for (const slot of sourceAvailability) {
+      for (const source of slot.sources) {
+        if (source.pluginId === entry.pluginId && source.streamId === entry.streamId) {
+          return getInterfaceLabel(source.interface);
+        }
+      }
+    }
+    return '';
+  };
+
+  // Group debug data by plugin
+  const debugByPlugin = new Map<string, DebugDataEntry[]>();
+  for (const entry of debugData) {
+    if (!debugByPlugin.has(entry.pluginId)) {
+      debugByPlugin.set(entry.pluginId, []);
+    }
+    debugByPlugin.get(entry.pluginId)!.push(entry);
+  }
+
+  // Get plugin name for debug header
+  const getPluginName = (pluginId: string): string => {
+    const p = allDriverPlugins.find(dp => dp.id === pluginId);
+    return p?.manifest.name ?? pluginId;
+  };
 
   return (
     <div
@@ -199,7 +264,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
           borderRadius: theme.radius.lg,
           padding: theme.space.xl,
           width: '100%',
-          maxWidth: '500px',
+          maxWidth: '520px',
           maxHeight: '90vh',
           overflow: 'auto',
           boxShadow: theme.shadow.lg,
@@ -379,16 +444,30 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
           </div>
         )}
 
-        {/* Stream List */}
-        {streams.length === 0 ? (
+        {/* Data Sources Section */}
+        <div style={{
+          fontSize: theme.fontSize.sm,
+          fontWeight: theme.fontWeight.semibold,
+          color: theme.colors.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginBottom: theme.space.sm,
+        }}>
+          {t('plugins.data_sources') || 'Data Sources'}
+        </div>
+
+        {sourceAvailability.length === 0 ? (
           <div style={{
             padding: theme.space.lg,
             color: theme.colors.textMuted,
             fontSize: theme.fontSize.sm,
             fontStyle: 'italic',
             textAlign: 'center',
+            background: theme.colors.bgCard,
+            borderRadius: theme.radius.md,
+            border: `1px solid ${theme.colors.border}`,
           }}>
-            {t('plugins.no_streams')}
+            {t('plugins.no_streams') || 'No data sources detected'}
           </div>
         ) : (
           <div style={{
@@ -397,176 +476,171 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
             border: `1px solid ${theme.colors.border}`,
             overflow: 'hidden',
           }}>
-            {streams.map((stream, idx) => {
-              const enabled = isStreamEnabled(stream);
-              const status = getStreamStatus(stream);
-              const conflict = enabled ? getConflict(stream) : null;
-              const isCore = CORE_SENSOR_TYPES.has(stream.dataType);
-              const isRenaming = renamingStream === stream.id;
+            {SLOT_CATEGORIES.map(([category, slotTypes]) => {
+              // Only show categories that have at least one available slot
+              const visibleSlots = slotTypes.filter(st => availableSlotTypes.has(st));
+              if (visibleSlots.length === 0) return null;
 
               return (
-                <div key={stream.id}>
-                  {/* Stream Row */}
+                <div key={category}>
+                  {/* Category header */}
                   <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: `${theme.space.sm} ${theme.space.md}`,
-                    minHeight: '52px',
-                    gap: theme.space.md,
-                    borderBottom: idx < streams.length - 1 ? `1px solid ${theme.colors.border}` : 'none',
+                    padding: `${theme.space.xs} ${theme.space.md}`,
+                    background: theme.colors.bgCardActive,
+                    fontSize: theme.fontSize.xs,
+                    fontWeight: theme.fontWeight.semibold,
+                    color: theme.colors.textMuted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    borderBottom: `1px solid ${theme.colors.border}`,
                   }}>
-                    {/* Status dot */}
-                    <div style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: enabled ? status.color : theme.colors.textMuted,
-                      flexShrink: 0,
-                    }} />
+                    {category}
+                  </div>
 
-                    {/* Stream info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {isRenaming ? (
-                        <div style={{ display: 'flex', gap: theme.space.xs, alignItems: 'center' }}>
-                          <input
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') confirmRename(stream.id);
-                              if (e.key === 'Escape') setRenamingStream(null);
-                            }}
-                            autoFocus
-                            style={{
-                              flex: 1,
-                              background: theme.colors.bgPrimary,
-                              border: `1px solid ${theme.colors.primary}`,
-                              borderRadius: theme.radius.sm,
-                              color: theme.colors.textPrimary,
-                              fontSize: theme.fontSize.sm,
-                              padding: `${theme.space.xs} ${theme.space.sm}`,
-                              outline: 'none',
-                            }}
-                          />
-                          <button
-                            onClick={() => confirmRename(stream.id)}
-                            className="touch-btn"
-                            style={{
-                              background: theme.colors.primary,
-                              border: 'none',
-                              borderRadius: theme.radius.sm,
-                              color: '#fff',
-                              padding: `${theme.space.xs} ${theme.space.sm}`,
-                              fontSize: theme.fontSize.xs,
-                              cursor: 'pointer',
-                              minWidth: '44px',
-                              minHeight: '32px',
-                            }}
-                          >
-                            OK
-                          </button>
+                  {/* Slot rows */}
+                  {visibleSlots.map((slotType, idx) => {
+                    const statusColor = getSlotStatusColor(slotType);
+                    const options = getDropdownOptions(slotType);
+                    const currentValue = getDropdownValue(slotType);
+
+                    return (
+                      <div
+                        key={slotType}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: `${theme.space.sm} ${theme.space.md}`,
+                          minHeight: '48px',
+                          gap: theme.space.md,
+                          borderBottom: idx < visibleSlots.length - 1 ? `1px solid ${theme.colors.border}` : 'none',
+                        }}
+                      >
+                        {/* Status dot */}
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: statusColor,
+                          flexShrink: 0,
+                        }} />
+
+                        {/* Slot label */}
+                        <div style={{
+                          flex: 1,
+                          fontSize: theme.fontSize.sm,
+                          color: theme.colors.textPrimary,
+                          minWidth: 0,
+                        }}>
+                          {SLOT_LABELS[slotType] || slotType}
                         </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.xs }}>
-                          <div>
-                            <div style={{
-                              fontSize: theme.fontSize.sm,
-                              color: theme.colors.textPrimary,
-                            }}>
-                              {getDisplayName(stream)}
-                            </div>
+
+                        {/* Source dropdown */}
+                        <div style={{ width: '180px', flexShrink: 0 }}>
+                          {options.length <= 1 ? (
+                            // Only "Off" available — show as disabled text
                             <div style={{
                               fontSize: theme.fontSize.xs,
                               color: theme.colors.textMuted,
+                              fontStyle: 'italic',
+                              textAlign: 'right',
+                              padding: `${theme.space.xs} 0`,
                             }}>
-                              {stream.dataType} - {stream.unit}
+                              Off
                             </div>
-                          </div>
-                          {/* Rename button for non-core sensors */}
-                          {!isCore && (
-                            <button
-                              onClick={() => startRename(stream)}
-                              className="touch-btn"
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: theme.colors.textMuted,
-                                cursor: 'pointer',
-                                padding: theme.space.xs,
-                                minWidth: '32px',
-                                minHeight: '32px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                              </svg>
-                            </button>
+                          ) : (
+                            <CustomSelect
+                              compact
+                              value={currentValue}
+                              options={options}
+                              onChange={(v) => handleSourceChange(slotType, v)}
+                            />
                           )}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Toggle switch */}
-                    <button
-                      onClick={() => handleToggleStream(stream)}
-                      className="touch-btn"
-                      style={{
-                        width: '56px',
-                        height: '32px',
-                        borderRadius: '16px',
-                        border: 'none',
-                        background: enabled ? theme.colors.primary : theme.colors.bgCardActive,
-                        cursor: 'pointer',
-                        position: 'relative',
-                        transition: `background ${theme.transition.fast}`,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <div style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '50%',
-                        background: '#fff',
-                        position: 'absolute',
-                        top: '3px',
-                        left: enabled ? '27px' : '3px',
-                        transition: `left ${theme.transition.fast}`,
-                      }} />
-                    </button>
-                  </div>
-
-                  {/* Conflict warning */}
-                  {conflict && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: theme.space.sm,
-                      padding: `${theme.space.xs} ${theme.space.md}`,
-                      background: `${theme.colors.warning}15`,
-                      borderLeft: `3px solid ${theme.colors.warning}`,
-                      fontSize: theme.fontSize.xs,
-                      color: theme.colors.warning,
-                      borderBottom: idx < streams.length - 1 ? `1px solid ${theme.colors.border}` : 'none',
-                    }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                      </svg>
-                      <span>
-                        {t('plugins.conflict_warning', {
-                          plugin: conflict.pluginName,
-                          dataType: stream.dataType,
-                        })}
-                      </span>
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
+
+            {/* Show any slot types not covered by SLOT_CATEGORIES */}
+            {(() => {
+              const categorizedSlots = new Set(SLOT_CATEGORIES.flatMap(([, slots]) => slots));
+              const uncategorized = [...availableSlotTypes].filter(st => !categorizedSlots.has(st));
+              if (uncategorized.length === 0) return null;
+
+              return (
+                <div>
+                  <div style={{
+                    padding: `${theme.space.xs} ${theme.space.md}`,
+                    background: theme.colors.bgCardActive,
+                    fontSize: theme.fontSize.xs,
+                    fontWeight: theme.fontWeight.semibold,
+                    color: theme.colors.textMuted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                  }}>
+                    Other
+                  </div>
+                  {uncategorized.map((slotType, idx) => {
+                    const statusColor = getSlotStatusColor(slotType);
+                    const options = getDropdownOptions(slotType);
+                    const currentValue = getDropdownValue(slotType);
+
+                    return (
+                      <div
+                        key={slotType}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: `${theme.space.sm} ${theme.space.md}`,
+                          minHeight: '48px',
+                          gap: theme.space.md,
+                          borderBottom: idx < uncategorized.length - 1 ? `1px solid ${theme.colors.border}` : 'none',
+                        }}
+                      >
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: statusColor,
+                          flexShrink: 0,
+                        }} />
+                        <div style={{
+                          flex: 1,
+                          fontSize: theme.fontSize.sm,
+                          color: theme.colors.textPrimary,
+                          minWidth: 0,
+                        }}>
+                          {SLOT_LABELS[slotType] || slotType}
+                        </div>
+                        <div style={{ width: '180px', flexShrink: 0 }}>
+                          {options.length <= 1 ? (
+                            <div style={{
+                              fontSize: theme.fontSize.xs,
+                              color: theme.colors.textMuted,
+                              fontStyle: 'italic',
+                              textAlign: 'right',
+                              padding: `${theme.space.xs} 0`,
+                            }}>
+                              Off
+                            </div>
+                          ) : (
+                            <CustomSelect
+                              compact
+                              value={currentValue}
+                              options={options}
+                              onChange={(v) => handleSourceChange(slotType, v)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -590,7 +664,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
               minHeight: '44px',
             }}
           >
-            <span>{t('plugins.debug')}</span>
+            <span>{t('plugins.debug') || 'Debug'}</span>
             <svg
               width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2"
@@ -611,7 +685,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
               borderTop: 'none',
               borderRadius: `0 0 ${theme.radius.md} ${theme.radius.md}`,
             }}>
-              {pluginDebugData.length === 0 ? (
+              {debugData.length === 0 ? (
                 <div style={{
                   fontSize: theme.fontSize.xs,
                   color: theme.colors.textMuted,
@@ -619,7 +693,7 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
                   textAlign: 'center',
                   padding: theme.space.md,
                 }}>
-                  {t('plugins.debug_no_data')}
+                  {t('plugins.debug_no_data') || 'No data received yet'}
                 </div>
               ) : (
                 <div style={{
@@ -628,27 +702,44 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
                   maxHeight: '60vh',
                   overflowY: 'auto',
                 }}>
-                  {pluginDebugData.map((entry, idx) => {
-                    const streamDef = streams.find(s => s.id === entry.streamId);
-                    return (
-                    <div key={idx} style={{
-                      display: 'flex',
-                      gap: theme.space.sm,
-                      padding: `${theme.space.xs} 0`,
-                      borderBottom: idx < pluginDebugData.length - 1 ? `1px solid ${theme.colors.border}20` : 'none',
-                    }}>
-                      <span style={{ color: theme.colors.primary, minWidth: '120px' }}>
-                        {entry.streamId}{streamDef ? ` (${streamDef.name})` : ''}
-                      </span>
-                      <span style={{ color: theme.colors.textPrimary, flex: 1 }}>
-                        {formatValue(entry.value)}
-                      </span>
-                      <span style={{ color: theme.colors.textMuted }}>
-                        {new Date(entry.timestamp).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: timeFormat === '12h' })}
-                      </span>
+                  {[...debugByPlugin.entries()].map(([pluginId, entries]) => (
+                    <div key={pluginId}>
+                      {/* Plugin header */}
+                      <div style={{
+                        padding: `${theme.space.xs} 0`,
+                        fontSize: theme.fontSize.xs,
+                        fontWeight: theme.fontWeight.semibold,
+                        color: theme.colors.textMuted,
+                        borderBottom: `1px solid ${theme.colors.border}40`,
+                        marginTop: theme.space.xs,
+                      }}>
+                        {getPluginName(pluginId)}
+                      </div>
+
+                      {entries.map((entry, idx) => {
+                        const ifaceLabel = getDebugInterfaceLabel(entry);
+                        return (
+                          <div key={`${pluginId}-${idx}`} style={{
+                            display: 'flex',
+                            gap: theme.space.sm,
+                            padding: `${theme.space.xs} 0`,
+                            borderBottom: idx < entries.length - 1 ? `1px solid ${theme.colors.border}20` : 'none',
+                          }}>
+                            <span style={{ color: theme.colors.primary, minWidth: '130px' }}>
+                              {entry.streamId}
+                              {ifaceLabel ? ` (${ifaceLabel})` : ''}
+                            </span>
+                            <span style={{ color: theme.colors.textPrimary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {formatValue(entry.value)}
+                            </span>
+                            <span style={{ color: theme.colors.textMuted, flexShrink: 0 }}>
+                              {new Date(entry.timestamp).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: timeFormat === '12h' })}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               )}
             </div>

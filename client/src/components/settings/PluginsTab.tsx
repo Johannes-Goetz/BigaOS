@@ -44,6 +44,7 @@ export const PluginsTab: React.FC = () => {
     disablePlugin,
     sensorMappings,
     debugData,
+    sourceAvailability,
     setMapping,
     removeMapping,
     refreshMappings,
@@ -760,6 +761,7 @@ export const PluginsTab: React.FC = () => {
           plugin={settingsPlugin}
           sensorMappings={sensorMappings}
           debugData={debugData}
+          sourceAvailability={sourceAvailability}
           allDriverPlugins={plugins.filter(p => p.manifest.type === 'driver')}
           pluginConfig={pluginConfigs[settingsPlugin.id] || {}}
           onSetMapping={setMapping}

@@ -75,11 +75,23 @@ export type SensorSlotType =
   | 'course_over_ground'    // number (radians)
   | 'heading_magnetic'      // number (radians)
   | 'heading_true'          // number (radians)
-  | 'attitude'              // { roll, pitch, yaw }
+  | 'attitude'              // { roll, pitch, yaw } (combined, radians)
+  | 'roll'                  // number (radians) - individual component
+  | 'pitch'                 // number (radians) - individual component
+  | 'yaw'                   // number (radians) - individual component
+  | 'rudder_angle'          // number (radians)
+  | 'speed_through_water'   // number (m/s)
   // Environment
   | 'depth'                 // number (meters)
-  | 'wind_apparent'         // { speed: number, angle: number } (m/s, radians)
-  | 'wind_true'             // { speed: number, angle: number } (m/s, radians)
+  | 'wind_apparent'         // { speed: number, angle: number } (m/s, radians) - combined
+  | 'wind_true'             // { speed: number, angle: number } (m/s, radians) - combined
+  | 'wind_speed_apparent'   // number (m/s) - individual component
+  | 'wind_angle_apparent'   // number (radians) - individual component
+  | 'wind_speed_true'       // number (m/s) - individual component
+  | 'wind_angle_true'       // number (radians) - individual component
+  | 'water_temperature'     // number (Kelvin)
+  | 'barometric_pressure'   // number (Pa)
+  | 'humidity'              // number (Percentage 0-100)
   | 'temperature_engine'    // number (Kelvin)
   | 'temperature_cabin'     // number (Kelvin)
   | 'temperature_outside'   // number (Kelvin)
@@ -89,10 +101,16 @@ export type SensorSlotType =
   | 'battery_current'       // number (Amps)
   | 'battery_soc'           // number (Percentage 0-100)
   | 'battery_temperature'   // number (Kelvin)
+  | 'voltage'               // number (Volts) - generic
+  | 'current'               // number (Amps) - generic
+  | 'soc'                   // number (Percentage 0-100) - generic
+  | 'temperature'           // number (Kelvin) - generic
   // Propulsion
   | 'motor_state'           // 'running' | 'stopped'
   | 'motor_temperature'     // number (Kelvin)
   | 'motor_throttle'        // number (Percentage 0-100)
+  | 'rpm'                   // number
+  | 'fuel_level'            // number (Percentage 0-100)
   // Custom (plugins can use any string)
   | string;
 
@@ -106,6 +124,7 @@ export interface DataStreamDeclaration {
   unit: string;                       // Unit of output data (e.g., "degrees", "m/s")
   updateRate?: number;                // Expected Hz (for UI display)
   description?: string;               // What this stream provides
+  interface?: string;                 // Source interface, e.g. "nmea2000", "imu", "gps"
 }
 
 /**

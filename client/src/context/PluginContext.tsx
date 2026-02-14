@@ -98,6 +98,22 @@ export interface DebugDataEntry {
   timestamp: string;
 }
 
+export interface SourceInfo {
+  pluginId: string;
+  streamId: string;
+  pluginName: string;
+  streamName: string;
+  interface: string;
+  alive: boolean;
+  lastUpdate?: string;
+  selected: boolean;
+}
+
+export interface SlotAvailability {
+  slotType: string;
+  sources: SourceInfo[];
+}
+
 // ============================================================================
 // Context Interface
 // ============================================================================
@@ -129,6 +145,7 @@ interface PluginContextType {
   // Sensor mappings
   sensorMappings: SensorMappingInfo[];
   debugData: DebugDataEntry[];
+  sourceAvailability: SlotAvailability[];
   setMapping: (slotType: string, pluginId: string, streamId: string) => void;
   removeMapping: (slotType: string, pluginId: string, streamId: string) => void;
   autoMapDriver: (pluginId: string) => void;
@@ -156,6 +173,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(new Set());
   const [sensorMappings, setSensorMappings] = useState<SensorMappingInfo[]>([]);
   const [debugData, setDebugData] = useState<DebugDataEntry[]>([]);
+  const [sourceAvailability, setSourceAvailability] = useState<SlotAvailability[]>([]);
   const [pluginConfigs, setPluginConfigs] = useState<Record<string, Record<string, any>>>({});
 
   useEffect(() => {
@@ -178,15 +196,21 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       wsService.emit('plugin_fetch_registry', {});
     };
 
-    const handleMappingsSync = (data: { mappings: SensorMappingInfo[]; debugData?: DebugDataEntry[] }) => {
+    const handleMappingsSync = (data: { mappings: SensorMappingInfo[]; debugData?: DebugDataEntry[]; sourceAvailability?: SlotAvailability[] }) => {
       setSensorMappings(data.mappings);
       if (data.debugData) {
         setDebugData(data.debugData);
       }
+      if (data.sourceAvailability) {
+        setSourceAvailability(data.sourceAvailability);
+      }
     };
 
-    const handleMappingsUpdated = (data: { mappings: SensorMappingInfo[] }) => {
+    const handleMappingsUpdated = (data: { mappings: SensorMappingInfo[]; sourceAvailability?: SlotAvailability[] }) => {
       setSensorMappings(data.mappings);
+      if (data.sourceAvailability) {
+        setSourceAvailability(data.sourceAvailability);
+      }
     };
 
     const handleRegistrySync = (data: { plugins: RegistryPlugin[] }) => {
@@ -293,6 +317,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     disablePlugin,
     sensorMappings,
     debugData,
+    sourceAvailability,
     setMapping,
     removeMapping,
     autoMapDriver,

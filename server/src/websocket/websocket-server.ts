@@ -122,9 +122,10 @@ export class WebSocketServer {
     // Sensor mapping events
     const sensorMapping = this.dataController.getSensorMappingService();
     if (sensorMapping) {
-      sensorMapping.on('mappings_updated', (mappings: any) => {
+      sensorMapping.on('mappings_updated', (data: any) => {
         this.io.emit('sensor_mappings_updated', {
-          mappings,
+          mappings: data.mappings,
+          sourceAvailability: data.sourceAvailability,
           timestamp: new Date(),
         });
       });
@@ -333,6 +334,7 @@ export class WebSocketServer {
             socket.emit('sensor_mappings_sync', {
               mappings: sm.getMappings(),
               debugData: sm.getDebugData(),
+              sourceAvailability: sm.getSourceAvailability(),
               timestamp: new Date(),
             });
           }
@@ -503,6 +505,7 @@ export class WebSocketServer {
         socket.emit('sensor_mappings_sync', {
           mappings: sm.getMappings(),
           debugData: sm.getDebugData(),
+          sourceAvailability: sm.getSourceAvailability(),
           timestamp: new Date(),
         });
       }

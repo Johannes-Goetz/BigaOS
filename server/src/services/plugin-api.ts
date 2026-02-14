@@ -46,10 +46,19 @@ export class PluginAPI {
 
   /**
    * Push a single sensor value into the data pipeline.
-   * The value must be in STANDARD units (m/s, meters, Kelvin, etc.).
+   *
+   * Value MUST be in NMEA2000 standard units — convert at the plugin
+   * boundary before calling this method:
+   *   - Angles: radians (0–2π or ±π)
+   *   - Speed: m/s
+   *   - Temperature: Kelvin
+   *   - Pressure: Pa
+   *   - Depth: meters
+   *   - Voltage: V, Current: A, Percentages: 0–100
+   *   - Position: decimal degrees (latitude/longitude)
    *
    * @param streamId - The stream ID from the plugin's dataStreams declaration
-   * @param value - The value in standard units
+   * @param value - The value in NMEA2000 standard units
    * @param timestamp - Optional timestamp (defaults to now)
    */
   pushSensorValue(streamId: string, value: any, timestamp?: Date): void {

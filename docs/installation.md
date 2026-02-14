@@ -27,14 +27,16 @@ Complete guide for installing BigaOS on a Raspberry Pi. Covers initial OS setup,
 3. Choose device: **Raspberry Pi 5** (or your model)
 4. Choose OS: **Raspberry Pi OS Lite (64-bit)** (under "Raspberry Pi OS (other)")
 5. Choose storage: your MicroSD card
-6. Click the **gear icon** (or "Edit Settings") and configure:
-   - **Hostname:** `bigaos`
-   - **Enable SSH:** Yes (password authentication)
-   - **Username:** `bigaos` (or your preferred username)
+6. Click **Next**
+7. When prompted "Would you like to apply OS customisation settings?", click **Edit Settings** and configure:
+   - **Hostname:** your preference (e.g. `bigaos`)
+   - **Username:** your preference (e.g. `bigaos`)
    - **Password:** choose a secure password
    - **WiFi:** configure if not using ethernet
    - **Locale:** set your timezone
-7. Click **Write** and wait for it to finish
+   - Under the **Services** tab: enable **SSH** with password authentication
+8. Click **Save**, then **Yes** to apply the settings
+9. Confirm the write and wait for it to finish
 
 ## Step 2: First Boot
 
@@ -45,20 +47,23 @@ Complete guide for installing BigaOS on a Raspberry Pi. Covers initial OS setup,
 
 ### Connect via SSH
 
+Replace `<user>` and `<hostname>` with the values you set in the imager:
 ```bash
-ssh bigaos@bigaos.local
+ssh <user>@<hostname>.local
 ```
 
-If `bigaos.local` doesn't resolve, find the Pi's IP address from your router's admin page and use that instead:
+If the hostname doesn't resolve, find the Pi's IP address from your router's admin page and use that instead:
 ```bash
-ssh bigaos@192.168.x.x
+ssh <user>@192.168.x.x
 ```
 
-### Update the system
+### Update the system (recommended)
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
+
+This ensures you have the latest security patches before installing BigaOS. Not strictly required, but recommended.
 
 ---
 
@@ -79,41 +84,13 @@ An NVMe SSD provides significantly faster read/write speeds and more storage. Th
 lsblk
 # You should see mmcblk0 (SD card) and nvme0n1 (NVMe)
 
-# Copy the entire SD card to the NVMe drive
-sudo dd if=/dev/mmcblk0 of=/dev/nvme0n1 bs=4M status=progress conv=fsync
+# Clone the SD card to the NVMe
+sudo dd if=/dev/mmcblk0 of=/dev/nvme0n1 bs=4M status=progress
 
-# Assign a new disk ID to the NVMe to avoid PARTUUID conflicts with the SD card
-sudo sfdisk --disk-id /dev/nvme0n1 0x$(openssl rand -hex 4)
-
-# Store the new PARTUUIDs
-NEW_BOOT=$(sudo blkid -s PARTUUID -o value /dev/nvme0n1p1)
-NEW_ROOT=$(sudo blkid -s PARTUUID -o value /dev/nvme0n1p2)
-echo "Boot PARTUUID: $NEW_BOOT"
-echo "Root PARTUUID: $NEW_ROOT"
-
-# Expand the root partition to use the full NVMe capacity
-sudo parted -s /dev/nvme0n1 resizepart 2 100%
-sudo e2fsck -f /dev/nvme0n1p2
+# Expand the root partition to use the full NVMe
+sudo parted /dev/nvme0n1 resizepart 2 100%
+sudo e2fsck -fy /dev/nvme0n1p2
 sudo resize2fs /dev/nvme0n1p2
-
-# Mount the NVMe partitions
-sudo mount /dev/nvme0n1p2 /mnt
-sudo mount /dev/nvme0n1p1 /mnt/boot/firmware
-
-# Update partition references on the NVMe
-sudo sed -i "s|PARTUUID=[^ ]*\s*/boot/firmware|PARTUUID=$NEW_BOOT  /boot/firmware|" /mnt/etc/fstab
-sudo sed -i "s|PARTUUID=[^ ]*\s*/\s|PARTUUID=$NEW_ROOT  / |" /mnt/etc/fstab
-sudo sed -i "s|root=PARTUUID=[^ ]*|root=PARTUUID=$NEW_ROOT|" /mnt/boot/firmware/cmdline.txt
-
-# Verify the changes
-echo "=== fstab ==="
-cat /mnt/etc/fstab
-echo "=== cmdline.txt ==="
-cat /mnt/boot/firmware/cmdline.txt
-
-# Unmount
-sudo umount /mnt/boot/firmware
-sudo umount /mnt
 
 # Set boot order to NVMe first
 sudo raspi-config nonint do_boot_order B2
@@ -128,7 +105,7 @@ sudo shutdown -h now
 2. **Power on** the Pi
 3. Wait ~30 seconds, then SSH back in:
    ```bash
-   ssh bigaos@bigaos.local
+   ssh <user>@<hostname>.local
    ```
 4. Verify you're running from NVMe:
    ```bash
@@ -164,7 +141,7 @@ The installer takes 2-5 minutes depending on your internet speed.
 Once installed, open a browser on any device on the same network and go to:
 
 ```
-http://bigaos.local:3000
+http://<hostname>.local:3000
 ```
 
 Or use the Pi's IP address:

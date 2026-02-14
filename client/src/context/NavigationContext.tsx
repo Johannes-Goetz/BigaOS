@@ -24,7 +24,9 @@ interface NavigationProviderProps {
 }
 
 export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [activeView, setActiveView] = useState<ActiveView>(
+    localStorage.getItem('bigaos-chart-only') === '1' ? 'chart' : 'dashboard'
+  );
   const [navigationParams, setNavigationParams] = useState<NavigationParams>({});
 
   const navigate = useCallback((view: ActiveView, params?: NavigationParams) => {

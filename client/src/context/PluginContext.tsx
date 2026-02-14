@@ -317,7 +317,16 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const isDemoActive = plugins.some(p => p.id === 'bigaos-demo-driver' && p.status === 'enabled');
-  const isChartOnly = plugins.some(p => p.id === 'bigaos-chart-only' && p.status === 'enabled');
+  const isChartOnlyLive = plugins.some(p => p.id === 'bigaos-chart-only' && p.status === 'enabled');
+
+  // Persist chart-only state to localStorage so it's available before server connects
+  useEffect(() => {
+    if (plugins.length > 0) {
+      localStorage.setItem('bigaos-chart-only', isChartOnlyLive ? '1' : '0');
+    }
+  }, [isChartOnlyLive, plugins.length]);
+
+  const isChartOnly = isChartOnlyLive || (plugins.length === 0 && localStorage.getItem('bigaos-chart-only') === '1');
 
   const value: PluginContextType = {
     plugins,

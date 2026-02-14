@@ -145,11 +145,20 @@ async function startServer() {
 // Start the server
 const serverPromise = startServer();
 
+// Track whether a reboot or update is already in progress
+// so we don't show the shutdown overlay on top of them
+let systemActionInProgress = false;
+export function markSystemActionInProgress() { systemActionInProgress = true; }
+
 // Graceful shutdown
 async function shutdown(signal: string) {
   console.log(`${signal} received, shutting down gracefully...`);
   const { httpServer, wsServer } = await serverPromise;
-  wsServer.broadcastSystemShuttingDown();
+  // Only show shutdown overlay for unexpected SIGTERMs (e.g. GPIO power-off),
+  // not for reboots/updates which already have their own overlays
+  if (!systemActionInProgress) {
+    wsServer.broadcastSystemShuttingDown();
+  }
   updateService.stop();
   wsServer.stop();
   await DataController.getInstance().stop();

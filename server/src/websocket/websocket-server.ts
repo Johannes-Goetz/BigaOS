@@ -13,6 +13,7 @@
 
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import { markSystemActionInProgress } from '../index';
 import { DataController, getDataController } from '../services/data.controller';
 import { dbWorker } from '../services/database-worker.service';
 import { connectivityService } from '../services/connectivity.service';
@@ -780,12 +781,14 @@ export class WebSocketServer {
    * Stop the WebSocket server
    */
   public broadcastSystemUpdating(): void {
+    markSystemActionInProgress();
     this.io.emit('system_updating', {
       timestamp: new Date(),
     });
   }
 
   public broadcastSystemRebooting(): void {
+    markSystemActionInProgress();
     this.io.emit('system_rebooting', {
       timestamp: new Date(),
     });

@@ -213,6 +213,7 @@ function AppContent() {
       pushNotification({
         message: t('update.new_version_available', { version: data.version }),
         severity: 'info',
+        tone: 'none',
       });
     });
 
@@ -253,7 +254,7 @@ function AppContent() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
+        height: '100dvh',
         background: '#0a1929',
         color: '#e0e0e0',
       }}>
@@ -508,7 +509,7 @@ function AppContent() {
   return (
     <div style={{
       width: '100vw',
-      height: '100vh',
+      height: '100dvh',
       background: '#0a1929',
       color: '#e0e0e0',
       overflow: 'hidden',

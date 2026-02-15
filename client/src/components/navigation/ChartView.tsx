@@ -269,11 +269,13 @@ export const ChartView: React.FC<ChartViewProps> = ({
     vesselSettings,
     setVesselSettings,
     weatherSettings,
+    sidebarPosition,
   } = useSettings();
 
   const convertedSpeed = convertSpeed(speed);
   const convertedDepth = convertDepth(depth);
-  const sidebarWidth = hideSidebar ? 0 : 100;
+  const isMobile = window.innerWidth <= 600;
+  const sidebarWidth = hideSidebar ? 0 : (isMobile ? 64 : 100);
 
   // Sound is now handled centrally by AlertContainer via unified notification system
 
@@ -756,6 +758,14 @@ export const ChartView: React.FC<ChartViewProps> = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
+  // Reposition zoom controls based on sidebar position
+  useEffect(() => {
+    const zoomControl = document.querySelector('.leaflet-control-zoom') as HTMLElement;
+    if (!zoomControl) return;
+    zoomControl.style.left = sidebarPosition === 'left' ? `${sidebarWidth + 10}px` : 'auto';
+    zoomControl.style.right = sidebarPosition === 'right' ? `${sidebarWidth + 10}px` : 'auto';
+  }, [sidebarPosition, sidebarWidth]);
 
   // Disable map dragging when dialogs/menus are open
   useEffect(() => {
@@ -1373,7 +1383,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
             style={{
               position: 'absolute',
               bottom: '0.5rem',
-              right: `calc(0.75rem + ${sidebarWidth}px)`,
+              right: sidebarPosition === 'right' ? `calc(0.75rem + ${sidebarWidth}px)` : undefined,
+              left: sidebarPosition === 'left' ? `calc(0.75rem + ${sidebarWidth}px)` : undefined,
               zIndex: 1000,
             }}
           >
@@ -1442,6 +1453,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
       {weatherPanelOpen && !hideSidebar && (
         <WeatherPanel
           sidebarWidth={sidebarWidth}
+          sidebarPosition={sidebarPosition}
           enabled={weatherOverlayEnabled}
           forecastHour={weatherOverlay.forecastHour}
           displayMode={weatherOverlay.displayMode}
@@ -1654,6 +1666,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
       {/* Sidebar */}
       {!hideSidebar && (
         <ChartSidebar
+          sidebarWidth={sidebarWidth}
+          sidebarPosition={sidebarPosition}
           heading={heading}
           convertedSpeed={convertedSpeed}
           speedUnit={speedUnit}
@@ -2087,6 +2101,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
       {depthSettingsOpen && (
         <DepthSettingsPanel
           sidebarWidth={sidebarWidth}
+          sidebarPosition={sidebarPosition}
           depthUnit={depthUnit}
           depthAlarm={depthAlarm}
           soundAlarmEnabled={soundAlarmEnabled}
@@ -2100,6 +2115,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
       {searchOpen && (
         <SearchPanel
           sidebarWidth={sidebarWidth}
+          sidebarPosition={sidebarPosition}
           searchQuery={searchQuery}
           searchResults={searchResults}
           searchLoading={searchLoading}
@@ -2119,6 +2135,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
       {autopilotOpen && (
         <AutopilotPanel
           sidebarWidth={sidebarWidth}
+          sidebarPosition={sidebarPosition}
           targetHeading={autopilotHeading}
           isActive={autopilotActive}
           hasActiveNavigation={!!(navigationTarget && routeWaypoints.length >= 2)}

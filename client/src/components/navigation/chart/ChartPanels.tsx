@@ -1,12 +1,34 @@
 import React from 'react';
 import { SearchResult } from '../../../services/geocoding';
 import { CustomMarker, markerIcons } from './map-icons';
-import { useSettings, windConversions, depthConversions, temperatureConversions } from '../../../context/SettingsContext';
+import { useSettings, windConversions, depthConversions, temperatureConversions, SidebarPosition } from '../../../context/SettingsContext';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import { radToDeg, degToRad, TWO_PI } from '../../../utils/angle';
 
+// Helper to compute panel positioning based on sidebar position
+function getPanelPositionStyle(sidebarWidth: number, sidebarPosition: SidebarPosition): React.CSSProperties {
+  return {
+    top: '50%',
+    transform: 'translateY(-50%)',
+    [sidebarPosition === 'left' ? 'left' : 'right']: `${sidebarWidth + 8}px`,
+  };
+}
+
+// Helper to compute the click-outside overlay positioning
+function getOverlayStyle(sidebarWidth: number, sidebarPosition: SidebarPosition): React.CSSProperties {
+  return {
+    position: 'absolute' as const,
+    top: 0,
+    left: sidebarPosition === 'left' ? sidebarWidth : 0,
+    right: sidebarPosition === 'right' ? sidebarWidth : 0,
+    bottom: 0,
+    zIndex: 1000,
+  };
+}
+
 interface DepthSettingsPanelProps {
   sidebarWidth: number;
+  sidebarPosition?: SidebarPosition;
   depthUnit: string;
   depthAlarm: number | null;
   soundAlarmEnabled: boolean;
@@ -17,6 +39,7 @@ interface DepthSettingsPanelProps {
 
 export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
   sidebarWidth,
+  sidebarPosition = 'left',
   depthUnit,
   depthAlarm,
   soundAlarmEnabled,
@@ -33,11 +56,9 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
       <div
         style={{
           position: 'absolute',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          right: `${sidebarWidth + 8}px`,
-          width: `${settingsPanelWidth}px`,
-          maxHeight: 'calc(100vh - 32px)',
+          ...getPanelPositionStyle(sidebarWidth, sidebarPosition),
+          width: `min(${settingsPanelWidth}px, calc(100vw - ${sidebarWidth + 16}px))`,
+          maxHeight: 'calc(100dvh - 32px)',
           overflowY: 'auto',
           background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -128,11 +149,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
           if (e.detail === 1) onClose();
         }}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: sidebarWidth,
-          bottom: 0,
+          ...getOverlayStyle(sidebarWidth, sidebarPosition),
           zIndex: 999,
         }}
       />
@@ -142,6 +159,7 @@ export const DepthSettingsPanel: React.FC<DepthSettingsPanelProps> = ({
 
 interface SearchPanelProps {
   sidebarWidth: number;
+  sidebarPosition?: SidebarPosition;
   searchQuery: string;
   searchResults: SearchResult[];
   searchLoading: boolean;
@@ -155,6 +173,7 @@ interface SearchPanelProps {
 
 interface AutopilotPanelProps {
   sidebarWidth: number;
+  sidebarPosition?: SidebarPosition;
   targetHeading: number;
   isActive: boolean;
   hasActiveNavigation: boolean;
@@ -168,6 +187,7 @@ interface AutopilotPanelProps {
 
 export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
   sidebarWidth,
+  sidebarPosition = 'left',
   targetHeading,
   isActive,
   hasActiveNavigation,
@@ -197,11 +217,9 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
       <div
         style={{
           position: 'absolute',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          right: `${sidebarWidth + 8}px`,
-          width: `${settingsPanelWidth}px`,
-          maxHeight: 'calc(100vh - 32px)',
+          ...getPanelPositionStyle(sidebarWidth, sidebarPosition),
+          width: `min(${settingsPanelWidth}px, calc(100vw - ${sidebarWidth + 16}px))`,
+          maxHeight: 'calc(100dvh - 32px)',
           overflowY: 'auto',
           background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -373,11 +391,7 @@ export const AutopilotPanel: React.FC<AutopilotPanelProps> = ({
           if (e.detail === 1) onClose();
         }}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: sidebarWidth,
-          bottom: 0,
+          ...getOverlayStyle(sidebarWidth, sidebarPosition),
           zIndex: 999,
         }}
       />
@@ -390,6 +404,7 @@ type WeatherDisplayMode = 'wind' | 'waves' | 'swell' | 'current' | 'water-temp';
 
 interface WeatherPanelProps {
   sidebarWidth: number;
+  sidebarPosition?: SidebarPosition;
   enabled: boolean;
   forecastHour: number;
   displayMode: WeatherDisplayMode;
@@ -425,6 +440,7 @@ const DISPLAY_MODES: { mode: WeatherDisplayMode; label: string }[] = [
 
 export const WeatherPanel: React.FC<WeatherPanelProps> = ({
   sidebarWidth,
+  sidebarPosition = 'left',
   enabled,
   forecastHour,
   displayMode,
@@ -533,11 +549,9 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
       <div
         style={{
           position: 'absolute',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          right: `${sidebarWidth + 8}px`,
-          width: `${settingsPanelWidth}px`,
-          maxHeight: 'calc(100vh - 32px)',
+          ...getPanelPositionStyle(sidebarWidth, sidebarPosition),
+          width: `min(${settingsPanelWidth}px, calc(100vw - ${sidebarWidth + 16}px))`,
+          maxHeight: 'calc(100dvh - 32px)',
           overflowY: 'auto',
           background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -1124,11 +1138,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
             if (e.detail === 1) onClose();
           }}
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: sidebarWidth,
-            bottom: 0,
+            ...getOverlayStyle(sidebarWidth, sidebarPosition),
             zIndex: 999,
           }}
         />
@@ -1139,6 +1149,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
 
 export const SearchPanel: React.FC<SearchPanelProps> = ({
   sidebarWidth,
+  sidebarPosition = 'left',
   searchQuery,
   searchResults,
   searchLoading,
@@ -1165,11 +1176,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       <div
         style={{
           position: 'absolute',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          right: `${sidebarWidth + 8}px`,
-          width: '340px',
-          maxHeight: 'calc(100vh - 32px)',
+          ...getPanelPositionStyle(sidebarWidth, sidebarPosition),
+          width: `min(340px, calc(100vw - ${sidebarWidth + 16}px))`,
+          maxHeight: 'calc(100dvh - 32px)',
           background: 'rgb(10, 25, 41)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: '6px',
@@ -1428,11 +1437,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           if (e.detail === 1) onClose();
         }}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: sidebarWidth,
-          bottom: 0,
+          ...getOverlayStyle(sidebarWidth, sidebarPosition),
           zIndex: 999,
         }}
       />

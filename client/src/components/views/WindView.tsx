@@ -59,7 +59,7 @@ export const WindView: React.FC<WindViewProps> = ({ sensorData, onClose }) => {
   return (
     <div style={{
       width: '100vw',
-      height: '100vh',
+      height: '100dvh',
       background: '#0a1929',
       color: '#e0e0e0',
       display: 'flex',

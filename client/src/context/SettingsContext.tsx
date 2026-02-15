@@ -13,6 +13,7 @@ export type WeightUnit = 'kg' | 'lbs';
 export type TemperatureUnit = '°C' | '°F';
 export type TimeFormat = '12h' | '24h';
 export type DateFormat = 'DD/MM/YYYY' | 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
+export type SidebarPosition = 'left' | 'right';
 
 export interface MapTileUrls {
   streetMap: string;
@@ -370,6 +371,10 @@ interface SettingsContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
 
+  // Sidebar position
+  sidebarPosition: SidebarPosition;
+  setSidebarPosition: (position: SidebarPosition) => void;
+
   // Sync status
   isSynced: boolean;
 }
@@ -424,6 +429,7 @@ const defaultSettings = {
   depthAlarm: null as number | null,
   soundAlarmEnabled: false,
   language: DEFAULT_LANGUAGE as LanguageCode,
+  sidebarPosition: 'left' as SidebarPosition,
   vesselSettings: defaultVesselSettings,
   weatherSettings: defaultWeatherSettings,
   alertSettings: DEFAULT_ALERT_SETTINGS,
@@ -452,6 +458,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
   const [language, setLanguageState] = useState<LanguageCode>(defaultSettings.language);
+  const [sidebarPosition, setSidebarPositionState] = useState<SidebarPosition>(defaultSettings.sidebarPosition);
   const [mapTileUrls, setMapTileUrlsState] = useState<MapTileUrls>(defaultSettings.mapTileUrls);
   const [apiUrls, setApiUrlsState] = useState<ApiUrls>(defaultSettings.apiUrls);
   const [vesselSettings, setVesselSettingsState] = useState<VesselSettings>(defaultSettings.vesselSettings);
@@ -496,6 +503,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // They come from the dedicated depth_alarm_sync event (AlertService is authoritative).
       if (data.settings.language) {
         setLanguageState(data.settings.language);
+      }
+      if (data.settings.sidebarPosition) {
+        setSidebarPositionState(data.settings.sidebarPosition);
       }
       if (data.settings.mapTileUrls) {
         setMapTileUrlsState(data.settings.mapTileUrls);
@@ -554,6 +564,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'language':
           setLanguageState(data.value);
+          break;
+        case 'sidebarPosition':
+          setSidebarPositionState(data.value);
           break;
         case 'mapTileUrls':
           setMapTileUrlsState(data.value);
@@ -711,6 +724,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateServerSetting('language', lang);
   }, [updateServerSetting]);
 
+  const setSidebarPosition = useCallback((position: SidebarPosition) => {
+    setSidebarPositionState(position);
+    updateServerSetting('sidebarPosition', position);
+  }, [updateServerSetting]);
+
   const setMapTileUrls = useCallback((urls: MapTileUrls) => {
     setMapTileUrlsState(urls);
     updateServerSetting('mapTileUrls', urls);
@@ -825,6 +843,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     isDepthAlarmTriggered,
     language,
     setLanguage,
+    sidebarPosition,
+    setSidebarPosition,
     convertSpeed,
     convertWind,
     convertDepth,

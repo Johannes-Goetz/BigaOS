@@ -212,7 +212,7 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose, onOpenSettings }) => 
     return (
       <div style={{
         width: '100%',
-        height: '100vh',
+        height: '100dvh',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -236,7 +236,7 @@ export const MapPage: React.FC<MapPageProps> = ({ onClose, onOpenSettings }) => 
   const speed = demoMode ? dummySpeed : sensorData.navigation.speedOverGround;
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative', background: '#0a1929' }}>
+    <div style={{ width: '100%', height: '100dvh', position: 'relative', background: '#0a1929' }}>
       {/* Full screen map */}
       <ChartView
         position={position}

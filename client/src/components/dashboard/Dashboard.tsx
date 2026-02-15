@@ -516,7 +516,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       onTouchEnd={handleTouchEnd}
       style={{
         width: '100vw',
-        height: '100vh',
+        height: '100dvh',
         overflow: 'hidden',
         position: 'relative',
       }}

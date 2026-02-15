@@ -118,7 +118,8 @@ html, body {
   color: var(--color-text-primary);
   overflow: hidden;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   position: fixed;
   top: 0;
   left: 0;
@@ -217,10 +218,10 @@ html, body {
 
 .leaflet-control-zoom {
   position: fixed !important;
-  top: 50% !important;
-  right: 110px !important;
-  left: auto !important;
-  transform: translateY(-50%) !important;
+  top: 50%;
+  right: 110px;
+  left: auto;
+  transform: translateY(-50%);
   border: none !important;
   box-shadow: none !important;
 }
@@ -249,6 +250,7 @@ html, body {
 .leaflet-control-zoom a:not(:active) {
   background-color: var(--color-bg-secondary) !important;
 }
+
 
 /* Only apply hover styles on devices that support hover (not touch) */
 @media (hover: hover) and (pointer: fine) {
@@ -522,6 +524,19 @@ html, body {
 @media (hover: hover) and (pointer: fine) {
   .chart-sidebar-btn:hover:not(.active) {
     background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Compact sidebar buttons in landscape / short viewports */
+@media (max-height: 500px) {
+  .chart-sidebar-btn {
+    height: 40px;
+  }
+  .chart-sidebar-btn.with-label {
+    gap: 0.1rem;
+  }
+  .chart-sidebar-btn.with-label span {
+    display: none;
   }
 }
 

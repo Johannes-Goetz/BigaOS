@@ -326,7 +326,7 @@ export const PluginsTab: React.FC = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {/* Update button OR Reboot button if setup requires reboot */}
               {(() => {
                 const rp = registryPlugins.find(r => r.id === plugin.id);

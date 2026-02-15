@@ -454,7 +454,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
 
       {/* Software Update Section */}
       <SLabel>{t('update.title')}</SLabel>
-      <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm, marginBottom: theme.space.xl }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: theme.space.sm, marginBottom: theme.space.xl }}>
         {/* Version info box */}
         <div style={{
           flex: 1,

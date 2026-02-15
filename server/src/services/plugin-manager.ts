@@ -331,6 +331,13 @@ export class PluginManager extends EventEmitter {
 
     const pluginDir = path.join(this.pluginsDir, registryEntry.id);
 
+    // If updating an existing plugin, preserve state and deactivate first
+    const existingPlugin = this.plugins.get(registryEntry.id);
+    const wasEnabled = existingPlugin?.enabledByUser ?? false;
+    if (existingPlugin?.module) {
+      await this.deactivatePlugin(registryEntry.id);
+    }
+
     try {
       // Download tarball from GitHub
       const response = await fetch(versionEntry.downloadUrl);
@@ -421,19 +428,25 @@ export class PluginManager extends EventEmitter {
       // Load plugin i18n files if declared
       const i18n = this.loadPluginI18n(manifest.id, manifest);
 
-      // Add to plugins map
+      // Add to plugins map (preserve enabledByUser for updates)
       this.plugins.set(manifest.id, {
         manifest,
         status: 'installed',
         module: null,
         api: null,
         installedVersion: manifest.version,
-        enabledByUser: false,
+        enabledByUser: wasEnabled,
         setupMessage,
         i18n,
       });
 
       console.log(`[PluginManager] Installed: ${manifest.id} v${manifest.version}`);
+
+      // Re-activate if the plugin was previously enabled
+      if (wasEnabled) {
+        await this.activatePlugin(manifest.id);
+      }
+
       this.emitPluginUpdate();
       return true;
     } catch (err: any) {

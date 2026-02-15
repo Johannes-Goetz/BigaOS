@@ -202,7 +202,21 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handlePluginUpdate = (data: { plugins: PluginInfo[] }) => {
       setPlugins(data.plugins);
       clearInstallingPlugins(data.plugins);
-      // Refresh registry so marketplace shows updated install state
+
+      // Locally update registry entries so hasUpdate clears immediately
+      const installedVersions = new Map(data.plugins.map(p => [p.id, p.installedVersion]));
+      setRegistryPlugins(prev => prev.map(rp => {
+        const newVersion = installedVersions.get(rp.id);
+        if (!newVersion || newVersion === rp.installedVersion) return rp;
+        return {
+          ...rp,
+          isInstalled: true,
+          installedVersion: newVersion,
+          hasUpdate: newVersion !== rp.latestVersion,
+        };
+      }));
+
+      // Also refresh from server for full accuracy
       wsService.emit('plugin_fetch_registry', {});
     };
 

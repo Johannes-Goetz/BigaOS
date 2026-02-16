@@ -5,12 +5,14 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { wsService } from '../../services/websocket';
 import { SButton, SCard, SInput, SLabel, SSection } from '../ui/SettingsUI';
+import { AddPhoneDialog } from './AddPhoneDialog';
 
 // Raw client data from server (snake_case fields)
 interface RawClient {
   id: string;
   name: string;
   user_agent?: string;
+  client_type?: string;
   created_at: string;
   last_seen_at: string;
 }
@@ -22,6 +24,7 @@ export const ClientsTab: React.FC = () => {
   const [clients, setClients] = useState<RawClient[]>([]);
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [showAddPhone, setShowAddPhone] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +112,16 @@ export const ClientsTab: React.FC = () => {
   return (
     <div>
       <SSection>
-        <SLabel>{t('clients.title')}</SLabel>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.space.md }}>
+          <SLabel style={{ marginBottom: 0 }}>{t('clients.title')}</SLabel>
+          <SButton variant="primary" onClick={() => setShowAddPhone(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: theme.space.xs }}>
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <line x1="12" y1="18" x2="12.01" y2="18" />
+            </svg>
+            {t('clients.add_phone')}
+          </SButton>
+        </div>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: theme.space.xl, color: theme.colors.textMuted }}>
@@ -137,7 +149,7 @@ export const ClientsTab: React.FC = () => {
                   style={{ padding: theme.space.lg }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignSelf: 'stretch' }}>
                       {isEditing ? (
                         <div style={{ display: 'flex', gap: theme.space.sm, alignItems: 'center', marginBottom: theme.space.xs }}>
                           <div style={{ flex: 1 }}>
@@ -151,11 +163,16 @@ export const ClientsTab: React.FC = () => {
                               }}
                             />
                           </div>
-                          <SButton variant="primary" onClick={saveEdit} style={{ padding: '4px 12px', fontSize: theme.fontSize.sm }}>
-                            {t('common.save')}
+                          <SButton variant="primary" onClick={saveEdit} style={{ padding: `${theme.space.sm} ${theme.space.md}` }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
                           </SButton>
-                          <SButton variant="secondary" onClick={cancelEdit} style={{ padding: '4px 12px', fontSize: theme.fontSize.sm }}>
-                            {t('common.cancel')}
+                          <SButton variant="secondary" onClick={cancelEdit} style={{ padding: `${theme.space.sm} ${theme.space.md}` }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
                           </SButton>
                         </div>
                       ) : (
@@ -184,6 +201,21 @@ export const ClientsTab: React.FC = () => {
                               {t('clients.this_client')}
                             </span>
                           )}
+                          {client.client_type === 'remote' && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: theme.colors.warningLight,
+                              padding: `2px ${theme.space.sm}`,
+                              borderRadius: theme.radius.sm,
+                            }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.colors.warning} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                <line x1="12" y1="18" x2="12.01" y2="18" />
+                              </svg>
+                            </span>
+                          )}
                         </div>
                       )}
 
@@ -209,8 +241,12 @@ export const ClientsTab: React.FC = () => {
                         <SButton
                           variant="outline"
                           onClick={() => startEdit(client)}
+                          style={{ padding: `${theme.space.sm} ${theme.space.md}` }}
                         >
-                          {t('clients.rename')}
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                         </SButton>
                         <SButton
                           variant="danger"
@@ -231,6 +267,8 @@ export const ClientsTab: React.FC = () => {
           </div>
         )}
       </SSection>
+
+      {showAddPhone && <AddPhoneDialog onClose={() => setShowAddPhone(false)} />}
     </div>
   );
 };

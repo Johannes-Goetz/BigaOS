@@ -261,10 +261,10 @@ class DatabaseWorkerService {
 
   // ==================== CLIENTS ====================
 
-  async registerClient(id: string, name: string, userAgent?: string): Promise<void> {
+  async registerClient(id: string, name: string, userAgent?: string, clientType?: string): Promise<void> {
     await this.send('execute', {
-      sql: `INSERT INTO clients (id, name, user_agent, created_at, last_seen_at) VALUES (?, ?, ?, datetime('now'), datetime('now')) ON CONFLICT(id) DO UPDATE SET name = excluded.name, user_agent = excluded.user_agent, last_seen_at = datetime('now')`,
-      params: [id, name, userAgent || null]
+      sql: `INSERT INTO clients (id, name, user_agent, client_type, created_at, last_seen_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now')) ON CONFLICT(id) DO UPDATE SET name = excluded.name, user_agent = excluded.user_agent, client_type = COALESCE(excluded.client_type, clients.client_type), last_seen_at = datetime('now')`,
+      params: [id, name, userAgent || null, clientType || 'display']
     });
   }
 
@@ -277,7 +277,7 @@ class DatabaseWorkerService {
 
   async getClient(id: string): Promise<any | null> {
     const result = await this.send('queryOne', {
-      sql: `SELECT id, name, user_agent, created_at, last_seen_at FROM clients WHERE id = ?`,
+      sql: `SELECT id, name, user_agent, client_type, created_at, last_seen_at FROM clients WHERE id = ?`,
       params: [id]
     });
     return result || null;
@@ -285,7 +285,7 @@ class DatabaseWorkerService {
 
   async getAllClients(): Promise<any[]> {
     return this.send('query', {
-      sql: `SELECT id, name, user_agent, created_at, last_seen_at FROM clients ORDER BY last_seen_at DESC`,
+      sql: `SELECT id, name, user_agent, client_type, created_at, last_seen_at FROM clients ORDER BY last_seen_at DESC`,
       params: []
     });
   }

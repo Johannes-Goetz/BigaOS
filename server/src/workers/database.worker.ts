@@ -55,6 +55,9 @@ function initialize(dbPath: string): void {
       db.exec(schema);
     }
 
+    // Migrations for existing databases
+    try { db.exec(`ALTER TABLE clients ADD COLUMN client_type TEXT DEFAULT 'display'`); } catch { /* column already exists */ }
+
     // Prepare statements for frequent operations
     insertSensorStmt = db.prepare(`
       INSERT INTO sensor_data (category, sensor_name, value, unit, timestamp)

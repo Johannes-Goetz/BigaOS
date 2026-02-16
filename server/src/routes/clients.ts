@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { dbWorker } from '../services/database-worker.service';
+import { wsServerInstance } from '../websocket/websocket-server';
 
 const router = Router();
 
@@ -7,7 +8,10 @@ const router = Router();
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const clients = await dbWorker.getAllClients();
-    res.json({ clients });
+    const onlineIds = wsServerInstance
+      ? wsServerInstance.getOnlineClientIds(clients.map((c: any) => c.id))
+      : [];
+    res.json({ clients, onlineIds });
   } catch (error) {
     console.error('[Clients API] Failed to get clients:', error);
     res.status(500).json({ error: 'Failed to get clients' });
@@ -31,11 +35,11 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/clients - register a new client
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { id, name, userAgent } = req.body;
+    const { id, name, userAgent, clientType } = req.body;
     if (!id || !name) {
       return res.status(400).json({ error: 'id and name are required' });
     }
-    await dbWorker.registerClient(id, name, userAgent);
+    await dbWorker.registerClient(id, name, userAgent, clientType);
     const client = await dbWorker.getClient(id);
     res.status(201).json({ client });
   } catch (error) {

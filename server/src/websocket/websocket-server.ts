@@ -885,6 +885,15 @@ export class WebSocketServer {
     });
   }
 
+  public getOnlineClientIds(clientIds: string[]): string[] {
+    const online: string[] = [];
+    for (const id of clientIds) {
+      const room = this.io.sockets.adapter.rooms.get(`client:${id}`);
+      if (room && room.size > 0) online.push(id);
+    }
+    return online;
+  }
+
   public stop(): void {
     this.io.close();
     console.log('[WebSocketServer] Stopped');

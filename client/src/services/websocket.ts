@@ -1,6 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-
-const WS_URL = import.meta.env.VITE_WS_URL || '';
+import { WS_URL } from '../utils/urls';
 
 class WebSocketService {
   private socket: Socket | null = null;

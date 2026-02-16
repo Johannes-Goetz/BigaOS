@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS clients (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     user_agent TEXT,
+    client_type TEXT DEFAULT 'display',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

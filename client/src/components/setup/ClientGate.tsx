@@ -4,8 +4,7 @@ import { SetupWizard } from './SetupWizard';
 import App from '../../App';
 import { theme } from '../../styles/theme';
 import { wsService } from '../../services/websocket';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+import { API_BASE_URL } from '../../utils/urls';
 
 export const ClientGate: React.FC = () => {
   const [clientId, setClientId] = useState<string | null>(null);
@@ -61,8 +60,10 @@ export const ClientGate: React.FC = () => {
   }, [clientId]);
 
   const handleWizardComplete = (id: string, name: string) => {
+    const isRemote = new URLSearchParams(window.location.search).has('remote');
     localStorage.setItem('bigaos-client-id', id);
     localStorage.setItem('bigaos-client-name', name);
+    localStorage.setItem('bigaos-client-type', isRemote ? 'remote' : 'display');
     setClientId(id);
   };
 

@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { theme } from '../../styles/theme';
 import { SButton, SInput, SCard } from '../ui/SettingsUI';
+import { API_BASE_URL } from '../../utils/urls';
 
 interface SetupWizardProps {
   onComplete: (id: string, name: string) => void;
 }
 
 type WizardStep = 'welcome' | 'name' | 'existing' | 'done';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const SUGGESTED_NAMES = [
   'Helm Display',
@@ -21,10 +20,20 @@ const SUGGESTED_NAMES = [
   'Owners Cabin',
 ];
 
+const SUGGESTED_NAMES_REMOTE = [
+  'My Phone',
+  'Captain Phone',
+  'Crew Phone',
+  'Guest Phone',
+  'Dock Phone',
+];
+
 export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
+  const isRemote = new URLSearchParams(window.location.search).has('remote');
   const [step, setStep] = useState<WizardStep>('welcome');
   const [clientName, setClientName] = useState('');
   const [existingClients, setExistingClients] = useState<Array<{ id: string; name: string }>>([]);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,11 +42,28 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
       const res = await fetch(`${API_BASE_URL}/clients`);
       if (res.ok) {
         const data = await res.json();
-        setExistingClients(data.clients || []);
+        const all = data.clients || [];
+        const type = isRemote ? 'remote' : 'display';
+        setExistingClients(all.filter((c: any) => (c.client_type || 'display') === type));
+        setOnlineIds(new Set(data.onlineIds || []));
       }
     } catch {
       // Server may not be ready yet, that's fine
     }
+  };
+
+  const generateId = (): string => {
+    // crypto.randomUUID() requires secure context (HTTPS or localhost)
+    // Fall back to crypto.getRandomValues() which works everywhere
+    if (typeof crypto.randomUUID === 'function') {
+      try { return crypto.randomUUID(); } catch {}
+    }
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
   };
 
   const handleCreate = async () => {
@@ -45,8 +71,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     setLoading(true);
     setError(null);
 
-    const id = crypto.randomUUID();
     try {
+      const id = generateId();
       const res = await fetch(`${API_BASE_URL}/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,6 +80,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           id,
           name: clientName.trim(),
           userAgent: navigator.userAgent,
+          clientType: isRemote ? 'remote' : 'display',
         }),
       });
 
@@ -63,7 +90,13 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
       }
 
       setStep('done');
-      setTimeout(() => onComplete(id, clientName.trim()), 1200);
+      setTimeout(() => {
+        onComplete(id, clientName.trim());
+        // Clean up ?remote=1 from URL after onComplete has read it
+        if (window.location.search) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }, 1200);
     } catch (err: any) {
       setError(err.message || 'Failed to register');
       setLoading(false);
@@ -152,21 +185,21 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           color: theme.colors.textPrimary,
           margin: `0 0 ${theme.space.sm} 0`,
         }}>
-          Name This Display
+          {isRemote ? 'Name This Phone' : 'Name This Display'}
         </h2>
         <p style={{
           fontSize: theme.fontSize.md,
           color: theme.colors.textSecondary,
           margin: `0 0 ${theme.space.xl} 0`,
         }}>
-          Give this screen a name so you can identify it later.
+          {isRemote ? 'Give this phone a name so you can identify it later.' : 'Give this screen a name so you can identify it later.'}
         </p>
 
         <div style={{ marginBottom: theme.space.lg }}>
           <SInput
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
-            placeholder="e.g., Helm Display"
+            placeholder={isRemote ? 'e.g., My Phone' : 'e.g., Helm Display'}
             autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter' && clientName.trim()) handleCreate(); }}
           />
@@ -178,7 +211,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           gap: theme.space.sm,
           marginBottom: theme.space.xl,
         }}>
-          {SUGGESTED_NAMES.map((name) => (
+          {(isRemote ? SUGGESTED_NAMES_REMOTE : SUGGESTED_NAMES).map((name) => (
             <button
               key={name}
               onClick={() => setClientName(name)}
@@ -242,56 +275,79 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         </p>
 
         {existingClients.length === 0 ? (
-          <SCard style={{ textAlign: 'center', padding: theme.space.xl }}>
+          <SCard style={{ textAlign: 'center', padding: theme.space.xl, marginBottom: theme.space.xl }}>
             <p style={{ color: theme.colors.textMuted, margin: 0 }}>
               No clients registered yet.
             </p>
           </SCard>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space.sm, marginBottom: theme.space.xl, maxHeight: '400px', overflowY: 'auto' }}>
-            {existingClients.map((client) => (
+            {existingClients.map((client) => {
+              const isOnline = onlineIds.has(client.id);
+              return (
               <SCard
                 key={client.id}
                 style={{
-                  cursor: 'pointer',
+                  cursor: isOnline ? 'default' : 'pointer',
                   padding: theme.space.lg,
                   transition: theme.transition.fast,
+                  opacity: isOnline ? 0.6 : 1,
                 }}
               >
                 <div
-                  onClick={() => handleSelectExisting(client)}
+                  onClick={() => {
+                    if (isOnline) {
+                      setError('This client is currently in use on another device.');
+                      return;
+                    }
+                    handleSelectExisting(client);
+                  }}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 >
-                  <div>
-                    <div style={{
+                  <div style={{ display: 'flex', alignItems: 'center', gap: theme.space.sm }}>
+                    <span style={{
                       fontSize: theme.fontSize.base,
                       fontWeight: theme.fontWeight.medium,
                       color: theme.colors.textPrimary,
                     }}>
                       {client.name}
-                    </div>
-                    <div style={{
-                      fontSize: theme.fontSize.xs,
-                      color: theme.colors.textMuted,
-                      marginTop: '2px',
-                    }}>
-                      {client.id.slice(0, 8)}...
-                    </div>
+                    </span>
+                    {isOnline && (
+                      <span style={{
+                        fontSize: theme.fontSize.xs,
+                        color: theme.colors.success,
+                        background: theme.colors.successLight,
+                        padding: `2px ${theme.space.sm}`,
+                        borderRadius: theme.radius.sm,
+                        fontWeight: theme.fontWeight.medium,
+                      }}>
+                        Online
+                      </span>
+                    )}
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.colors.textMuted} strokeWidth="2">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                  {!isOnline && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.colors.textMuted} strokeWidth="2">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  )}
                 </div>
               </SCard>
-            ))}
+              );
+            })}
           </div>
         )}
 
+        {error && (
+          <p style={{ color: theme.colors.error, fontSize: theme.fontSize.sm, marginBottom: theme.space.md }}>
+            {error}
+          </p>
+        )}
+
         <div style={{ display: 'flex', gap: theme.space.md }}>
-          <SButton variant="secondary" onClick={() => setStep('welcome')} style={{ flex: 1 }}>
+          <SButton variant="secondary" onClick={() => { setError(null); setStep('welcome'); }} style={{ flex: 1 }}>
             Back
           </SButton>
-          <SButton variant="primary" onClick={() => setStep('name')} style={{ flex: 1 }}>
+          <SButton variant="primary" onClick={() => { setError(null); setStep('name'); }} style={{ flex: 1 }}>
             Create New
           </SButton>
         </div>

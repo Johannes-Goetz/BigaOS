@@ -138,7 +138,16 @@ export class WebSocketServer {
    */
   private setupEventHandlers(): void {
     this.io.on('connection', (socket) => {
-      console.log(`Client connected: ${socket.id}`);
+      const clientId = socket.handshake.auth?.clientId as string | undefined;
+      console.log(`Client connected: ${socket.id}${clientId ? ` (clientId: ${clientId})` : ''}`);
+
+      // Track client and join room for targeted messaging
+      if (clientId) {
+        dbWorker.updateClientLastSeen(clientId).catch(() => {});
+        socket.join(`client:${clientId}`);
+        // Notify all clients that this client came online
+        this.io.emit('clients_changed', { timestamp: new Date() });
+      }
 
       // Send initial data
       this.sendInitialData(socket);
@@ -435,8 +444,77 @@ export class WebSocketServer {
         }
       });
 
+      // ================================================================
+      // Client Management Handlers
+      // ================================================================
+
+      socket.on('get_clients', async () => {
+        try {
+          const clients = await dbWorker.getAllClients();
+          // Determine which clients are currently online by checking socket rooms
+          const onlineIds: string[] = [];
+          for (const c of clients) {
+            const room = this.io.sockets.adapter.rooms.get(`client:${c.id}`);
+            if (room && room.size > 0) onlineIds.push(c.id);
+          }
+          socket.emit('clients_sync', { clients, onlineIds, timestamp: new Date() });
+        } catch (error) {
+          console.error('[WebSocket] Failed to get clients:', error);
+        }
+      });
+
+      socket.on('client_update_name', async (data: { id: string; name: string }) => {
+        try {
+          await dbWorker.updateClientName(data.id, data.name);
+          this.io.emit('clients_changed', { timestamp: new Date() });
+        } catch (error) {
+          console.error('[WebSocket] Failed to update client name:', error);
+        }
+      });
+
+      socket.on('client_delete', async (data: { id: string }) => {
+        try {
+          // Notify the deleted client before removing it
+          this.io.to(`client:${data.id}`).emit('client_deleted');
+          await dbWorker.deleteClient(data.id);
+          this.io.emit('clients_changed', { timestamp: new Date() });
+        } catch (error) {
+          console.error('[WebSocket] Failed to delete client:', error);
+        }
+      });
+
+      socket.on('client_settings_update', async (data: { clientId: string; key: string; value: any }) => {
+        try {
+          await dbWorker.setClientSetting(data.clientId, data.key, JSON.stringify(data.value));
+          this.io.to(`client:${data.clientId}`).emit('client_settings_changed', {
+            key: data.key,
+            value: data.value,
+            timestamp: new Date(),
+          });
+        } catch (error) {
+          console.error('[WebSocket] Failed to update client setting:', error);
+        }
+      });
+
+      socket.on('get_client_settings', async (data: { clientId: string }) => {
+        try {
+          const settings = await dbWorker.getAllClientSettings(data.clientId);
+          const settingsObj: Record<string, any> = {};
+          for (const s of settings) {
+            try { settingsObj[s.key] = JSON.parse(s.value); } catch { settingsObj[s.key] = s.value; }
+          }
+          socket.emit('client_settings_sync', { settings: settingsObj, timestamp: new Date() });
+        } catch (error) {
+          console.error('[WebSocket] Failed to get client settings:', error);
+        }
+      });
+
       socket.on('disconnect', () => {
         console.log(`Client disconnected: ${socket.id}`);
+        if (clientId) {
+          dbWorker.updateClientLastSeen(clientId).catch(() => {});
+          this.io.emit('clients_changed', { timestamp: new Date() });
+        }
       });
     });
   }

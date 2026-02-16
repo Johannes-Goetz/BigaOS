@@ -7,7 +7,7 @@ class WebSocketService {
   private listeners: Map<string, Set<Function>> = new Map();
   private serverReachable: boolean = true;
 
-  connect() {
+  connect(clientId?: string) {
     if (this.socket?.connected) {
       return;
     }
@@ -19,6 +19,7 @@ class WebSocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 5000, // Initial connection timeout
+      auth: clientId ? { clientId } : undefined,
     });
 
     this.socket.on('connect', () => {

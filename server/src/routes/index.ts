@@ -9,8 +9,12 @@ import { autopilotController } from '../controllers/autopilot.controller';
 import { weatherController } from '../controllers/weather.controller';
 import { unifiedDataController } from '../controllers/unified-data.controller';
 import { systemController } from '../controllers/system.controller';
+import clientsRouter from './clients';
 
 const router = Router();
+
+// Client management routes
+router.use('/clients', clientsRouter);
 
 // State routes
 router.get('/state', stateController.getCurrentState.bind(stateController));

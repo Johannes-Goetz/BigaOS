@@ -18,6 +18,7 @@ import { AlertProvider, useAlerts } from './context/AlertContext';
 import { PluginProvider, usePlugins } from './context/PluginContext';
 import { AlertContainer } from './components/alerts';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import { useClient } from './context/ClientContext';
 import { wsService } from './services/websocket';
 import { sensorAPI } from './services/api';
 import './styles/globals.css';
@@ -93,6 +94,7 @@ function AppContent() {
   const { setCurrentDepth } = useSettings();
   const { isChartOnly: chartOnly, installingPlugins } = usePlugins();
   const { activeView, navigationParams, navigate, goBack } = useNavigation();
+  const { clientId } = useClient();
   const repaintIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // In chart-only mode, redirect dashboard to chart
@@ -137,7 +139,7 @@ function AppContent() {
   }, [forceRepaint]);
 
   useEffect(() => {
-    wsService.connect();
+    wsService.connect(clientId);
 
     wsService.on('sensor_update', (data: any) => {
       if (data.data) {

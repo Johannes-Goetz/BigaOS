@@ -24,6 +24,7 @@ import { AlertsTab } from '../settings/AlertsTab';
 import { PluginsTab } from '../settings/PluginsTab';
 import { TerminalPanel } from '../settings/TerminalPanel';
 import { DisplayTab } from '../settings/DisplayTab';
+import { ClientsTab } from '../settings/ClientsTab';
 
 import { wsService } from '../../services/websocket';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -40,7 +41,7 @@ import {
   SInfoBox,
 } from '../ui/SettingsUI';
 
-type SettingsTab = 'general' | 'display' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'plugins' | 'advanced';
+type SettingsTab = 'general' | 'display' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'plugins' | 'clients' | 'advanced';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -429,6 +430,17 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
           <rect x="2" y="14" width="8" height="8" rx="1" />
           <path d="M18 14v4h-4" />
           <path d="M14 18h4v-4" />
+        </svg>
+      ),
+    },
+    {
+      id: 'clients',
+      label: t('settings.clients'),
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+          <line x1="8" y1="21" x2="16" y2="21" />
+          <line x1="12" y1="17" x2="12" y2="21" />
         </svg>
       ),
     },
@@ -1213,6 +1225,8 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
         return <AlertsTab />;
       case 'plugins':
         return <PluginsTab />;
+      case 'clients':
+        return <ClientsTab />;
       case 'advanced':
         return renderAdvancedTab();
     }
@@ -1223,7 +1237,11 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
   const sidebarTab = (tab: typeof tabs[0]) => (
     <button
       key={tab.id}
-      onClick={() => { setActiveTab(tab.id); setMenuOpen(false); }}
+      onClick={() => {
+        setActiveTab(tab.id);
+        setMenuOpen(false);
+        localStorage.setItem('bigaos-nav-params', JSON.stringify({ settings: { tab: tab.id } }));
+      }}
       style={{
         display: 'flex',
         alignItems: 'center',

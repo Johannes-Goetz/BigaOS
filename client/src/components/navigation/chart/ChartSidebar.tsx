@@ -88,7 +88,7 @@ export const ChartSidebar: React.FC<ChartSidebarProps> = ({
         width: `${sidebarWidth}px`,
         height: '100%',
         [`border${sidebarPosition === 'left' ? 'Right' : 'Left'}`]: separator,
-        background: 'rgba(10, 25, 41, 0.95)',
+        background: 'rgb(10, 25, 41)',
         zIndex: 1000,
         display: 'flex',
         flexDirection: 'column',

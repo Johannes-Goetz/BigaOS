@@ -109,6 +109,29 @@ CREATE TABLE IF NOT EXISTS weather_cache (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_weather_location ON weather_cache(lat, lon);
 CREATE INDEX IF NOT EXISTS idx_weather_expires ON weather_cache(expires_at);
 
+-- Clients
+-- Registered browser/device instances
+CREATE TABLE IF NOT EXISTS clients (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Client-Specific Settings
+-- Per-client key-value store (mirrors settings table structure)
+CREATE TABLE IF NOT EXISTS client_settings (
+    client_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, key),
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_settings_client ON client_settings(client_id);
+
 -- Database Metadata
 -- Track schema version and migrations
 CREATE TABLE IF NOT EXISTS db_metadata (

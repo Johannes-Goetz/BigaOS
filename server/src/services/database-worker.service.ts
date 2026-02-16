@@ -259,6 +259,75 @@ class DatabaseWorkerService {
     });
   }
 
+  // ==================== CLIENTS ====================
+
+  async registerClient(id: string, name: string, userAgent?: string): Promise<void> {
+    await this.send('execute', {
+      sql: `INSERT INTO clients (id, name, user_agent, created_at, last_seen_at) VALUES (?, ?, ?, datetime('now'), datetime('now')) ON CONFLICT(id) DO UPDATE SET name = excluded.name, user_agent = excluded.user_agent, last_seen_at = datetime('now')`,
+      params: [id, name, userAgent || null]
+    });
+  }
+
+  async updateClientLastSeen(id: string): Promise<void> {
+    await this.send('execute', {
+      sql: `UPDATE clients SET last_seen_at = datetime('now') WHERE id = ?`,
+      params: [id]
+    });
+  }
+
+  async getClient(id: string): Promise<any | null> {
+    const result = await this.send('queryOne', {
+      sql: `SELECT id, name, user_agent, created_at, last_seen_at FROM clients WHERE id = ?`,
+      params: [id]
+    });
+    return result || null;
+  }
+
+  async getAllClients(): Promise<any[]> {
+    return this.send('query', {
+      sql: `SELECT id, name, user_agent, created_at, last_seen_at FROM clients ORDER BY last_seen_at DESC`,
+      params: []
+    });
+  }
+
+  async updateClientName(id: string, name: string): Promise<void> {
+    await this.send('execute', {
+      sql: `UPDATE clients SET name = ? WHERE id = ?`,
+      params: [name, id]
+    });
+  }
+
+  async deleteClient(id: string): Promise<void> {
+    await this.send('execute', {
+      sql: `DELETE FROM clients WHERE id = ?`,
+      params: [id]
+    });
+  }
+
+  // ==================== CLIENT SETTINGS ====================
+
+  async getClientSetting(clientId: string, key: string): Promise<string | null> {
+    const result = await this.send('queryOne', {
+      sql: `SELECT value FROM client_settings WHERE client_id = ? AND key = ?`,
+      params: [clientId, key]
+    });
+    return result?.value || null;
+  }
+
+  async setClientSetting(clientId: string, key: string, value: string): Promise<void> {
+    await this.send('execute', {
+      sql: `INSERT INTO client_settings (client_id, key, value, updated_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(client_id, key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+      params: [clientId, key, value]
+    });
+  }
+
+  async getAllClientSettings(clientId: string): Promise<any[]> {
+    return this.send('query', {
+      sql: `SELECT key, value FROM client_settings WHERE client_id = ? ORDER BY key`,
+      params: [clientId]
+    });
+  }
+
   // ==================== MAINTENANCE LOG ====================
 
   /**

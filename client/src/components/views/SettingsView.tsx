@@ -17,13 +17,14 @@ import {
   weightConversions,
   temperatureConversions,
 } from '../../context/SettingsContext';
-import { theme } from '../../styles/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { dataAPI, DataFileInfo, DownloadProgress, offlineMapsAPI, StorageStats, systemAPI, UpdateInfo } from '../../services/api';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { AlertsTab } from '../settings/AlertsTab';
 import { PluginsTab } from '../settings/PluginsTab';
 import { TerminalPanel } from '../settings/TerminalPanel';
-import { DisplayTab } from '../settings/DisplayTab';
+import { ChartTab } from '../settings/ChartTab';
+import type { ThemeMode } from '../../styles/themes';
 import { ClientsTab } from '../settings/ClientsTab';
 
 import { wsService } from '../../services/websocket';
@@ -41,7 +42,7 @@ import {
   SInfoBox,
 } from '../ui/SettingsUI';
 
-type SettingsTab = 'general' | 'display' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'plugins' | 'clients' | 'advanced';
+type SettingsTab = 'general' | 'chart' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'plugins' | 'clients' | 'advanced';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -49,6 +50,7 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, initialTab }) => {
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general');
   const [dataFiles, setDataFiles] = useState<DataFileInfo[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
@@ -361,13 +363,13 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
       ),
     },
     {
-      id: 'display',
-      label: t('settings.display'),
+      id: 'chart',
+      label: t('settings.chart'),
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+          <line x1="8" y1="2" x2="8" y2="18" />
+          <line x1="16" y1="6" x2="16" y2="22" />
         </svg>
       ),
     },
@@ -488,8 +490,8 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
           flexWrap: 'wrap',
           padding: '0.5rem 0.75rem',
           lineHeight: 1,
-          background: 'rgba(255, 255, 255, 0.08)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: theme.colors.bgCard,
+          border: `1px solid ${theme.colors.border}`,
           borderRadius: theme.radius.md,
           minHeight: '42px',
           boxSizing: 'border-box' as const,
@@ -833,7 +835,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
             {/* Header: name + status */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: theme.space.sm }}>
               <div style={{ fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.bold, color: theme.colors.textPrimary }}>
-                {file.name}
+                {t(`downloads.file_${file.id}`)}
               </div>
               <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted, textAlign: 'right' }}>
                 {file.exists && !hasUpdate(file) && (
@@ -878,8 +880,8 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
                 {!downloadingFiles.has(file.id) && (
                   <div style={{
                     padding: theme.space.md,
-                    background: `${theme.colors.error}10`,
-                    border: `1px solid ${theme.colors.error}40`,
+                    background: theme.colors.errorLight,
+                    border: `1px solid ${theme.colors.error}`,
                     borderRadius: theme.radius.md,
                     color: theme.colors.error,
                     fontSize: theme.fontSize.xs,
@@ -935,7 +937,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
                   <div style={{
                     flex: 1,
                     padding: '0.75rem',
-                    background: `${theme.colors.success}30`,
+                    background: theme.colors.successLight,
                     border: 'none',
                     borderRadius: theme.radius.md,
                     color: theme.colors.success,
@@ -1096,7 +1098,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
               monospace
               placeholder={t('downloads.enter_url')}
               inputStyle={{
-                border: `1px solid ${editingUrls[file.id] !== file.url ? theme.colors.primary : 'rgba(255,255,255,0.1)'}`,
+                border: `1px solid ${editingUrls[file.id] !== file.url ? theme.colors.primary : theme.colors.border}`,
               }}
             />
             {editingUrls[file.id] !== file.url && (
@@ -1213,8 +1215,8 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
     switch (activeTab) {
       case 'general':
         return renderGeneralTab();
-      case 'display':
-        return <DisplayTab />;
+      case 'chart':
+        return <ChartTab />;
       case 'vessel':
         return renderVesselTab();
       case 'units':
@@ -1237,6 +1239,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
   const sidebarTab = (tab: typeof tabs[0]) => (
     <button
       key={tab.id}
+      className="s-tab-btn"
       onClick={() => {
         setActiveTab(tab.id);
         setMenuOpen(false);
@@ -1247,7 +1250,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
         alignItems: 'center',
         gap: theme.space.sm,
         padding: `${theme.space.sm} ${theme.space.md}`,
-        background: activeTab === tab.id ? theme.colors.primaryLight : 'transparent',
+        background: 'transparent',
         border: 'none',
         borderLeft: activeTab === tab.id ? `3px solid ${theme.colors.primary}` : '3px solid transparent',
         color: activeTab === tab.id ? theme.colors.textPrimary : theme.colors.textMuted,

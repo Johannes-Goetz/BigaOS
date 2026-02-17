@@ -9,7 +9,7 @@ import { API_BASE_URL } from '../../utils/urls';
 
 // Apply saved theme immediately before any render (avoids flash)
 const savedTheme = (localStorage.getItem('bigaos-theme-mode') || 'dark') as ThemeMode;
-applyThemeToDOM(themes[savedTheme] || themes.dark);
+applyThemeToDOM(themes[savedTheme] || themes.dark, savedTheme);
 
 export const ClientGate: React.FC = () => {
   const [clientId, setClientId] = useState<string | null>(null);
@@ -79,12 +79,21 @@ export const ClientGate: React.FC = () => {
         height: '100dvh',
         background: 'var(--color-bg-primary)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         color: 'var(--color-text-primary)',
-        fontSize: '1.25rem',
+        gap: '24px',
       }}>
-        Loading...
+        <span style={{ fontSize: '2rem', fontWeight: 700 }}>BigaOS</span>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          border: '3px solid var(--color-border)',
+          borderTopColor: 'var(--color-primary)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }} />
       </div>
     );
   }

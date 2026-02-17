@@ -313,6 +313,7 @@ downloads.free=free
 downloads.installed=Installed:
 downloads.update=Update:
 downloads.available=available
+downloads.file_navigation-data=Navigation Data
 downloads.custom_url=Custom URL
 downloads.modified=(modified)
 downloads.enter_url=Enter download URL

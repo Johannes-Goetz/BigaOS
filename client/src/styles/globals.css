@@ -593,11 +593,11 @@ html, body {
 
 @media (hover: hover) and (pointer: fine) {
   .s-btn:hover:not(:disabled) {
-    filter: brightness(1.15);
+    filter: brightness(var(--hover-brightness));
   }
 
   .s-option-btn:hover {
-    filter: brightness(1.15);
+    filter: brightness(var(--hover-brightness));
   }
 
   .s-input:hover {
@@ -605,7 +605,7 @@ html, body {
   }
 
   .s-toggle:hover {
-    filter: brightness(1.1);
+    filter: brightness(var(--hover-brightness-subtle));
   }
 
   .s-tab-btn:hover {
@@ -615,7 +615,7 @@ html, body {
 
 .s-btn:active:not(:disabled) {
   transform: scale(0.96);
-  filter: brightness(0.85);
+  filter: brightness(var(--active-brightness));
 }
 
 .s-option-btn:active {

@@ -478,17 +478,6 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
         />
       </div>
 
-      {/* Theme Selector */}
-      <div style={{ marginBottom: theme.space.xl }}>
-        <SLabel>{t('settings.theme')}</SLabel>
-        <SOptionGroup
-          options={['dark', 'light'] as ThemeMode[]}
-          labels={{ dark: t('settings.theme_dark'), light: t('settings.theme_light') }}
-          value={settings.themeMode}
-          onChange={settings.setThemeMode}
-        />
-      </div>
-
       {/* Software Update Section */}
       <SLabel>{t('update.title')}</SLabel>
       <div style={{ display: 'flex', alignItems: 'stretch', gap: theme.space.sm, marginBottom: theme.space.xl }}>
@@ -846,7 +835,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
             {/* Header: name + status */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: theme.space.sm }}>
               <div style={{ fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.bold, color: theme.colors.textPrimary }}>
-                {file.name}
+                {t(`downloads.file_${file.id}`)}
               </div>
               <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted, textAlign: 'right' }}>
                 {file.exists && !hasUpdate(file) && (
@@ -891,8 +880,8 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
                 {!downloadingFiles.has(file.id) && (
                   <div style={{
                     padding: theme.space.md,
-                    background: `${theme.colors.error}10`,
-                    border: `1px solid ${theme.colors.error}40`,
+                    background: theme.colors.errorLight,
+                    border: `1px solid ${theme.colors.error}`,
                     borderRadius: theme.radius.md,
                     color: theme.colors.error,
                     fontSize: theme.fontSize.xs,
@@ -948,7 +937,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
                   <div style={{
                     flex: 1,
                     padding: '0.75rem',
-                    background: `${theme.colors.success}30`,
+                    background: theme.colors.successLight,
                     border: 'none',
                     borderRadius: theme.radius.md,
                     color: theme.colors.success,
@@ -1261,7 +1250,7 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
         alignItems: 'center',
         gap: theme.space.sm,
         padding: `${theme.space.sm} ${theme.space.md}`,
-        background: activeTab === tab.id ? theme.colors.primaryLight : 'transparent',
+        background: 'transparent',
         border: 'none',
         borderLeft: activeTab === tab.id ? `3px solid ${theme.colors.primary}` : '3px solid transparent',
         color: activeTab === tab.id ? theme.colors.textPrimary : theme.colors.textMuted,

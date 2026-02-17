@@ -118,14 +118,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     return (
       <WizardContainer>
         <div style={{ textAlign: 'center', marginBottom: theme.space['3xl'] }}>
-          {/* Boat/anchor icon */}
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={theme.colors.primary} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: theme.space.xl }}>
-            <path d="M12 2L12 22" />
-            <path d="M4.93 10.93L12 2L19.07 10.93" />
-            <path d="M2 16C2 16 4 20 12 20C20 20 22 16 22 16" />
-          </svg>
           <h1 style={{
-            fontSize: theme.fontSize['2xl'],
+            fontSize: theme.fontSize['3xl'],
             fontWeight: theme.fontWeight.bold,
             color: theme.colors.textPrimary,
             margin: `0 0 ${theme.space.sm} 0`,

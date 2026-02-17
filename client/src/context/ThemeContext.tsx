@@ -50,7 +50,7 @@ const shadowVarMap: Record<string, string> = {
   lg: '--shadow-lg',
 };
 
-export function applyThemeToDOM(themeObj: ThemeDefinition) {
+export function applyThemeToDOM(themeObj: ThemeDefinition, mode?: ThemeMode) {
   const root = document.documentElement;
   for (const [key, cssVar] of Object.entries(colorVarMap)) {
     const value = themeObj.colors[key as keyof typeof themeObj.colors];
@@ -60,6 +60,11 @@ export function applyThemeToDOM(themeObj: ThemeDefinition) {
     const value = themeObj.shadow[key as keyof typeof themeObj.shadow];
     if (value) root.style.setProperty(cssVar, value);
   }
+  // Light mode: hover darkens, Dark mode: hover brightens
+  const isLight = mode === 'light';
+  root.style.setProperty('--hover-brightness', isLight ? '0.9' : '1.1');
+  root.style.setProperty('--hover-brightness-subtle', isLight ? '0.93' : '1.07');
+  root.style.setProperty('--active-brightness', isLight ? '0.82' : '0.85');
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -68,7 +73,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentTheme = useMemo(() => themes[themeMode] || themes.dark, [themeMode]);
 
   useEffect(() => {
-    applyThemeToDOM(currentTheme);
+    applyThemeToDOM(currentTheme, themeMode);
     localStorage.setItem('bigaos-theme-mode', themeMode);
   }, [currentTheme, themeMode]);
 

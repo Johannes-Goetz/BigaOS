@@ -457,7 +457,11 @@ export class WebSocketServer {
             const room = this.io.sockets.adapter.rooms.get(`client:${c.id}`);
             if (room && room.size > 0) onlineIds.push(c.id);
           }
-          socket.emit('clients_sync', { clients, onlineIds, timestamp: new Date() });
+          socket.emit('clients_sync', {
+            clients,
+            onlineIds,
+            timestamp: new Date(),
+          });
         } catch (error) {
           console.error('[WebSocket] Failed to get clients:', error);
         }

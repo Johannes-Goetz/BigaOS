@@ -193,8 +193,8 @@ export const ClientsTab: React.FC = () => {
                           {isSelf && (
                             <span style={{
                               fontSize: theme.fontSize.xs,
-                              color: theme.colors.info,
-                              background: theme.colors.infoLight,
+                              color: theme.colors.success,
+                              background: theme.colors.successLight,
                               padding: `2px ${theme.space.sm}`,
                               borderRadius: theme.radius.sm,
                               fontWeight: theme.fontWeight.medium,
@@ -207,11 +207,11 @@ export const ClientsTab: React.FC = () => {
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              background: theme.colors.warningLight,
+                              background: theme.colors.primaryLight,
                               padding: `2px ${theme.space.sm}`,
                               borderRadius: theme.radius.sm,
                             }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.colors.warning} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                                 <line x1="12" y1="18" x2="12.01" y2="18" />
                               </svg>

@@ -156,8 +156,8 @@ const shared = {
 export const darkTheme: ThemeDefinition = {
   colors: {
     bgPrimary: '#0a1929',
-    bgSecondary: 'rgba(10, 25, 41, 0.98)',
-    bgTertiary: 'rgba(10, 25, 41, 0.9)',
+    bgSecondary: '#0a1929',
+    bgTertiary: '#0a1929',
     bgCard: 'rgba(255, 255, 255, 0.05)',
     bgCardHover: 'rgba(255, 255, 255, 0.08)',
     bgCardActive: 'rgba(255, 255, 255, 0.1)',

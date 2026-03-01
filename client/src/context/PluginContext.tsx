@@ -129,9 +129,6 @@ interface PluginContextType {
   // Demo mode: true when the demo driver plugin is enabled
   isDemoActive: boolean;
 
-  // Chart-only mode: true when the chart-only plugin is enabled
-  isChartOnly: boolean;
-
   // Registry (marketplace)
   registryPlugins: RegistryPlugin[];
   registryLoading: boolean;
@@ -172,7 +169,6 @@ const PluginContext = createContext<PluginContextType | null>(null);
 
 export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-  const [pluginsSynced, setPluginsSynced] = useState(false);
   const [registryPlugins, setRegistryPlugins] = useState<RegistryPlugin[]>([]);
   const [registryLoading, setRegistryLoading] = useState(false);
   const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(new Set());
@@ -196,7 +192,6 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const handlePluginSync = (data: { plugins: PluginInfo[] }) => {
       setPlugins(data.plugins);
-      setPluginsSynced(true);
       clearInstallingPlugins(data.plugins);
     };
 
@@ -351,23 +346,11 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [plugins]);
 
   const isDemoActive = plugins.some(p => p.id === 'bigaos-demo-driver' && p.status === 'enabled');
-  const isChartOnlyLive = plugins.some(p => p.id === 'bigaos-chart-only' && p.status === 'enabled');
-
-  // Persist chart-only state to localStorage so it's available before server connects
-  useEffect(() => {
-    if (pluginsSynced) {
-      localStorage.setItem('bigaos-chart-only', isChartOnlyLive ? '1' : '0');
-    }
-  }, [isChartOnlyLive, pluginsSynced]);
-
-  // Use localStorage only before first server sync; after sync, trust the server
-  const isChartOnly = pluginsSynced ? isChartOnlyLive : localStorage.getItem('bigaos-chart-only') === '1';
 
   const value: PluginContextType = {
     plugins,
     getPluginTranslations,
     isDemoActive,
-    isChartOnly,
     registryPlugins,
     registryLoading,
     refreshRegistry,

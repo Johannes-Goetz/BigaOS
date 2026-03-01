@@ -1946,6 +1946,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 </span>
               </button>
             )}
+
           </div>
         );
       })()}
@@ -2540,6 +2541,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           </svg>
         </button>
       )}
+
     </div>
   );
 };

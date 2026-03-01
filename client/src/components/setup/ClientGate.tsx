@@ -64,11 +64,10 @@ export const ClientGate: React.FC = () => {
     return () => { wsService.off('client_deleted', handleDeleted); };
   }, [clientId]);
 
-  const handleWizardComplete = (id: string, name: string) => {
-    const isRemote = new URLSearchParams(window.location.search).has('remote');
+  const handleWizardComplete = (id: string, name: string, clientType: string) => {
     localStorage.setItem('bigaos-client-id', id);
     localStorage.setItem('bigaos-client-name', name);
-    localStorage.setItem('bigaos-client-type', isRemote ? 'remote' : 'display');
+    localStorage.setItem('bigaos-client-type', clientType);
     setClientId(id);
   };
 

@@ -22,10 +22,13 @@ import {
 } from './items';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useClient } from '../../context/ClientContext';
+import { wsService } from '../../services/websocket';
 
 const LAYOUT_STORAGE_KEY = 'bigaos-dashboard-layout';
 const GRID_CONFIG_KEY = 'bigaos-grid-config';
-const DEFAULT_GRID_COLS = 6;
+const IS_REMOTE_CLIENT = typeof window !== 'undefined' && localStorage.getItem('bigaos-client-type') === 'remote';
+const DEFAULT_GRID_COLS = IS_REMOTE_CLIENT ? 2 : 6;
 const DEFAULT_GRID_ROWS = 3;
 
 interface DashboardProps {
@@ -60,6 +63,7 @@ const migrateItems = (items: DashboardItemConfig[]): DashboardItemConfig[] => {
 export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { clientId } = useClient();
 
   const getItemTypeLabel = (type: DashboardItemType): string => {
     const labelKeys: Record<DashboardItemType, string> = {
@@ -125,20 +129,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
     return DEFAULT_GRID_ROWS;
   });
 
+  // Sync layout and grid config to server for cross-device persistence
+  const syncLayoutToServer = useCallback((layout: DashboardItemConfig[], gridConfig: { cols: number; rows: number }) => {
+    wsService.emit('client_settings_update', { clientId, key: 'dashboardLayout', value: layout });
+    wsService.emit('client_settings_update', { clientId, key: 'dashboardGridConfig', value: gridConfig });
+  }, [clientId]);
+
+  // Listen for layout changes from server (e.g. when switching to existing client)
+  useEffect(() => {
+    const handleDashboardChanged = () => {
+      const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
+      const savedGrid = localStorage.getItem(GRID_CONFIG_KEY);
+      if (savedLayout) {
+        try { setItems(migrateItems(JSON.parse(savedLayout))); } catch {}
+      }
+      if (savedGrid) {
+        try {
+          const config = JSON.parse(savedGrid);
+          if (config.cols) setGridCols(config.cols);
+          if (config.rows) setGridRows(config.rows);
+        } catch {}
+      }
+    };
+    window.addEventListener('bigaos-dashboard-changed', handleDashboardChanged);
+    return () => window.removeEventListener('bigaos-dashboard-changed', handleDashboardChanged);
+  }, []);
+
   // Save grid config and clear items when grid size changes
   const handleGridColsChange = useCallback((newCols: number) => {
     setGridCols(newCols);
     setItems([]);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(GRID_CONFIG_KEY, JSON.stringify({ cols: newCols, rows: gridRows }));
-  }, [gridRows]);
+    syncLayoutToServer([], { cols: newCols, rows: gridRows });
+  }, [gridRows, syncLayoutToServer]);
 
   const handleGridRowsChange = useCallback((newRows: number) => {
     setGridRows(newRows);
     setItems([]);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify([]));
     localStorage.setItem(GRID_CONFIG_KEY, JSON.stringify({ cols: gridCols, rows: newRows }));
-  }, [gridCols]);
+    syncLayoutToServer([], { cols: gridCols, rows: newRows });
+  }, [gridCols, syncLayoutToServer]);
 
   // Pull-down menu with settings and edit icons
   const [pullDistance, setPullDistance] = useState(0);
@@ -300,15 +332,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
     });
     setItems(updatedItems);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(updatedItems));
-  }, [items, gridCols, gridRows]);
+    syncLayoutToServer(updatedItems, { cols: gridCols, rows: gridRows });
+  }, [items, gridCols, gridRows, syncLayoutToServer]);
 
   const handleDeleteItem = useCallback((id: string) => {
     setItems(prevItems => {
       const updatedItems = prevItems.filter((item) => item.id !== id);
       localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(updatedItems));
+      syncLayoutToServer(updatedItems, { cols: gridCols, rows: gridRows });
       return updatedItems;
     });
-  }, []);
+  }, [gridCols, gridRows, syncLayoutToServer]);
 
   const handleAddItem = (type: DashboardItemType) => {
     const config = ITEM_TYPE_CONFIG[type];
@@ -338,6 +372,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
     const updatedItems = [...items, newItem];
     setItems(updatedItems);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(updatedItems));
+    syncLayoutToServer(updatedItems, { cols: gridCols, rows: gridRows });
     setShowAddMenu(false);
   };
 

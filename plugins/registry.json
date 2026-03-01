@@ -125,26 +125,6 @@
           "changelog": "Add plugin i18n support with EN/DE translations for config labels"
         }
       ]
-    },
-    {
-      "id": "bigaos-chart-only",
-      "name": "Chart Only Mode",
-      "description": "Use the nautical chart as the main screen instead of the dashboard.",
-      "author": "BigaOS Team",
-      "type": "service",
-      "flag": "official",
-      "latestVersion": "1.0.0",
-      "capabilities": [],
-      "downloadUrl": "https://github.com/BigaOSTeam/BigaOS/raw/main/plugins/bigaos-chart-only.tar.gz",
-      "repository": "https://github.com/BigaOSTeam/BigaOS/tree/main/plugin-sources/bigaos-chart-only",
-      "versions": [
-        {
-          "version": "1.0.0",
-          "downloadUrl": "https://github.com/BigaOSTeam/BigaOS/raw/main/plugins/bigaos-chart-only.tar.gz",
-          "releaseDate": "2026-02-13",
-          "changelog": "Initial release"
-        }
-      ]
     }
   ]
 }

@@ -4,7 +4,7 @@ import { SButton, SInput, SCard } from '../ui/SettingsUI';
 import { API_BASE_URL } from '../../utils/urls';
 
 interface SetupWizardProps {
-  onComplete: (id: string, name: string) => void;
+  onComplete: (id: string, name: string, clientType: string) => void;
 }
 
 type WizardStep = 'welcome' | 'name' | 'existing' | 'done';
@@ -30,10 +30,10 @@ const SUGGESTED_NAMES_REMOTE = [
 
 export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const { theme } = useTheme();
-  const isRemote = new URLSearchParams(window.location.search).has('remote');
+  const [isRemote, setIsRemote] = useState(() => new URLSearchParams(window.location.search).has('remote'));
   const [step, setStep] = useState<WizardStep>('welcome');
   const [clientName, setClientName] = useState('');
-  const [existingClients, setExistingClients] = useState<Array<{ id: string; name: string }>>([]);
+  const [existingClients, setExistingClients] = useState<Array<{ id: string; name: string; client_type?: string }>>([]);
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +43,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
       const res = await fetch(`${API_BASE_URL}/clients`);
       if (res.ok) {
         const data = await res.json();
-        const all = data.clients || [];
-        const type = isRemote ? 'remote' : 'display';
-        setExistingClients(all.filter((c: any) => (c.client_type || 'display') === type));
+        setExistingClients(data.clients || []);
         setOnlineIds(new Set(data.onlineIds || []));
       }
     } catch {
@@ -92,7 +90,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
 
       setStep('done');
       setTimeout(() => {
-        onComplete(id, clientName.trim());
+        onComplete(id, clientName.trim(), isRemote ? 'remote' : 'display');
         // Clean up ?remote=1 from URL after onComplete has read it
         if (window.location.search) {
           window.history.replaceState({}, '', window.location.pathname);
@@ -104,8 +102,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     }
   };
 
-  const handleSelectExisting = (client: { id: string; name: string }) => {
-    onComplete(client.id, client.name);
+  const handleSelectExisting = (client: { id: string; name: string; client_type?: string }) => {
+    onComplete(client.id, client.name, client.client_type || 'display');
   };
 
   const handleShowExisting = () => {
@@ -228,6 +226,51 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           ))}
         </div>
 
+        <div
+          onClick={() => setIsRemote(r => !r)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: `${theme.space.md} ${theme.space.lg}`,
+            marginBottom: theme.space.xl,
+            background: theme.colors.bgCard,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.md,
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.medium, color: theme.colors.textPrimary }}>
+              Remote client
+            </div>
+            <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.textMuted }}>
+              Phone, tablet, etc.
+            </div>
+          </div>
+          <div style={{
+            width: '40px',
+            height: '22px',
+            borderRadius: '11px',
+            background: isRemote ? theme.colors.primary : theme.colors.border,
+            transition: theme.transition.fast,
+            position: 'relative',
+            flexShrink: 0,
+          }}>
+            <div style={{
+              width: '18px',
+              height: '18px',
+              borderRadius: '50%',
+              background: '#fff',
+              position: 'absolute',
+              top: '2px',
+              left: isRemote ? '20px' : '2px',
+              transition: theme.transition.fast,
+            }} />
+          </div>
+        </div>
+
         {error && (
           <p style={{ color: theme.colors.error, fontSize: theme.fontSize.sm, marginBottom: theme.space.md }}>
             {error}
@@ -277,11 +320,13 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
               No clients registered yet.
             </p>
           </SCard>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space.sm, marginBottom: theme.space.xl, maxHeight: '400px', overflowY: 'auto' }}>
-            {existingClients.map((client) => {
-              const isOnline = onlineIds.has(client.id);
-              return (
+        ) : (() => {
+          const displayClients = existingClients.filter(c => (c.client_type || 'display') === 'display');
+          const remoteClients = existingClients.filter(c => c.client_type === 'remote');
+
+          const renderClient = (client: { id: string; name: string; client_type?: string }) => {
+            const isOnline = onlineIds.has(client.id);
+            return (
               <SCard
                 key={client.id}
                 style={{
@@ -329,10 +374,50 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   )}
                 </div>
               </SCard>
-              );
-            })}
-          </div>
-        )}
+            );
+          };
+
+          const SectionDivider: React.FC<{ label: string; icon: React.ReactNode }> = ({ label, icon }) => (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.space.sm,
+              padding: `${theme.space.sm} 0`,
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSize.xs,
+              fontWeight: theme.fontWeight.medium,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.05em',
+            }}>
+              {icon}
+              {label}
+              <div style={{ flex: 1, height: '1px', background: theme.colors.border }} />
+            </div>
+          );
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: theme.space.sm, marginBottom: theme.space.xl, maxHeight: '400px', overflowY: 'auto' }}>
+              {displayClients.length > 0 && (
+                <>
+                  <SectionDivider
+                    label="Displays"
+                    icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>}
+                  />
+                  {displayClients.map(renderClient)}
+                </>
+              )}
+              {remoteClients.length > 0 && (
+                <>
+                  <SectionDivider
+                    label="Remote"
+                    icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></svg>}
+                  />
+                  {remoteClients.map(renderClient)}
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {error && (
           <p style={{ color: theme.colors.error, fontSize: theme.fontSize.sm, marginBottom: theme.space.md }}>

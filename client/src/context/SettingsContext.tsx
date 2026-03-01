@@ -464,7 +464,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [depthAlarm, setDepthAlarmState] = useState<number | null>(defaultSettings.depthAlarm);
   const [soundAlarmEnabled, setSoundAlarmEnabledState] = useState<boolean>(defaultSettings.soundAlarmEnabled);
   const [language, setLanguageState] = useState<LanguageCode>(defaultSettings.language);
-  const [sidebarPosition, setSidebarPositionState] = useState<SidebarPosition>(defaultSettings.sidebarPosition);
+  const [sidebarPosition, setSidebarPositionState] = useState<SidebarPosition>(
+    () => (localStorage.getItem('bigaos-sidebar-position') as SidebarPosition) || defaultSettings.sidebarPosition
+  );
   const [themeMode, setThemeModeState] = useState<ThemeMode>(defaultSettings.themeMode);
   const [mapTileUrls, setMapTileUrlsState] = useState<MapTileUrls>(defaultSettings.mapTileUrls);
   const [apiUrls, setApiUrlsState] = useState<ApiUrls>(defaultSettings.apiUrls);
@@ -511,9 +513,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (data.settings.language) {
         setLanguageState(data.settings.language);
       }
-      if (data.settings.sidebarPosition) {
-        setSidebarPositionState(data.settings.sidebarPosition);
-      }
+      // sidebarPosition is client-specific — loaded from localStorage, not global settings
+      // if (data.settings.sidebarPosition) setSidebarPositionState(data.settings.sidebarPosition);
       if (data.settings.themeMode) {
         setThemeModeState(data.settings.themeMode);
       }
@@ -575,9 +576,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         case 'language':
           setLanguageState(data.value);
           break;
-        case 'sidebarPosition':
-          setSidebarPositionState(data.value);
-          break;
+        // sidebarPosition is client-specific — handled in ChartTab via client_settings
+        // case 'sidebarPosition': break;
         case 'themeMode':
           setThemeModeState(data.value);
           break;
@@ -739,8 +739,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setSidebarPosition = useCallback((position: SidebarPosition) => {
     setSidebarPositionState(position);
-    updateServerSetting('sidebarPosition', position);
-  }, [updateServerSetting]);
+    // Client-specific: save to localStorage only (not global settings)
+    localStorage.setItem('bigaos-sidebar-position', position);
+  }, []);
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
     setThemeModeState(mode);

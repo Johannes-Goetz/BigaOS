@@ -94,8 +94,30 @@ function AppContent() {
   const [systemShuttingDown, setSystemShuttingDown] = useState(false);
   const systemUpdatingRef = useRef(false);
   const wasOfflineRef = useRef<boolean | null>(null);
-  const { setCurrentDepth } = useSettings();
-  const { isChartOnly: chartOnly, installingPlugins } = usePlugins();
+  const { setCurrentDepth, setSidebarPosition } = useSettings();
+  const { installingPlugins } = usePlugins();
+
+  // Chart-only mode: simple client-specific toggle stored in localStorage
+  const [chartOnly, setChartOnly] = useState(() => localStorage.getItem('bigaos-chart-only') === '1');
+  useEffect(() => {
+    const handleClientSettingsChanged = (data: { key: string; value: any }) => {
+      if (data.key === 'chartOnly') {
+        const val = !!data.value;
+        setChartOnly(val);
+        localStorage.setItem('bigaos-chart-only', val ? '1' : '0');
+      }
+    };
+    // Listen for same-tab changes from ChartTab
+    const handleLocalChange = () => {
+      setChartOnly(localStorage.getItem('bigaos-chart-only') === '1');
+    };
+    wsService.on('client_settings_changed', handleClientSettingsChanged);
+    window.addEventListener('bigaos-chart-only-changed', handleLocalChange);
+    return () => {
+      wsService.off('client_settings_changed', handleClientSettingsChanged);
+      window.removeEventListener('bigaos-chart-only-changed', handleLocalChange);
+    };
+  }, []);
   const { activeView, navigationParams, navigate, goBack } = useNavigation();
   const { clientId } = useClient();
   const repaintIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -143,6 +165,28 @@ function AppContent() {
 
   useEffect(() => {
     wsService.connect(clientId);
+
+    // Fetch per-client settings from server on startup
+    wsService.emit('get_client_settings', { clientId });
+    wsService.on('client_settings_sync', (data: { settings: Record<string, any> }) => {
+      if (data.settings.chartOnly !== undefined) {
+        const val = !!data.settings.chartOnly;
+        setChartOnly(val);
+        localStorage.setItem('bigaos-chart-only', val ? '1' : '0');
+        window.dispatchEvent(new Event('bigaos-chart-only-changed'));
+      }
+      if (data.settings.sidebarPosition) {
+        setSidebarPosition(data.settings.sidebarPosition);
+      }
+      if (data.settings.dashboardLayout) {
+        localStorage.setItem('bigaos-dashboard-layout', JSON.stringify(data.settings.dashboardLayout));
+        window.dispatchEvent(new Event('bigaos-dashboard-changed'));
+      }
+      if (data.settings.dashboardGridConfig) {
+        localStorage.setItem('bigaos-grid-config', JSON.stringify(data.settings.dashboardGridConfig));
+        window.dispatchEvent(new Event('bigaos-dashboard-changed'));
+      }
+    });
 
     wsService.on('sensor_update', (data: any) => {
       if (data.data) {
@@ -227,7 +271,7 @@ function AppContent() {
     return () => {
       wsService.disconnect();
     };
-  }, [setCurrentDepth]);
+  }, [setCurrentDepth, setSidebarPosition]);
 
   const fetchInitialData = async () => {
     try {

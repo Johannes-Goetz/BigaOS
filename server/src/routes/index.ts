@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { stateController } from '../controllers/state.controller';
 import { sensorController } from '../controllers/sensor.controller';
 import { DatabaseController } from '../controllers/database.controller';
 import { navigationController } from '../controllers/navigation.controller';
@@ -15,12 +14,6 @@ const router = Router();
 
 // Client management routes
 router.use('/clients', clientsRouter);
-
-// State routes
-router.get('/state', stateController.getCurrentState.bind(stateController));
-router.post('/state/override', stateController.overrideState.bind(stateController));
-router.delete('/state/override', stateController.cancelOverride.bind(stateController));
-router.get('/state/history', stateController.getStateHistory.bind(stateController));
 
 // Sensor routes
 router.get('/sensors', sensorController.getAllSensors.bind(sensorController));

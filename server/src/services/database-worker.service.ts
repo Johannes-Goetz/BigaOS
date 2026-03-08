@@ -170,25 +170,6 @@ class DatabaseWorkerService {
     });
   }
 
-  // ==================== STATE HISTORY ====================
-
-  /**
-   * Add state change to history
-   */
-  addStateHistory(state: string, reason?: string, overrideBy?: string): void {
-    this.sendAsync('addStateHistory', { state, reason: reason || null, overrideBy: overrideBy || null });
-  }
-
-  /**
-   * Get state history
-   */
-  async getStateHistory(limit: number = 100): Promise<any[]> {
-    return this.send('query', {
-      sql: `SELECT * FROM state_history ORDER BY timestamp DESC LIMIT ?`,
-      params: [limit]
-    });
-  }
-
   // ==================== EVENTS ====================
 
   /**

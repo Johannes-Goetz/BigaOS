@@ -9,15 +9,6 @@ const api = axios.create({
   }
 });
 
-// State API
-export const stateAPI = {
-  getCurrentState: () => api.get('/state'),
-  overrideState: (state: string, reason: string) =>
-    api.post('/state/override', { state, reason }),
-  cancelOverride: () => api.delete('/state/override'),
-  getStateHistory: () => api.get('/state/history')
-};
-
 // Sensor API
 export const sensorAPI = {
   getAllSensors: () => api.get('/sensors'),

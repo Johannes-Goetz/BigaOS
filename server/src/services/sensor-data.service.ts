@@ -13,7 +13,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { BoatState, GeoPosition } from '../types/boat-state.types';
+import { GeoPosition } from '../types/data.types';
 import {
   StandardSensorData,
   StandardNavigationData,
@@ -26,14 +26,11 @@ import { knotsToMs, celsiusToKelvin } from '../types/units.types';
 const DEG_TO_RAD = Math.PI / 180;
 
 export class SensorDataService extends EventEmitter {
-  private currentState: BoatState = BoatState.DRIFTING;
   private basePosition: GeoPosition = {
     latitude: 43.45, // Adriatic Sea, west of Split
     longitude: 16.2, // In the water, off Croatian coast
     timestamp: new Date(),
   };
-  private anchorPosition: GeoPosition | null = null;
-  private stateStartTime: Date = new Date();
 
   // Demo mode controlled values (set by client, in DISPLAY units)
   private demoMode: boolean = true;
@@ -85,8 +82,6 @@ export class SensorDataService extends EventEmitter {
    * Generate realistic sensor data in STANDARD units
    */
   generateSensorData(): StandardSensorData {
-    const timeInState = (Date.now() - this.stateStartTime.getTime()) / 1000;
-
     // Values in knots/Celsius (legacy units) that we'll convert
     let speedKnots = 0;
     let heading = 180;
@@ -106,46 +101,13 @@ export class SensorDataService extends EventEmitter {
       motorRunning = speedKnots > 0;
       throttle = speedKnots > 0 ? Math.min(speedKnots * 10, 100) : 0;
     } else {
-      // Original random behavior when not in demo mode
-      switch (this.currentState) {
-        case BoatState.ANCHORED:
-          speedKnots = this.randomVariation(0.1, 0.05);
-          heading = this.randomVariation(180, 10);
-          heelAngle = this.randomVariation(2, 1);
-          windSpeedKnots = this.randomVariation(10, 3);
-          break;
+      // Default random behavior when not in demo mode
+      speedKnots = this.randomVariation(1.2, 0.4);
+      heading = this.randomVariation(200, 15);
+      heelAngle = this.randomVariation(5, 2);
+      windSpeedKnots = this.randomVariation(8, 2);
 
-        case BoatState.SAILING:
-          speedKnots = this.randomVariation(5.5, 0.8);
-          heading = this.randomVariation(240, 5);
-          heelAngle = this.randomVariation(15, 3);
-          windSpeedKnots = this.randomVariation(12, 2);
-          break;
-
-        case BoatState.MOTORING:
-          speedKnots = this.randomVariation(4.8, 0.3);
-          heading = this.randomVariation(180, 3);
-          heelAngle = this.randomVariation(3, 1);
-          motorRunning = true;
-          throttle = 60;
-          break;
-
-        case BoatState.IN_MARINA:
-          speedKnots = 0.05;
-          heading = this.randomVariation(90, 2);
-          heelAngle = this.randomVariation(1, 0.5);
-          windSpeedKnots = this.randomVariation(5, 2);
-          break;
-
-        case BoatState.DRIFTING:
-          speedKnots = this.randomVariation(1.2, 0.4);
-          heading = this.randomVariation(200, 15);
-          heelAngle = this.randomVariation(5, 2);
-          windSpeedKnots = this.randomVariation(8, 2);
-          break;
-      }
-
-      // Update position based on speed and heading (only when not in demo mode)
+      // Update position based on speed and heading
       this.updatePosition(speedKnots, heading);
       position = this.basePosition;
     }
@@ -213,30 +175,6 @@ export class SensorDataService extends EventEmitter {
       electrical,
       propulsion,
     };
-  }
-
-  // ============================================================================
-  // State Management
-  // ============================================================================
-
-  changeState(newState: BoatState): void {
-    if (newState === BoatState.ANCHORED && !this.anchorPosition) {
-      this.anchorPosition = { ...this.basePosition };
-    } else if (newState !== BoatState.ANCHORED) {
-      this.anchorPosition = null;
-    }
-
-    this.currentState = newState;
-    this.stateStartTime = new Date();
-    this.emit('state_change', { currentState: newState, timestamp: new Date() });
-  }
-
-  getCurrentState(): BoatState {
-    return this.currentState;
-  }
-
-  getAnchorPosition(): GeoPosition | null {
-    return this.anchorPosition;
   }
 
   // ============================================================================
@@ -329,20 +267,6 @@ export class SensorDataService extends EventEmitter {
     this.basePosition.latitude += latChange;
     this.basePosition.longitude += lonChange;
     this.basePosition.timestamp = new Date();
-
-    // If anchored, add some drift but keep near anchor
-    if (this.currentState === BoatState.ANCHORED && this.anchorPosition) {
-      const maxDrift = 0.0001; // degrees (~11 meters)
-      const latDiff = this.basePosition.latitude - this.anchorPosition.latitude;
-      const lonDiff = this.basePosition.longitude - this.anchorPosition.longitude;
-
-      if (Math.abs(latDiff) > maxDrift) {
-        this.basePosition.latitude = this.anchorPosition.latitude + (latDiff > 0 ? maxDrift : -maxDrift);
-      }
-      if (Math.abs(lonDiff) > maxDrift) {
-        this.basePosition.longitude = this.anchorPosition.longitude + (lonDiff > 0 ? maxDrift : -maxDrift);
-      }
-    }
   }
 }
 

@@ -538,13 +538,6 @@ export class WebSocketServer {
         });
       }
 
-      // Send current state
-      const sensorService = this.dataController.getSensorService();
-      socket.emit('state_change', {
-        currentState: sensorService.getCurrentState(),
-        timestamp: new Date(),
-      });
-
       // Send current triggered alerts
       const triggeredAlerts = this.dataController.getAlertService().getTriggeredAlerts();
       if (triggeredAlerts.length > 0) {
@@ -657,15 +650,6 @@ export class WebSocketServer {
    */
   private handleControlCommand(data: any, socket: any): void {
     console.log('Control command received:', data);
-
-    if (data.type === 'set_state' && this.dataController) {
-      this.dataController.getSensorService().changeState(data.state);
-      this.io.emit('state_change', {
-        currentState: data.state,
-        previousState: null,
-        timestamp: new Date(),
-      });
-    }
 
     // Handle demo navigation updates - sync to all clients
     if (data.type === 'demo_navigation' && this.dataController) {

@@ -1,11 +1,3 @@
-export enum BoatState {
-  ANCHORED = 'ANCHORED',
-  IN_MARINA = 'IN_MARINA',
-  MOTORING = 'MOTORING',
-  SAILING = 'SAILING',
-  DRIFTING = 'DRIFTING'
-}
-
 export interface GeoPosition {
   latitude: number;
   longitude: number;
@@ -73,14 +65,6 @@ export interface PropulsionData {
     temperature: number;
     throttle: number;
   };
-}
-
-export interface BoatStateData {
-  currentState: BoatState;
-  previousState: BoatState | null;
-  lastTransition: Date;
-  manualOverride: any;
-  inputs: any;
 }
 
 // Legacy WeatherData - kept for backwards compatibility

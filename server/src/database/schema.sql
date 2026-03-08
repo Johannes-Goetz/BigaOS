@@ -1,18 +1,6 @@
 -- Biga OS Database Schema
 -- SQLite database for boat automation system
 
--- State History
--- Tracks boat state changes over time
-CREATE TABLE IF NOT EXISTS state_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    state TEXT NOT NULL,
-    reason TEXT,
-    override_by TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_state_timestamp ON state_history(timestamp DESC);
-
 -- Sensor Data History
 -- Stores sensor readings with timestamps
 CREATE TABLE IF NOT EXISTS sensor_data (
@@ -147,9 +135,6 @@ INSERT OR IGNORE INTO db_metadata (key, value) VALUES ('created_at', datetime('n
 INSERT OR IGNORE INTO db_metadata (key, value) VALUES ('app_name', 'Biga OS');
 
 -- Insert default settings
-INSERT OR IGNORE INTO settings (key, value, description)
-VALUES ('state_auto_detect', 'true', 'Enable automatic boat state detection');
-
 INSERT OR IGNORE INTO settings (key, value, description)
 VALUES ('data_retention_days', '30', 'Number of days to retain sensor data');
 

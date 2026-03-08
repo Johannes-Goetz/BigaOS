@@ -61,31 +61,6 @@ class DatabaseService {
     }
   }
 
-  // ==================== STATE HISTORY ====================
-
-  /**
-   * Add state change to history
-   */
-  addStateHistory(state: string, reason?: string, overrideBy?: string): void {
-    const stmt = this.getDb().prepare(`
-      INSERT INTO state_history (state, reason, override_by)
-      VALUES (?, ?, ?)
-    `);
-    stmt.run(state, reason || null, overrideBy || null);
-  }
-
-  /**
-   * Get state history
-   */
-  getStateHistory(limit: number = 100): any[] {
-    const stmt = this.getDb().prepare(`
-      SELECT * FROM state_history
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `);
-    return stmt.all(limit);
-  }
-
   // ==================== SENSOR DATA ====================
 
   /**
@@ -330,7 +305,6 @@ class DatabaseService {
     const stats: any = {};
 
     const queries = {
-      stateHistoryCount: 'SELECT COUNT(*) as count FROM state_history',
       sensorDataCount: 'SELECT COUNT(*) as count FROM sensor_data',
       eventsCount: 'SELECT COUNT(*) as count FROM events',
       unacknowledgedEvents: 'SELECT COUNT(*) as count FROM events WHERE acknowledged = 0',

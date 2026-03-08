@@ -547,26 +547,6 @@ markers.icon=ICON
 markers.color=COLOR
 markers.name_placeholder=Marker name...
 
-# ==================== State / Status ====================
-state.anchored=Anchored
-state.sailing=Sailing
-state.motoring=Motoring
-state.in_marina=In Marina
-state.drifting=Drifting
-state.boat_status=Boat Status
-state.alarm_status=Alarm Status
-state.alarm_radius=Alarm Radius
-state.chain_out=Chain Out
-state.sailing_performance=Sailing Performance
-state.motor_status=Motor Status
-state.throttle=Throttle
-state.motor_temp=Motor Temp
-state.running=Running
-state.stopped=Stopped
-state.marina_status=Marina Status
-state.moored_message=Boat is securely moored in marina
-state.drifting_message=Boat is drifting - consider anchoring or starting motor
-
 # ==================== Chart Additional ====================
 chart.calculating_route=Calculating route...
 chart.nav_data_missing=Navigation Data Missing

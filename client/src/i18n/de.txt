@@ -547,26 +547,6 @@ markers.icon=SYMBOL
 markers.color=FARBE
 markers.name_placeholder=Markername...
 
-# ==================== Status ====================
-state.anchored=Geankert
-state.sailing=Segeln
-state.motoring=Motorbetrieb
-state.in_marina=Im Hafen
-state.drifting=Treibend
-state.boat_status=Bootsstatus
-state.alarm_status=Alarmstatus
-state.alarm_radius=Alarmradius
-state.chain_out=Kette ausgebracht
-state.sailing_performance=Segelleistung
-state.motor_status=Motorstatus
-state.throttle=Gas
-state.motor_temp=Motortemp.
-state.running=Läuft
-state.stopped=Gestoppt
-state.marina_status=Hafenstatus
-state.moored_message=Boot ist sicher im Hafen vertäut
-state.drifting_message=Boot treibt - Ankern oder Motor starten empfohlen
-
 # ==================== Karte Zusätzlich ====================
 chart.calculating_route=Route wird berechnet...
 chart.nav_data_missing=Navigationsdaten fehlen

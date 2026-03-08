@@ -28,7 +28,6 @@ const FLUSH_INTERVAL = 1000; // Flush every second for real-time data
 
 // Prepared statements (cached for performance)
 let insertSensorStmt: Database.Statement | null = null;
-let insertStateStmt: Database.Statement | null = null;
 let insertEventStmt: Database.Statement | null = null;
 
 /**
@@ -62,11 +61,6 @@ function initialize(dbPath: string): void {
     insertSensorStmt = db.prepare(`
       INSERT INTO sensor_data (category, sensor_name, value, unit, timestamp)
       VALUES (?, ?, ?, ?, datetime(? / 1000, 'unixepoch'))
-    `);
-
-    insertStateStmt = db.prepare(`
-      INSERT INTO state_history (state, reason, override_by)
-      VALUES (?, ?, ?)
     `);
 
     insertEventStmt = db.prepare(`
@@ -131,19 +125,6 @@ function addSensorData(category: string, sensorName: string, value: number, unit
   // Flush if buffer is full
   if (sensorDataBuffer.length >= BATCH_SIZE) {
     flushSensorData();
-  }
-}
-
-/**
- * Add state history (immediate write)
- */
-function addStateHistory(state: string, reason: string | null, overrideBy: string | null): void {
-  if (!db || !insertStateStmt) return;
-
-  try {
-    insertStateStmt.run(state, reason, overrideBy);
-  } catch (error) {
-    console.error('[DB Worker] Error adding state history:', error);
   }
 }
 
@@ -238,7 +219,6 @@ function getStats(): any {
   const stats: any = {};
 
   const queries = {
-    stateHistoryCount: 'SELECT COUNT(*) as count FROM state_history',
     sensorDataCount: 'SELECT COUNT(*) as count FROM sensor_data',
     eventsCount: 'SELECT COUNT(*) as count FROM events',
     unacknowledgedEvents: 'SELECT COUNT(*) as count FROM events WHERE acknowledged = 0',
@@ -316,14 +296,6 @@ if (parentPort) {
               reading.unit
             );
           }
-          break;
-
-        case 'addStateHistory':
-          addStateHistory(
-            message.data.state,
-            message.data.reason,
-            message.data.overrideBy
-          );
           break;
 
         case 'addEvent':

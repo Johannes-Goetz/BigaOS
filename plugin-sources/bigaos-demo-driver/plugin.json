@@ -19,6 +19,8 @@
       { "id": "voltage", "name": "Battery Voltage", "dataType": "voltage", "unit": "V", "updateRate": 1 },
       { "id": "current", "name": "Battery Current", "dataType": "current", "unit": "A", "updateRate": 1 },
       { "id": "soc", "name": "State of Charge", "dataType": "soc", "unit": "%", "updateRate": 1 },
+      { "id": "power", "name": "Battery Power", "dataType": "battery_power", "unit": "W", "updateRate": 1 },
+      { "id": "time_remaining", "name": "Time Remaining", "dataType": "battery_time_remaining", "unit": "s", "updateRate": 1 },
       { "id": "wind_speed", "name": "Wind Speed", "dataType": "wind_speed", "unit": "m/s", "updateRate": 1 },
       { "id": "wind_angle", "name": "Wind Angle", "dataType": "wind_angle", "unit": "degrees", "updateRate": 1 },
       { "id": "temperature", "name": "Temperature", "dataType": "temperature", "unit": "°C", "updateRate": 1 },
@@ -30,8 +32,6 @@
       { "id": "rudder", "name": "Rudder Angle", "dataType": "rudder_angle", "unit": "degrees", "updateRate": 1 },
       { "id": "tank_fresh", "name": "Fresh Water Tank", "dataType": "tank_level", "unit": "%", "updateRate": 1 },
       { "id": "tank_waste", "name": "Waste Tank", "dataType": "tank_level", "unit": "%", "updateRate": 1 },
-      { "id": "solar_voltage", "name": "Solar Panel Voltage", "dataType": "voltage", "unit": "V", "updateRate": 1 },
-      { "id": "solar_current", "name": "Solar Panel Current", "dataType": "current", "unit": "A", "updateRate": 1 },
       { "id": "chain_counter", "name": "Anchor Chain", "dataType": "chain_length", "unit": "m", "updateRate": 1 }
     ]
   }

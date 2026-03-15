@@ -4,7 +4,7 @@
  * Reads sensor data from the MacArthur HAT on RPi 5.
  * Supports:
  *   - NMEA 2000 via CAN bus (candump + canboatjs)
- *   - ICM-20948 IMU via I2C (roll, pitch, yaw, magnetic heading)
+ *   - ICM-20948 IMU via I2C (roll, pitch, magnetic heading)
  *
  * Data flow (CAN):
  *   MacArthur HAT -> SocketCAN (can0) -> candump -L
@@ -13,7 +13,8 @@
  *
  * Data flow (IMU):
  *   MacArthur HAT -> I2C bus 1 -> ICM-20948 registers
- *   -> raw accel/gyro/mag -> Madgwick AHRS fusion
+ *   -> raw accel/gyro/mag -> calibration correction
+ *   -> Madgwick AHRS fusion -> mounting offset correction
  *   -> api.pushSensorValue() -> SensorMappingService -> Client
  */
 
@@ -21,6 +22,7 @@ const { CANConnection } = require('./can-connection');
 const { PGNHandlers } = require('./pgn-handlers');
 const { IMUConnection } = require('./imu-connection');
 const { IMUFusion } = require('./imu-fusion');
+const { IMUCalibration } = require('./imu-calibration');
 
 let api = null;
 let canConnection = null;
@@ -28,6 +30,7 @@ let pgnHandlers = null;
 let fromPgn = null;
 let imuConnection = null;
 let imuFusion = null;
+let imuCalibration = null;
 let healthCheckTimer = null;
 let frameCount = 0;
 let parsedCount = 0;
@@ -36,6 +39,7 @@ let rawFrameCount = 0;
 let imuSampleCount = 0;
 let imuPushCount = 0;
 let lastImuPush = 0;
+let imuCalibrating = false;
 
 // IMU push rate limiting (ms between pushes)
 const IMU_PUSH_INTERVAL = 100; // 10Hz output
@@ -84,14 +88,25 @@ function processFrame(frame) {
 }
 
 /**
- * Process IMU data through fusion filter and push to streams.
+ * Process IMU data through calibration and fusion filter, then push to streams.
  */
 function processIMUData(data) {
-  if (!imuFusion || !api) return;
+  if (!imuFusion || !api || !imuCalibration || imuCalibrating) return;
 
   imuSampleCount++;
 
-  const attitude = imuFusion.update(data);
+  // Apply calibration corrections
+  const corrected = {
+    accel: data.accel,
+    gyro: imuCalibration.applyGyro(data.gyro),
+    mag: imuCalibration.applyMag(data.mag),
+    timestamp: data.timestamp,
+  };
+
+  const attitude = imuFusion.update(corrected);
+
+  // Apply mounting offset
+  const final = imuCalibration.applyMountingOffset(attitude);
 
   // Rate-limit pushes to 10Hz
   const now = Date.now();
@@ -99,9 +114,53 @@ function processIMUData(data) {
   lastImuPush = now;
   imuPushCount++;
 
-  api.pushSensorValue('imu_roll', attitude.roll);
-  api.pushSensorValue('imu_pitch', attitude.pitch);
-  api.pushSensorValue('imu_heading', attitude.heading);
+  api.pushSensorValue('imu_roll', final.roll);
+  api.pushSensorValue('imu_pitch', final.pitch);
+  api.pushSensorValue('imu_heading', final.heading);
+}
+
+/**
+ * Run auto-calibration on first startup (gyro bias + mounting offset).
+ * Magnetometer calibration requires user action.
+ */
+async function runAutoCalibration() {
+  if (!imuConnection || !imuConnection.isConnected()) return;
+
+  api.log('IMU: No calibration data found — running auto-calibration...');
+  imuCalibrating = true;
+
+  try {
+    // Step 1: Gyro bias (device must be stationary)
+    api.log('IMU: Calibrating gyro bias (keep device still)...');
+    const gyroBias = await imuCalibration.calibrateGyro(imuConnection);
+    api.log(`IMU: Gyro bias: x=${gyroBias.x.toFixed(4)}, y=${gyroBias.y.toFixed(4)}, z=${gyroBias.z.toFixed(4)}`);
+
+    // Step 2: Let the fusion filter converge with corrected gyro data (~3s)
+    api.log('IMU: Waiting for AHRS convergence...');
+    imuCalibrating = false; // Let processIMUData run to feed the filter
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    imuCalibrating = true;
+
+    // Step 3: Mounting offset (capture current orientation as level)
+    api.log('IMU: Calibrating mounting offset (capturing current orientation as level)...');
+    // Reset fusion so it re-converges with calibrated gyro
+    imuFusion.reset();
+    await imuCalibration.calibrateMountingOffset(imuConnection, imuFusion);
+    api.log(`IMU: Mounting offset: roll=${imuCalibration.mountingOffset.roll.toFixed(3)}, pitch=${imuCalibration.mountingOffset.pitch.toFixed(3)}`);
+
+    // Save
+    imuCalibration.calibrated = true;
+    imuCalibration.status = 'complete';
+    await imuCalibration.save(api);
+    api.log('IMU: Auto-calibration complete and saved');
+  } catch (err) {
+    api.log(`IMU: Auto-calibration failed: ${err.message}`);
+    imuCalibration.status = 'idle';
+  } finally {
+    imuCalibrating = false;
+    // Reset fusion after calibration for clean start
+    imuFusion.reset();
+  }
 }
 
 function startHealthCheck() {
@@ -217,6 +276,8 @@ module.exports = {
         sampleInterval: Math.round(1000 / imuPollRate),
       });
 
+      imuCalibration = new IMUCalibration();
+
       imuConnection = new IMUConnection({
         address: imuAddress,
         pollRate: imuPollRate,
@@ -236,6 +297,15 @@ module.exports = {
       // Connect IMU (errors won't kill the plugin)
       try {
         await imuConnection.connect();
+
+        // Load or auto-calibrate
+        const hasCalibration = await imuCalibration.load(api);
+        if (hasCalibration) {
+          api.log('IMU: Loaded saved calibration data');
+        } else {
+          // Auto-calibrate on first run (non-blocking)
+          setTimeout(() => runAutoCalibration(), 500);
+        }
       } catch (err) {
         api.log(`IMU initialization failed: ${err.message} (CAN bus continues)`);
         api.triggerAlert({
@@ -279,6 +349,8 @@ module.exports = {
     fromPgn = null;
     pgnHandlers = null;
     imuFusion = null;
+    imuCalibration = null;
+    imuCalibrating = false;
     frameCount = 0;
     parsedCount = 0;
     rawFrameCount = 0;
@@ -287,5 +359,70 @@ module.exports = {
     imuPushCount = 0;
     lastImuPush = 0;
     api = null;
+  },
+
+  // ================================================================
+  // Plugin Actions (RPC from client UI)
+  // ================================================================
+
+  async onAction(action, params) {
+    if (action === 'imu_calibration_status') {
+      if (!imuCalibration) return { status: 'unavailable' };
+      return imuCalibration.getState();
+    }
+
+    if (action === 'imu_recalibrate_gyro_mount') {
+      if (!imuConnection || !imuConnection.isConnected() || !imuCalibration || !imuFusion) {
+        return { error: 'IMU not connected' };
+      }
+      if (imuCalibrating) return { error: 'Calibration already in progress' };
+
+      // Run in background (non-blocking)
+      (async () => {
+        imuCalibrating = true;
+        try {
+          api.log('IMU: Recalibrating gyro + mounting offset...');
+          await imuCalibration.calibrateGyro(imuConnection);
+          imuFusion.reset();
+          imuCalibrating = false;
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          imuCalibrating = true;
+          await imuCalibration.calibrateMountingOffset(imuConnection, imuFusion);
+          imuCalibration.calibrated = true;
+          imuCalibration.status = 'complete';
+          await imuCalibration.save(api);
+          api.log('IMU: Recalibration complete');
+        } catch (err) {
+          api.log(`IMU: Recalibration failed: ${err.message}`);
+          imuCalibration.status = 'idle';
+        } finally {
+          imuCalibrating = false;
+          imuFusion.reset();
+        }
+      })();
+
+      return { status: 'started' };
+    }
+
+    if (action === 'imu_start_mag_calibration') {
+      if (!imuConnection || !imuConnection.isConnected() || !imuCalibration) {
+        return { error: 'IMU not connected' };
+      }
+      imuCalibration.startMagCalibration(imuConnection);
+      return { status: 'started' };
+    }
+
+    if (action === 'imu_stop_mag_calibration') {
+      if (!imuConnection || !imuCalibration) return { error: 'IMU not connected' };
+      const result = imuCalibration.stopMagCalibration(imuConnection);
+      if (result) {
+        await imuCalibration.save(api);
+        imuFusion.reset();
+        return { status: 'complete', ...result };
+      }
+      return { error: 'Not enough samples collected' };
+    }
+
+    return { error: `Unknown action: ${action}` };
   },
 };

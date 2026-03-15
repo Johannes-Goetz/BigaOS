@@ -350,6 +350,8 @@ export class DataController extends EventEmitter {
           current: data.electrical.battery.current, // No conversion
           temperature: temperatureFromStandard(data.electrical.battery.temperature, units.temperatureUnit),
           stateOfCharge: data.electrical.battery.stateOfCharge, // No conversion
+          timeRemaining: data.electrical.battery.timeRemaining, // Seconds
+          power: data.electrical.battery.power, // Watts
         },
       },
       propulsion: {

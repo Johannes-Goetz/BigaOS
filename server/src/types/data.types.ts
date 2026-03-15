@@ -62,6 +62,8 @@ export interface StandardElectricalData {
     current: number; // Amps (no conversion needed)
     temperature: number; // Kelvin
     stateOfCharge: number; // Percentage (0-100)
+    timeRemaining: number; // Seconds (0 = unknown)
+    power: number; // Watts (positive = charging, negative = discharging)
   };
 }
 
@@ -174,6 +176,8 @@ export interface DisplaySensorData {
       current: number; // Amps
       temperature: number; // user's temperature unit
       stateOfCharge: number; // Percentage
+      timeRemaining: number; // Seconds (0 = unknown)
+      power: number; // Watts
     };
   };
   propulsion: {

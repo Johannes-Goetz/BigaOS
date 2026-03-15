@@ -5,7 +5,7 @@
  * All values pass through with zero unit conversion because
  * canboatjs outputs radians/m/s/K/Pa and BigaOS uses the same units internally.
  *
- * Supports 15 PGNs producing 25 data streams.
+ * Supports 16 PGNs producing 28 data streams.
  */
 
 // Rate limiting: minimum milliseconds between pushes per stream
@@ -27,8 +27,10 @@ const RATE_LIMITS = {
   rudder: 500,
   battery_0_voltage: 1000,  // 1Hz
   battery_0_current: 1000,
-  battery_0_temp: 1000,
+  battery_0_temperature: 1000,
   battery_0_soc: 1000,
+  battery_0_time_remaining: 1000,
+  battery_0_power: 1000,
   engine_0_rpm: 500,
   engine_0_temp: 1000,
   water_temp: 1000,
@@ -69,7 +71,8 @@ class PGNHandlers {
       case 130306: return this._handleWindData(parsed.fields);
       case 127257: return this._handleAttitude(parsed.fields);
       case 127245: return this._handleRudder(parsed.fields);
-      case 127508: return this._handleBatteryStatus(parsed.fields, parsed.src);
+      case 127508: return this._handleBatteryStatus(parsed.fields);
+      case 127506: return this._handleDCDetailedStatus(parsed.fields);
       case 127488: return this._handleEngineRapid(parsed.fields);
       case 127489: return this._handleEngineDynamic(parsed.fields);
       case 130310: return this._handleEnvironmentalParams(parsed.fields);
@@ -162,19 +165,37 @@ class PGNHandlers {
   }
 
   // PGN 127508 - Battery Status
-  _handleBatteryStatus(fields, src) {
+  _handleBatteryStatus(fields) {
     const instance = fields['Battery Instance'] || 0;
     const prefix = `battery_${instance}`;
 
     const voltage = fields.Voltage;
     const current = fields.Current;
     const temp = fields.Temperature;
-    const soc = fields['State of Charge'];
+    const power = fields.Power;
 
-    if (voltage != null) this._push(`${prefix}_voltage`, voltage);   // Volts
-    if (current != null) this._push(`${prefix}_current`, current);   // Amps
-    if (temp != null) this._push(`${prefix}_temp`, temp);            // Kelvin
-    if (soc != null) this._push(`${prefix}_soc`, soc);              // Percentage
+    if (voltage != null) this._push(`${prefix}_voltage`, voltage);          // Volts
+    if (current != null) this._push(`${prefix}_current`, current);          // Amps
+    if (temp != null) this._push(`${prefix}_temperature`, temp);            // Kelvin
+
+    // Direct power from interface takes priority; otherwise calculate from V × A
+    if (power != null) {
+      this._push(`${prefix}_power`, power);                                 // Watts
+    } else if (voltage != null && current != null) {
+      this._push(`${prefix}_power`, voltage * current);                     // Watts (calculated)
+    }
+  }
+
+  // PGN 127506 - DC Detailed Status
+  _handleDCDetailedStatus(fields) {
+    const instance = fields['DC Instance'] || 0;
+    const prefix = `battery_${instance}`;
+
+    const soc = fields['State of Charge'];
+    const timeRemaining = fields['Time Remaining'];
+
+    if (soc != null) this._push(`${prefix}_soc`, soc);                     // Percentage
+    if (timeRemaining != null) this._push(`${prefix}_time_remaining`, timeRemaining);  // Seconds
   }
 
   // PGN 127488 - Engine Parameters, Rapid Update

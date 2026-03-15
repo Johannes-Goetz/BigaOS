@@ -677,6 +677,14 @@ slot.voltage=Batteriespannung
 slot.current=Batteriestrom
 slot.temperature=Temperatur
 slot.soc=Ladezustand
+slot.battery_temperature=Batterietemperatur
+slot.battery_soc=Ladezustand
+slot.battery_time_remaining=Restlaufzeit
+slot.battery_power=Batterieleistung
+slot.wind_speed=Windgeschwindigkeit
+slot.wind_angle=Windwinkel
+slot.tank_level=Tankstand
+slot.chain_length=Ankerkette
 slot.rpm=Motordrehzahl
 slot.water_temperature=Wassertemperatur
 slot.barometric_pressure=Luftdruck
@@ -688,6 +696,19 @@ slot_cat.navigation=Navigation
 slot_cat.environment=Umwelt
 slot_cat.electrical=Elektrik
 slot_cat.propulsion=Antrieb
+
+# ==================== IMU-Kalibrierung ====================
+imu.calibration=IMU-Kalibrierung
+imu.calibrated=Kalibriert
+imu.not_calibrated=Nicht kalibriert
+imu.calibrating_gyro=Gyro wird kalibriert
+imu.calibrating_mount=Lage wird gesetzt
+imu.calibrating_mag=Kompasskalibrierung
+imu.samples=Messwerte
+imu.recalibrate=Lage neu kalibrieren
+imu.start_mag_cal=Kompass kalibrieren
+imu.stop_mag_cal=Kalibrierung beenden
+imu.mag_cal_hint=Drehen Sie das Boot langsam durch möglichst viele Kurse und drücken Sie dann Beenden.
 
 # ==================== Schnittstellen-Bezeichnungen ====================
 iface.nmea2000=NMEA 2000

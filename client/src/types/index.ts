@@ -56,6 +56,8 @@ export interface ElectricalData {
     current: number;
     temperature: number;
     stateOfCharge: number;
+    timeRemaining: number;
+    power: number;
   };
 }
 

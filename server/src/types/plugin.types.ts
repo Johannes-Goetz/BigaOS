@@ -99,6 +99,8 @@ export type SensorSlotType =
   | 'battery_current'       // number (Amps)
   | 'battery_soc'           // number (Percentage 0-100)
   | 'battery_temperature'   // number (Kelvin)
+  | 'battery_time_remaining' // number (seconds)
+  | 'battery_power'          // number (Watts)
   | 'voltage'               // number (Volts) - generic
   | 'current'               // number (Amps) - generic
   | 'soc'                   // number (Percentage 0-100) - generic
@@ -236,6 +238,7 @@ export interface PluginInfo {
 export interface BigaOSPlugin {
   activate(api: any): Promise<void>;
   deactivate(): Promise<void>;
+  onAction?(action: string, params?: any): Promise<any>;
 }
 
 // ============================================================================

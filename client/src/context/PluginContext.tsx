@@ -157,6 +157,10 @@ interface PluginContextType {
   loadPluginConfig: (pluginId: string, keys: string[]) => void;
   setPluginConfig: (pluginId: string, key: string, value: any) => void;
 
+  // Plugin actions (RPC)
+  executePluginAction: (pluginId: string, action: string, params?: any) => void;
+  pluginActionResults: Record<string, any>;
+
   // System actions
   rebootSystem: () => void;
 }
@@ -176,6 +180,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [debugData, setDebugData] = useState<DebugDataEntry[]>([]);
   const [sourceAvailability, setSourceAvailability] = useState<SlotAvailability[]>([]);
   const [pluginConfigs, setPluginConfigs] = useState<Record<string, Record<string, any>>>({});
+  const [pluginActionResults, setPluginActionResults] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const clearInstallingPlugins = (plugins: PluginInfo[]) => {
@@ -262,6 +267,14 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     wsService.on('plugin_registry_sync', handleRegistrySync);
     wsService.on('plugin_config_sync', handleConfigSync);
 
+    const handleActionResult = (data: { pluginId: string; action: string; result: any }) => {
+      setPluginActionResults(prev => ({
+        ...prev,
+        [`${data.pluginId}:${data.action}`]: data.result,
+      }));
+    };
+    wsService.on('plugin_action_result', handleActionResult);
+
     // Request initial data
     wsService.emit('get_plugins', {});
     wsService.emit('get_sensor_mappings', {});
@@ -274,6 +287,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       wsService.off('sensor_mappings_updated', handleMappingsUpdated);
       wsService.off('plugin_registry_sync', handleRegistrySync);
       wsService.off('plugin_config_sync', handleConfigSync);
+      wsService.off('plugin_action_result', handleActionResult);
     };
   }, []);
 
@@ -327,6 +341,10 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     wsService.emit('plugin_config_set', { pluginId, key, value });
   }, []);
 
+  const executePluginAction = useCallback((pluginId: string, action: string, params?: any) => {
+    wsService.emit('plugin_action', { pluginId, action, params });
+  }, []);
+
   const rebootSystem = useCallback(() => {
     wsService.emit('system_reboot', {});
   }, []);
@@ -369,6 +387,8 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     pluginConfigs,
     loadPluginConfig,
     setPluginConfig,
+    executePluginAction,
+    pluginActionResults,
     rebootSystem,
   };
 

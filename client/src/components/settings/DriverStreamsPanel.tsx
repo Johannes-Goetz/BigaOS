@@ -17,6 +17,7 @@ import {
   DebugDataEntry,
   SlotAvailability,
   SourceInfo,
+  usePlugins,
 } from '../../context/PluginContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -28,10 +29,10 @@ import { SLabel, SSection, SInput, SButton, SToggle, SInfoBox } from '../ui/Sett
 // ============================================================================
 
 const SLOT_CATEGORIES: [string, string[]][] = [
-  ['slot_cat.navigation', ['position', 'course_over_ground', 'speed_over_ground', 'heading', 'speed_through_water', 'roll', 'pitch', 'yaw', 'rudder_angle']],
-  ['slot_cat.environment', ['depth', 'wind_speed_apparent', 'wind_angle_apparent', 'wind_speed_true', 'wind_angle_true', 'water_temperature', 'barometric_pressure', 'humidity']],
-  ['slot_cat.electrical', ['voltage', 'current', 'temperature', 'soc']],
-  ['slot_cat.propulsion', ['rpm', 'fuel_level']],
+  ['slot_cat.navigation', ['position', 'course_over_ground', 'speed_over_ground', 'heading', 'speed_through_water', 'roll', 'pitch', 'yaw', 'rudder_angle', 'chain_length']],
+  ['slot_cat.environment', ['depth', 'wind_speed_apparent', 'wind_angle_apparent', 'wind_speed_true', 'wind_angle_true', 'wind_speed', 'wind_angle', 'water_temperature', 'barometric_pressure', 'humidity']],
+  ['slot_cat.electrical', ['voltage', 'current', 'temperature', 'soc', 'battery_temperature', 'battery_soc', 'battery_time_remaining', 'battery_power']],
+  ['slot_cat.propulsion', ['rpm', 'fuel_level', 'tank_level']],
 ];
 
 // ============================================================================
@@ -68,10 +69,24 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
   const { theme } = useTheme();
   const { t, language } = useLanguage();
   const { timeFormat } = useSettings();
+  const { executePluginAction, pluginActionResults } = usePlugins();
   const [debugExpanded, setDebugExpanded] = useState(false);
   const [advancedExpanded, setAdvancedExpanded] = useState(false);
+  const [magCalActive, setMagCalActive] = useState(false);
 
   const configSchema = plugin.manifest.driver?.configSchema || [];
+  const isMacArthur = plugin.id === 'bigaos-macarthur-hat';
+  const imuCalStatus = pluginActionResults['bigaos-macarthur-hat:imu_calibration_status'];
+
+  // Poll IMU calibration status when advanced settings are open (MacArthur HAT only)
+  useEffect(() => {
+    if (!isMacArthur || !advancedExpanded) return;
+    executePluginAction('bigaos-macarthur-hat', 'imu_calibration_status');
+    const interval = setInterval(() => {
+      executePluginAction('bigaos-macarthur-hat', 'imu_calibration_status');
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isMacArthur, advancedExpanded, executePluginAction]);
 
   // Auto-refresh debug data when debug is expanded
   useEffect(() => {
@@ -127,8 +142,8 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
 
     for (const source of slot.sources) {
       if (source.alive || source.selected) {
-        const ifaceLabel = getInterfaceLabel(source.interface);
-        const label = `${source.pluginName} (${ifaceLabel})`;
+        const ifaceLabel = source.interface ? getInterfaceLabel(source.interface) : '';
+        const label = ifaceLabel ? `${source.pluginName} (${ifaceLabel})` : source.pluginName;
         options.push({
           value: `${source.pluginId}:${source.streamId}`,
           label,
@@ -585,8 +600,94 @@ export const DriverSettingsDialog: React.FC<DriverSettingsDialogProps> = ({
           </div>
         )}
 
+        {/* IMU Calibration (MacArthur HAT only) */}
+        {isMacArthur && advancedExpanded && imuCalStatus && imuCalStatus.status !== 'unavailable' && (
+          <div style={{
+            marginTop: theme.space.md,
+            padding: theme.space.md,
+            background: theme.colors.bgCard,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.md,
+          }}>
+            <div style={{
+              fontSize: theme.fontSize.sm,
+              fontWeight: theme.fontWeight.semibold,
+              color: theme.colors.textPrimary,
+              marginBottom: theme.space.sm,
+            }}>
+              {t('imu.calibration') || 'IMU Calibration'}
+            </div>
+
+            {/* Status */}
+            <div style={{
+              fontSize: theme.fontSize.xs,
+              color: theme.colors.textMuted,
+              marginBottom: theme.space.md,
+            }}>
+              {imuCalStatus.calibrated
+                ? (t('imu.calibrated') || 'Calibrated')
+                : (t('imu.not_calibrated') || 'Not calibrated')}
+              {imuCalStatus.status !== 'idle' && imuCalStatus.status !== 'complete' && (
+                <span style={{ color: theme.colors.warning, marginLeft: theme.space.sm }}>
+                  {imuCalStatus.status === 'calibrating_gyro' && `${t('imu.calibrating_gyro') || 'Calibrating gyro'}... ${imuCalStatus.progress}%`}
+                  {imuCalStatus.status === 'calibrating_mount' && `${t('imu.calibrating_mount') || 'Setting level'}... ${imuCalStatus.progress}%`}
+                  {imuCalStatus.status === 'calibrating_mag' && `${t('imu.calibrating_mag') || 'Mag calibration'} (${imuCalStatus.magSamples} ${t('imu.samples') || 'samples'})`}
+                </span>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: theme.space.sm, flexWrap: 'wrap' }}>
+              <SButton
+                variant="secondary"
+                onClick={() => executePluginAction('bigaos-macarthur-hat', 'imu_recalibrate_gyro_mount')}
+                disabled={imuCalStatus.status !== 'idle' && imuCalStatus.status !== 'complete'}
+                style={{ flex: 1, minWidth: '140px' }}
+              >
+                {t('imu.recalibrate') || 'Recalibrate Level'}
+              </SButton>
+
+              {!magCalActive ? (
+                <SButton
+                  variant="secondary"
+                  onClick={() => {
+                    executePluginAction('bigaos-macarthur-hat', 'imu_start_mag_calibration');
+                    setMagCalActive(true);
+                  }}
+                  disabled={imuCalStatus.status !== 'idle' && imuCalStatus.status !== 'complete'}
+                  style={{ flex: 1, minWidth: '140px' }}
+                >
+                  {t('imu.start_mag_cal') || 'Calibrate Compass'}
+                </SButton>
+              ) : (
+                <SButton
+                  variant="primary"
+                  onClick={() => {
+                    executePluginAction('bigaos-macarthur-hat', 'imu_stop_mag_calibration');
+                    setMagCalActive(false);
+                  }}
+                  style={{ flex: 1, minWidth: '140px' }}
+                >
+                  {t('imu.stop_mag_cal') || 'Finish Compass Cal'}
+                </SButton>
+              )}
+            </div>
+
+            {magCalActive && (
+              <div style={{
+                marginTop: theme.space.sm,
+                fontSize: theme.fontSize.xs,
+                color: theme.colors.warning,
+                fontStyle: 'italic',
+              }}>
+                {t('imu.mag_cal_hint') || 'Slowly rotate the boat through as many headings as possible, then press Finish.'}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Unsupported interfaces info (MacArthur HAT only) */}
-        {plugin.id === 'bigaos-macarthur-hat' && (
+        {isMacArthur && (
           <SInfoBox>
             <span style={{ fontWeight: theme.fontWeight.semibold, color: theme.colors.textSecondary }}>
               {t('plugins.not_yet_supported') || 'Not yet supported:'}

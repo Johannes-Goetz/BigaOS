@@ -157,6 +157,8 @@ export class SensorDataService extends EventEmitter {
         current: motorRunning ? this.randomVariation(-45, 5) : this.randomVariation(-2, 1), // Amps (no conversion)
         temperature: celsiusToKelvin(batteryTempC),
         stateOfCharge: this.randomVariation(75, 3), // Percentage (no conversion)
+        timeRemaining: 14400, // Seconds (demo: ~4h)
+        power: motorRunning ? this.randomVariation(-550, 50) : this.randomVariation(-25, 10), // Watts
       },
     };
 

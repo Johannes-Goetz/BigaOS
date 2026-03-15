@@ -280,6 +280,20 @@ export class WebSocketServer {
         socket.emit('plugin_config_sync', { pluginId: data.pluginId, config: { [data.key]: data.value } });
       });
 
+      socket.on('plugin_action', async (data: { pluginId: string; action: string; params?: any }) => {
+        if (this.dataController) {
+          const pm = this.dataController.getPluginManager();
+          if (pm) {
+            const result = await pm.executeAction(data.pluginId, data.action, data.params);
+            socket.emit('plugin_action_result', {
+              pluginId: data.pluginId,
+              action: data.action,
+              result,
+            });
+          }
+        }
+      });
+
       socket.on('system_reboot', () => {
         console.log('[WebSocket] System reboot requested by client');
         this.broadcastSystemRebooting();

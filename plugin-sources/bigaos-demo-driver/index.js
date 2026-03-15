@@ -61,9 +61,13 @@ function pushAllStreams() {
   api.pushSensorValue('roll', degToRad(speedKnots > 5 ? randomVariation(speedKnots * 2, 2) : randomVariation(2, 1)));
 
   // Electrical
-  api.pushSensorValue('voltage', randomVariation(12.4, 0.2));
-  api.pushSensorValue('current', motorRunning ? randomVariation(-45, 5) : randomVariation(-2, 1));
+  const voltage = randomVariation(12.4, 0.2);
+  const current = motorRunning ? randomVariation(-45, 5) : randomVariation(-2, 1);
+  api.pushSensorValue('voltage', voltage);
+  api.pushSensorValue('current', current);
   api.pushSensorValue('soc', randomVariation(75, 3));
+  api.pushSensorValue('power', voltage * current);
+  api.pushSensorValue('time_remaining', motorRunning ? randomVariation(7200, 600) : randomVariation(14400, 1200));
 
   // Wind
   api.pushSensorValue('wind_speed', knotsToMs(randomVariation(8, 2)));
@@ -87,10 +91,6 @@ function pushAllStreams() {
   // Tanks
   api.pushSensorValue('tank_fresh', randomVariation(70, 1));
   api.pushSensorValue('tank_waste', randomVariation(30, 1));
-
-  // Solar
-  api.pushSensorValue('solar_voltage', randomVariation(18.5, 0.5));
-  api.pushSensorValue('solar_current', randomVariation(3.2, 0.5));
 
   // Anchor chain
   api.pushSensorValue('chain_counter', randomVariation(25, 0.5));
@@ -140,6 +140,8 @@ function generateLegacyPacket() {
         current: motorRunning ? randomVariation(-45, 5) : randomVariation(-2, 1),
         temperature: celsiusToKelvin(randomVariation(24, 1)),
         stateOfCharge: randomVariation(75, 3),
+        timeRemaining: motorRunning ? randomVariation(7200, 600) : randomVariation(14400, 1200),
+        power: randomVariation(12.4, 0.2) * (motorRunning ? randomVariation(-45, 5) : randomVariation(-2, 1)),
       },
     },
     propulsion: {

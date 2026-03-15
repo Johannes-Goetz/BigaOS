@@ -2,31 +2,46 @@
  * IMU Sensor Fusion
  *
  * Wraps the AHRS (Madgwick) filter to produce stable roll, pitch,
- * yaw, and magnetic heading from raw ICM-20948 sensor data.
+ * and magnetic heading from raw ICM-20948 sensor data.
+ *
+ * Features:
+ * - Beta warmup: starts with high beta (2.5) for fast convergence,
+ *   then reduces to steady-state (0.4) after warmup period
+ * - Accepts pre-corrected data (gyro bias and mag calibration
+ *   applied externally by IMUCalibration)
  *
  * Input:  accel (g), gyro (rad/s), mag (µT)
- * Output: roll, pitch, yaw, heading (all in radians)
+ * Output: roll, pitch, heading (all in radians)
  */
 
 const AHRS = require('ahrs');
 
+const WARMUP_BETA = 2.5;
+const STEADY_BETA = 0.4;
+const WARMUP_SAMPLES = 200; // ~4 seconds at 50Hz
+
 class IMUFusion {
   constructor(options = {}) {
     const sampleInterval = options.sampleInterval || 20; // ms
+    this.sampleInterval = sampleInterval;
+    this.steadyBeta = options.beta || STEADY_BETA;
+    this.warmupSamples = options.warmupSamples || WARMUP_SAMPLES;
+    this.sampleCount = 0;
+    this.lastTimestamp = null;
+
     this.ahrs = new AHRS({
       sampleInterval,
       algorithm: 'Madgwick',
-      beta: options.beta || 0.4,
+      beta: WARMUP_BETA,
     });
-    this.lastTimestamp = null;
   }
 
   /**
    * Update the filter with new sensor readings.
    *
    * @param {object} data - { accel: {x,y,z}, gyro: {x,y,z}, mag: {x,y,z}, timestamp }
-   *   accel in g-force, gyro in rad/s, mag in µT
-   * @returns {{ roll: number, pitch: number, yaw: number, heading: number }} radians
+   *   accel in g-force, gyro in rad/s (bias-corrected), mag in µT (hard/soft-iron corrected)
+   * @returns {{ roll: number, pitch: number, heading: number }} radians
    */
   update(data) {
     const { accel, gyro, mag } = data;
@@ -42,8 +57,13 @@ class IMUFusion {
     }
     this.lastTimestamp = data.timestamp;
 
+    // Beta warmup: transition from high beta to steady beta
+    this.sampleCount++;
+    if (this.sampleCount === this.warmupSamples) {
+      this.ahrs.beta = this.steadyBeta;
+    }
+
     // Update Madgwick filter
-    // ahrs expects: gx, gy, gz (rad/s), ax, ay, az (g), mx, my, mz (any consistent unit)
     this.ahrs.update(
       gyro.x, gyro.y, gyro.z,
       accel.x, accel.y, accel.z,
@@ -54,7 +74,6 @@ class IMUFusion {
     // Get Euler angles (radians)
     const euler = this.ahrs.getEulerAngles();
 
-    // euler.heading is magnetic heading from magnetometer
     // Normalize heading to [0, 2π]
     let heading = euler.heading;
     if (heading < 0) heading += 2 * Math.PI;
@@ -68,10 +87,11 @@ class IMUFusion {
 
   reset() {
     this.lastTimestamp = null;
+    this.sampleCount = 0;
     this.ahrs = new AHRS({
-      sampleInterval: 20,
+      sampleInterval: this.sampleInterval,
       algorithm: 'Madgwick',
-      beta: 0.4,
+      beta: WARMUP_BETA,
     });
   }
 }

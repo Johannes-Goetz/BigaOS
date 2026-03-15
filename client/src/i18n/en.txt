@@ -677,6 +677,14 @@ slot.voltage=Battery Voltage
 slot.current=Battery Current
 slot.temperature=Temperature
 slot.soc=State of Charge
+slot.battery_temperature=Battery Temperature
+slot.battery_soc=State of Charge
+slot.battery_time_remaining=Time Remaining
+slot.battery_power=Battery Power
+slot.wind_speed=Wind Speed
+slot.wind_angle=Wind Angle
+slot.tank_level=Tank Level
+slot.chain_length=Anchor Chain
 slot.rpm=Engine RPM
 slot.water_temperature=Water Temperature
 slot.barometric_pressure=Atmospheric Pressure
@@ -688,6 +696,19 @@ slot_cat.navigation=Navigation
 slot_cat.environment=Environment
 slot_cat.electrical=Electrical
 slot_cat.propulsion=Propulsion
+
+# ==================== IMU Calibration ====================
+imu.calibration=IMU Calibration
+imu.calibrated=Calibrated
+imu.not_calibrated=Not calibrated
+imu.calibrating_gyro=Calibrating gyro
+imu.calibrating_mount=Setting level
+imu.calibrating_mag=Compass calibration
+imu.samples=samples
+imu.recalibrate=Recalibrate Level
+imu.start_mag_cal=Calibrate Compass
+imu.stop_mag_cal=Finish Compass Cal
+imu.mag_cal_hint=Slowly rotate the boat through as many headings as possible, then press Finish.
 
 # ==================== Interface Labels ====================
 iface.nmea2000=NMEA 2000

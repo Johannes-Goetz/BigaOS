@@ -282,6 +282,8 @@ export class SensorMappingService extends EventEmitter {
         current: get('battery_current') ?? get('current') ?? 0,
         temperature: get('battery_temperature') ?? get('temperature') ?? 297,
         stateOfCharge: get('battery_soc') ?? get('soc') ?? 75,
+        timeRemaining: get('battery_time_remaining') ?? 0,
+        power: get('battery_power') ?? 0,
       },
     };
 

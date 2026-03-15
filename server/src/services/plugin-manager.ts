@@ -595,6 +595,22 @@ export class PluginManager extends EventEmitter {
   }
 
   // ================================================================
+  // Plugin Actions (RPC from client)
+  // ================================================================
+
+  async executeAction(pluginId: string, action: string, params?: any): Promise<any> {
+    const plugin = this.plugins.get(pluginId);
+    if (!plugin?.module?.onAction) {
+      return { error: 'Plugin does not support actions' };
+    }
+    try {
+      return await plugin.module.onAction(action, params);
+    } catch (err: any) {
+      return { error: err.message || 'Action failed' };
+    }
+  }
+
+  // ================================================================
   // Persistence
   // ================================================================
 

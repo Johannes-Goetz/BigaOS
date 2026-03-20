@@ -46,14 +46,17 @@ interface ChartConfig {
   fillGradient: boolean;
   currentValue: number;
   formatValue: (v: number) => string;
+  yLabelFormatter?: (v: number) => string;
 }
 
 const formatTimeRemaining = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return '--:--';
-  const h = Math.floor(seconds / 3600);
+  if (!seconds || seconds <= 0) return '--';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (h > 99) return `${h}h`;
-  return `${h}:${m.toString().padStart(2, '0')}`;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 };
 
 export const BatteryView: React.FC<BatteryViewProps> = ({
@@ -103,8 +106,8 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
       key: 'power',
       label: t('battery.power_history'),
       sensorKey: `${batteryId}_power`,
-      yInterval: 50,
-      yHeadroom: 25,
+      yInterval: 20,
+      yHeadroom: 10,
       yUnit: 'W',
       yMinValue: undefined,
       lineColor: theme.colors.dataWind,
@@ -155,14 +158,15 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
       key: 'timeRemaining',
       label: t('battery.time_remaining_history'),
       sensorKey: `${batteryId}_timeRemaining`,
-      yInterval: 3600,
-      yHeadroom: 1800,
+      yInterval: 21600,
+      yHeadroom: 7200,
       yUnit: '',
       yMinValue: 0,
       lineColor: theme.colors.dataHeading,
       fillGradient: false,
       currentValue: timeRemaining,
       formatValue: (v: number) => formatTimeRemaining(v),
+      yLabelFormatter: (v: number) => formatTimeRemaining(v),
     },
     {
       key: 'voltage',
@@ -446,14 +450,7 @@ export const BatteryView: React.FC<BatteryViewProps> = ({
                   yMaxValue={chart.yMaxValue}
                   lineColor={chart.lineColor}
                   fillGradient={chart.fillGradient}
-                  yLabelFormatter={chart.key === 'timeRemaining'
-                    ? (v: number) => {
-                        const h = Math.floor(v / 3600);
-                        const m = Math.floor((v % 3600) / 60);
-                        return `${h}:${m.toString().padStart(2, '0')}`;
-                      }
-                    : undefined
-                  }
+                  yLabelFormatter={chart.yLabelFormatter}
                 />
               </div>
             </div>

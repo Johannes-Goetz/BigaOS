@@ -1,4 +1,5 @@
 import { Layout } from 'react-grid-layout';
+import { SwitchDashboardConfig } from './switches';
 
 export type DashboardSidebarPosition = 'left' | 'right' | 'top' | 'bottom';
 
@@ -9,6 +10,7 @@ export interface DashboardItemConfig {
   type: DashboardItemType;
   targetView: ViewType;
   layout: Layout;
+  switchConfig?: SwitchDashboardConfig;
 }
 
 export type DashboardItemType =
@@ -27,7 +29,8 @@ export type DashboardItemType =
   | 'sea-temp-forecast'
   | 'temp-forecast'
   | 'roll'
-  | 'pitch';
+  | 'pitch'
+  | 'switch';
 
 export interface DashboardLayout {
   items: DashboardItemConfig[];

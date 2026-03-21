@@ -461,6 +461,68 @@ class DatabaseWorkerService {
     return result?.count || 0;
   }
 
+  // ==================== SWITCHES ====================
+
+  async getAllSwitches(): Promise<any[]> {
+    return this.send('query', {
+      sql: `SELECT id, name, icon, target_client_id, device_type, relay_type, gpio_pin, state, created_at, updated_at FROM switches ORDER BY name`,
+      params: []
+    });
+  }
+
+  async getSwitchesForClient(clientId: string): Promise<any[]> {
+    return this.send('query', {
+      sql: `SELECT id, name, icon, target_client_id, device_type, relay_type, gpio_pin, state, created_at, updated_at FROM switches WHERE target_client_id = ? ORDER BY gpio_pin`,
+      params: [clientId]
+    });
+  }
+
+  async createSwitch(id: string, name: string, icon: string, targetClientId: string, deviceType: string, relayType: string, gpioPin: number): Promise<void> {
+    await this.send('execute', {
+      sql: `INSERT INTO switches (id, name, icon, target_client_id, device_type, relay_type, gpio_pin, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))`,
+      params: [id, name, icon, targetClientId, deviceType, relayType, gpioPin]
+    });
+  }
+
+  async updateSwitch(id: string, fields: { name?: string; icon?: string; targetClientId?: string; deviceType?: string; relayType?: string; gpioPin?: number }): Promise<void> {
+    const sets: string[] = [];
+    const params: any[] = [];
+    if (fields.name !== undefined) { sets.push('name = ?'); params.push(fields.name); }
+    if (fields.icon !== undefined) { sets.push('icon = ?'); params.push(fields.icon); }
+    if (fields.targetClientId !== undefined) { sets.push('target_client_id = ?'); params.push(fields.targetClientId); }
+    if (fields.deviceType !== undefined) { sets.push('device_type = ?'); params.push(fields.deviceType); }
+    if (fields.relayType !== undefined) { sets.push('relay_type = ?'); params.push(fields.relayType); }
+    if (fields.gpioPin !== undefined) { sets.push('gpio_pin = ?'); params.push(fields.gpioPin); }
+    if (sets.length === 0) return;
+    sets.push('updated_at = datetime(\'now\')');
+    params.push(id);
+    await this.send('execute', {
+      sql: `UPDATE switches SET ${sets.join(', ')} WHERE id = ?`,
+      params,
+    });
+  }
+
+  async updateSwitchState(id: string, state: number): Promise<void> {
+    await this.send('execute', {
+      sql: `UPDATE switches SET state = ?, updated_at = datetime('now') WHERE id = ?`,
+      params: [state, id]
+    });
+  }
+
+  async deleteSwitch(id: string): Promise<void> {
+    await this.send('execute', {
+      sql: `DELETE FROM switches WHERE id = ?`,
+      params: [id]
+    });
+  }
+
+  async resetSwitchStatesByRelayType(relayType: string, state: number): Promise<void> {
+    await this.send('execute', {
+      sql: `UPDATE switches SET state = ?, updated_at = datetime('now') WHERE relay_type = ?`,
+      params: [state, relayType]
+    });
+  }
+
   // ==================== UTILITIES ====================
 
   /**

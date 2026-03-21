@@ -14,3 +14,4 @@ export { SeaTempForecastItem } from './SeaTempForecastItem';
 export { TempForecastItem } from './TempForecastItem';
 export { RollItem } from './RollItem';
 export { PitchItem } from './PitchItem';
+export { SwitchItem } from './SwitchItem';

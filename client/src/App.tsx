@@ -18,6 +18,7 @@ import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { AlertProvider, useAlerts } from './context/AlertContext';
 import { PluginProvider, usePlugins } from './context/PluginContext';
+import { SwitchProvider } from './context/SwitchContext';
 import { AlertContainer } from './components/alerts';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -657,12 +658,14 @@ function App() {
           <LanguageSyncBridge />
           <PluginProvider>
             <PluginI18nBridge />
+            <SwitchProvider>
             <AlertProvider>
               <ConfirmDialogProvider>
                 <AppContent />
                 <AlertContainer />
               </ConfirmDialogProvider>
             </AlertProvider>
+            </SwitchProvider>
           </PluginProvider>
           </ThemeProvider>
         </SettingsProvider>

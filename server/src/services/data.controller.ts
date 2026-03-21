@@ -22,6 +22,7 @@ import { EventEmitter } from 'events';
 import { SensorDataService, sensorDataService } from './sensor-data.service';
 import { WeatherDataService, weatherDataService } from './weather-data.service';
 import { AlertService, alertService } from './alert.service';
+import { SwitchService, switchService } from './switch.service';
 import { SensorMappingService } from './sensor-mapping.service';
 import { PluginManager } from './plugin-manager';
 import { dbWorker } from './database-worker.service';
@@ -50,6 +51,7 @@ export class DataController extends EventEmitter {
   private sensorService: SensorDataService;
   private weatherService: WeatherDataService;
   private alertServiceInstance: AlertService;
+  private switchServiceInstance: SwitchService;
   private sensorMappingService: SensorMappingService | null = null;
   private pluginManager: PluginManager | null = null;
 
@@ -67,6 +69,7 @@ export class DataController extends EventEmitter {
     this.sensorService = sensorDataService;
     this.weatherService = weatherDataService;
     this.alertServiceInstance = alertService;
+    this.switchServiceInstance = switchService;
   }
 
   /**
@@ -90,6 +93,9 @@ export class DataController extends EventEmitter {
 
     // Initialize alert service
     await this.alertServiceInstance.initialize();
+
+    // Initialize switch service
+    await this.switchServiceInstance.initialize();
 
     // Initialize plugin system
     await this.initializePluginSystem();
@@ -428,6 +434,10 @@ export class DataController extends EventEmitter {
 
   getAlertService(): AlertService {
     return this.alertServiceInstance;
+  }
+
+  getSwitchService(): SwitchService {
+    return this.switchServiceInstance;
   }
 
   getPluginManager(): PluginManager | null {

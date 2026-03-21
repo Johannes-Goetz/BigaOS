@@ -26,6 +26,7 @@ common.no_data=Keine Daten
 common.starting=Starten...
 common.other=Sonstige
 common.settings=Einstellungen
+common.done=Fertig
 
 # ==================== App ====================
 app.demo=DEMO
@@ -134,6 +135,7 @@ dashboard.weather_sea_temp=Wassertemp.
 dashboard.weather_air_temp=Temperatur
 dashboard.roll=Krängung
 dashboard.pitch=Trimm
+dashboard.switch=Schalter
 dashboard.chart=Karte
 dashboard.weather=Wetter
 
@@ -655,6 +657,9 @@ chart.navigate=WASD: navigieren ({speed} kt)
 confirm.delete_file={name} löschen?
 confirm.remove_data=Die heruntergeladenen Daten werden entfernt. Sie können sie später erneut herunterladen.
 
+# ==================== Switches ====================
+settings.switches=Schalter
+
 # ==================== Plugins ====================
 settings.plugins=Plugins
 plugins.installed=Installiert
@@ -816,6 +821,12 @@ clients.start_page_hint=Seite, die beim Start dieses Clients angezeigt wird. Nü
 clients.start_page_default=Standard
 clients.direct_url=Direkte URL
 clients.direct_url_hint=Verwenden Sie diese URL, um BigaOS als dieser Client aufzurufen, ohne Cookies oder lokalen Speicher zu benötigen. Ideal für schreibgeschützte Kiosk-Systeme.
+clients.create_new=Client erstellen
+clients.create_title=Neuen Client erstellen
+clients.create_success=Client erfolgreich erstellt
+clients.client_id=Client-ID
+clients.server_address=Server-Adresse
+clients.setup_instructions=Kopieren Sie die Client-ID und Server-Adresse oben. Sie benötigen diese beim Ausführen des BigaOS Client-Setup-Skripts auf Ihrem Raspberry Pi.
 setup.name_this_phone=Handy benennen
 setup.name_phone_hint=Geben Sie diesem Handy einen Namen zur Identifizierung.
 setup.welcome_title=BigaOS
@@ -829,3 +840,29 @@ setup.use_existing=Bestehenden Client verwenden
 setup.select_client=Client auswählen
 setup.create_new=Neu erstellen
 setup.skip=Überspringen
+switches.title=Schalter
+switches.description=Physische Relais über GPIO-Pins an Raspberry Pi Geräten steuern.
+switches.add=Schalter hinzufügen
+switches.edit=Schalter bearbeiten
+switches.delete=Schalter löschen
+switches.delete_confirm=Diesen Schalter löschen? Das Relais bleibt in seinem aktuellen Zustand.
+switches.name=Name
+switches.icon=Symbol
+switches.target_client=Zielgerät
+switches.device_type=Gerätetyp
+switches.gpio_pin=GPIO-Pin
+switches.relay_type=Relais-Typ
+switches.relay_normally_off=Normal aus
+switches.relay_normally_on=Normal ein
+switches.relay_type_desc_off=Relais schaltet bei Stromverlust auf AUS zurück
+switches.relay_type_desc_on=Relais schaltet bei Stromverlust auf EIN zurück
+switches.state_on=EIN
+switches.state_off=AUS
+switches.pin_in_use=Dieser Pin wird bereits von einem anderen Schalter auf demselben Gerät verwendet
+switches.no_switches=Noch keine Schalter konfiguriert
+switches.toggle_failed=Umschalten fehlgeschlagen
+switches.timeout=Schaltvorgang hat das Zeitlimit überschritten
+switches.client_offline=Zielgerät ist offline
+switches.configure=Konfigurieren
+switches.select_switch=Schalter auswählen
+switches.active_color=Aktive Farbe

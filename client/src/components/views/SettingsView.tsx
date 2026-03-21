@@ -21,6 +21,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { dataAPI, DataFileInfo, DownloadProgress, offlineMapsAPI, StorageStats, systemAPI, UpdateInfo } from '../../services/api';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { AlertsTab } from '../settings/AlertsTab';
+import { SwitchesTab } from '../settings/SwitchesTab';
 import { PluginsTab } from '../settings/PluginsTab';
 import { TerminalPanel } from '../settings/TerminalPanel';
 import { ChartTab } from '../settings/ChartTab';
@@ -41,7 +42,7 @@ import {
   SInfoBox,
 } from '../ui/SettingsUI';
 
-type SettingsTab = 'general' | 'chart' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'plugins' | 'clients' | 'advanced';
+type SettingsTab = 'general' | 'chart' | 'vessel' | 'units' | 'downloads' | 'alerts' | 'switches' | 'plugins' | 'clients' | 'advanced';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -419,6 +420,16 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      ),
+    },
+    {
+      id: 'switches',
+      label: t('settings.switches'),
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="5" width="22" height="14" rx="7" />
+          <circle cx="16" cy="12" r="4" />
         </svg>
       ),
     },
@@ -1225,6 +1236,8 @@ const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
         return renderDownloadsTab();
       case 'alerts':
         return <AlertsTab />;
+      case 'switches':
+        return <SwitchesTab />;
       case 'plugins':
         return <PluginsTab />;
       case 'clients':

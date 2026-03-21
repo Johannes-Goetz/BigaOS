@@ -57,6 +57,24 @@ function initialize(dbPath: string): void {
     // Migrations for existing databases
     try { db.exec(`ALTER TABLE clients ADD COLUMN client_type TEXT DEFAULT 'display'`); } catch { /* column already exists */ }
 
+    // Migrations: create switches table if it doesn't exist (for databases created before this feature)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS switches (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        icon TEXT NOT NULL DEFAULT 'lightbulb',
+        target_client_id TEXT NOT NULL,
+        device_type TEXT NOT NULL DEFAULT 'rpi4b',
+        relay_type TEXT NOT NULL DEFAULT 'normally-off',
+        gpio_pin INTEGER NOT NULL,
+        state INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(target_client_id, gpio_pin)
+      )
+    `);
+    try { db.exec(`CREATE INDEX IF NOT EXISTS idx_switches_target ON switches(target_client_id)`); } catch { /* already exists */ }
+
     // Prepare statements for frequent operations
     insertSensorStmt = db.prepare(`
       INSERT INTO sensor_data (category, sensor_name, value, unit, timestamp)

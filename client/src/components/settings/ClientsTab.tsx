@@ -7,6 +7,7 @@ import { wsService } from '../../services/websocket';
 import { SButton, SCard, SLabel, SSection } from '../ui/SettingsUI';
 import { AddPhoneDialog } from './AddPhoneDialog';
 import { ClientSettingsDialog } from './ClientSettingsDialog';
+import { CreateClientDialog } from './CreateClientDialog';
 
 // Raw client data from server (snake_case fields)
 interface RawClient {
@@ -27,6 +28,7 @@ export const ClientsTab: React.FC = () => {
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showAddPhone, setShowAddPhone] = useState(false);
+  const [showCreateClient, setShowCreateClient] = useState(false);
   const [settingsClient, setSettingsClient] = useState<RawClient | null>(null);
 
   const fetchClients = useCallback(() => {
@@ -98,13 +100,22 @@ export const ClientsTab: React.FC = () => {
       <SSection>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.space.md }}>
           <SLabel style={{ marginBottom: 0 }}>{t('clients.title')}</SLabel>
-          <SButton variant="primary" onClick={() => setShowAddPhone(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: theme.space.xs }}>
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-              <line x1="12" y1="18" x2="12.01" y2="18" />
-            </svg>
-            {t('clients.add_phone')}
-          </SButton>
+          <div style={{ display: 'flex', gap: theme.space.sm }}>
+            <SButton variant="outline" onClick={() => setShowCreateClient(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: theme.space.xs }}>
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              {t('clients.create_new')}
+            </SButton>
+            <SButton variant="primary" onClick={() => setShowAddPhone(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: theme.space.xs }}>
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                <line x1="12" y1="18" x2="12.01" y2="18" />
+              </svg>
+              {t('clients.add_phone')}
+            </SButton>
+          </div>
         </div>
 
         {loading ? (
@@ -224,6 +235,7 @@ export const ClientsTab: React.FC = () => {
       </SSection>
 
       {showAddPhone && <AddPhoneDialog onClose={() => setShowAddPhone(false)} />}
+      {showCreateClient && <CreateClientDialog onClose={() => { setShowCreateClient(false); fetchClients(); }} />}
       {settingsClient && <ClientSettingsDialog client={settingsClient} onClose={() => setSettingsClient(null)} />}
     </div>
   );

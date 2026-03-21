@@ -19,6 +19,8 @@ import { dbWorker } from '../services/database-worker.service';
 import { connectivityService } from '../services/connectivity.service';
 import { DisplaySensorData } from '../types/data.types';
 import { TriggeredAlert, AlertSettings } from '../types/alert.types';
+import { SwitchDefinition, GpioResult } from '../types/switch.types';
+import { gpioService } from '../services/gpio.service';
 import { UserUnitPreferences } from '../types/units.types';
 import { setLanguage as setI18nLanguage } from '../i18n/lang';
 
@@ -120,6 +122,27 @@ export class WebSocketServer {
       });
     });
 
+    // Switch service events
+    const switchSvc = this.dataController.getSwitchService();
+    switchSvc.on('switches_changed', () => {
+      this.io.emit('switches_sync', {
+        switches: switchSvc.getAllSwitches(),
+        timestamp: new Date(),
+      });
+    });
+
+    switchSvc.on('switch_state_update', (data: { switchId: string; state: boolean; locked: boolean; error?: string }) => {
+      this.io.emit('switch_state_update', {
+        ...data,
+        timestamp: new Date(),
+      });
+    });
+
+    // GPIO remote command forwarding
+    gpioService.on('gpio_send_remote', (data: { targetClientId: string; command: any }) => {
+      this.io.to(`gpio:${data.targetClientId}`).emit('gpio_command', data.command);
+    });
+
     // Sensor mapping events
     const sensorMapping = this.dataController.getSensorMappingService();
     if (sensorMapping) {
@@ -139,12 +162,30 @@ export class WebSocketServer {
   private setupEventHandlers(): void {
     this.io.on('connection', (socket) => {
       const clientId = socket.handshake.auth?.clientId as string | undefined;
-      console.log(`Client connected: ${socket.id}${clientId ? ` (clientId: ${clientId})` : ''}`);
+      const clientType = socket.handshake.auth?.type as string | undefined;
+      const isGpioAgent = clientType === 'gpio-agent';
+      console.log(`Client connected: ${socket.id}${clientId ? ` (clientId: ${clientId})` : ''}${isGpioAgent ? ' [GPIO Agent]' : ''}`);
 
       // Track client and join room for targeted messaging
       if (clientId) {
         dbWorker.updateClientLastSeen(clientId).catch(() => {});
         socket.join(`client:${clientId}`);
+        // GPIO agents join a dedicated room for GPIO commands
+        if (isGpioAgent) {
+          socket.join(`gpio:${clientId}`);
+          // Send switch initialization data to the GPIO agent
+          if (this.dataController) {
+            const switches = this.dataController.getSwitchService().getSwitchesForClient(clientId);
+            socket.emit('gpio_init', {
+              switches: switches.map(s => ({
+                switchId: s.id,
+                gpioPin: s.gpioPin,
+                deviceType: s.deviceType,
+                state: s.state,
+              })),
+            });
+          }
+        }
         // Notify all clients that this client came online
         this.io.emit('clients_changed', { timestamp: new Date() });
       }
@@ -536,8 +577,67 @@ export class WebSocketServer {
         }
       });
 
+      // ================================================================
+      // Switch Handlers
+      // ================================================================
+
+      socket.on('get_switches', () => {
+        if (this.dataController) {
+          socket.emit('switches_sync', {
+            switches: this.dataController.getSwitchService().getAllSwitches(),
+            timestamp: new Date(),
+          });
+        }
+      });
+
+      socket.on('switch_create', async (data: any) => {
+        if (this.dataController) {
+          try {
+            await this.dataController.getSwitchService().createSwitch(data);
+          } catch (error: any) {
+            socket.emit('switch_error', { error: error.message || 'Failed to create switch' });
+          }
+        }
+      });
+
+      socket.on('switch_update', async (data: { id: string; [key: string]: any }) => {
+        if (this.dataController) {
+          try {
+            const { id, ...updates } = data;
+            await this.dataController.getSwitchService().updateSwitch(id, updates);
+          } catch (error: any) {
+            socket.emit('switch_error', { error: error.message || 'Failed to update switch' });
+          }
+        }
+      });
+
+      socket.on('switch_delete', async (data: { id: string }) => {
+        if (this.dataController) {
+          try {
+            await this.dataController.getSwitchService().deleteSwitch(data.id);
+          } catch (error: any) {
+            socket.emit('switch_error', { error: error.message || 'Failed to delete switch' });
+          }
+        }
+      });
+
+      socket.on('switch_toggle', async (data: { switchId: string }) => {
+        if (this.dataController) {
+          await this.dataController.getSwitchService().requestToggle(data.switchId);
+        }
+      });
+
+      // GPIO agent result callback
+      socket.on('gpio_command_result', (data: GpioResult) => {
+        gpioService.handleRemoteResult(data);
+      });
+
+      // ================================================================
+      // Disconnect
+      // ================================================================
+
       socket.on('disconnect', () => {
-        console.log(`Client disconnected: ${socket.id}`);
+        console.log(`Client disconnected: ${socket.id}${isGpioAgent ? ' [GPIO Agent]' : ''}`);
         if (clientId) {
           dbWorker.updateClientLastSeen(clientId).catch(() => {});
           this.io.emit('clients_changed', { timestamp: new Date() });
@@ -615,6 +715,14 @@ export class WebSocketServer {
           timestamp: new Date(),
         });
       }
+    }
+
+    // Send switches
+    if (this.dataController) {
+      socket.emit('switches_sync', {
+        switches: this.dataController.getSwitchService().getAllSwitches(),
+        timestamp: new Date(),
+      });
     }
 
     // Send settings

@@ -27,10 +27,13 @@ import {
   TempForecastItem,
   RollItem,
   PitchItem,
+  SwitchItem,
 } from './items';
 import { DashboardSidebar } from './DashboardSidebar';
+import { SwitchConfigDialog } from './SwitchConfigDialog';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useSwitches } from '../../context/SwitchContext';
 import { useClient } from '../../context/ClientContext';
 import { wsService } from '../../services/websocket';
 
@@ -55,14 +58,15 @@ const ITEM_TYPE_CONFIG: Record<DashboardItemType, { label: string; targetView: V
   'position': { label: 'Position', targetView: 'position', defaultSize: { w: 1, h: 1 } },
   'battery': { label: 'Battery', targetView: 'battery', defaultSize: { w: 1, h: 1 } },
   'battery-draw': { label: 'Battery Draw', targetView: 'battery', defaultSize: { w: 1, h: 1 } },
+  'switch': { label: 'Switch', targetView: 'settings', defaultSize: { w: 1, h: 1 } },
+  'roll': { label: 'Roll', targetView: 'roll', defaultSize: { w: 1, h: 1 } },
+  'pitch': { label: 'Pitch', targetView: 'pitch', defaultSize: { w: 1, h: 1 } },
   'weather-forecast': { label: 'Weather', targetView: 'weather', defaultSize: { w: 1, h: 1 } },
   'wave-forecast': { label: 'Waves', targetView: 'weather', defaultSize: { w: 1, h: 1 } },
   'gust-forecast': { label: 'Gusts', targetView: 'weather', defaultSize: { w: 1, h: 1 } },
   'pressure-forecast': { label: 'Pressure', targetView: 'weather', defaultSize: { w: 1, h: 1 } },
   'sea-temp-forecast': { label: 'Sea Temp', targetView: 'weather', defaultSize: { w: 1, h: 1 } },
   'temp-forecast': { label: 'Air Temp', targetView: 'weather', defaultSize: { w: 1, h: 1 } },
-  'roll': { label: 'Roll', targetView: 'roll', defaultSize: { w: 1, h: 1 } },
-  'pitch': { label: 'Pitch', targetView: 'pitch', defaultSize: { w: 1, h: 1 } },
 };
 
 // Migrate old items to use new targetView values
@@ -82,6 +86,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
   const { theme } = useTheme();
   const { t, language } = useLanguage();
   const { clientId } = useClient();
+  const { toggleSwitch } = useSwitches();
+  const [switchConfigItem, setSwitchConfigItem] = useState<string | null>(null);
 
   // Dashboard sidebar position - independent from chart sidebar, saved per client
   const [sidebarPosition, setSidebarPosition] = useState<DashboardSidebarPosition>(() => {
@@ -110,6 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       'temp-forecast': 'dashboard.weather_air_temp',
       'roll': 'dashboard.roll',
       'pitch': 'dashboard.pitch',
+      'switch': 'dashboard.switch',
     };
     return t(labelKeys[type]);
   };
@@ -468,6 +475,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
         return <RollItem roll={sensorData.navigation.attitude.roll} />;
       case 'pitch':
         return <PitchItem pitch={sensorData.navigation.attitude.pitch} />;
+      case 'switch':
+        return <SwitchItem switchId={item.switchConfig?.switchId} activeColor={item.switchConfig?.activeColor} />;
       default:
         return null;
     }
@@ -591,10 +600,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       case 'roll':
         return (
           <div style={{ textAlign: 'center' }}>
-            <svg width="40" height="30" viewBox="0 0 100 40" style={iconStyle}>
-              <path d="M10 35 Q50 0 90 35" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.3" />
-              <line x1="50" y1="35" x2="62" y2="12" stroke="#81C784" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="50" cy="35" r="3" fill="#81C784" />
+            {/* Boat stern cross-section, tilted — matches RollItem */}
+            <svg width="44" height="34" viewBox="0 0 120 65" style={iconStyle}>
+              <path d="M-20 30 Q-10 28 0 30 T20 30 T40 30 T60 30 T80 30 T100 30 T120 30 T140 30" stroke="#4FC3F7" strokeWidth="1" opacity="0.4" fill="none" />
+              <g transform="rotate(8, 60, 30) scale(0.9) translate(6.67, 6)">
+                <path d="M30 12 C30 19 32 30 48 38 Q54 41 55 45 Q55 48 57 48 L63 48 Q65 48 65 45 Q66 41 72 38 C88 30 90 19 90 12 Z" fill="#e8e8e8" stroke="#888" strokeWidth="1.2" />
+                <path d="M40 13 C40 17 42 25 55 31 L60 34 L65 31 C78 25 80 17 80 13 Z" fill="#d0d0d0" stroke="#bbb" strokeWidth="0.6" />
+              </g>
             </svg>
             <div style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '-2px' }}>3.2°</div>
           </div>
@@ -602,12 +614,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
       case 'pitch':
         return (
           <div style={{ textAlign: 'center' }}>
-            <svg width="40" height="30" viewBox="0 0 100 40" style={iconStyle}>
-              <line x1="10" y1="20" x2="90" y2="20" stroke="currentColor" strokeWidth="2" opacity="0.3" />
-              <line x1="25" y1="24" x2="75" y2="16" stroke="#81C784" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="50" cy="20" r="3" fill="#81C784" />
+            {/* Boat side profile, tilted — matches PitchItem */}
+            <svg width="44" height="34" viewBox="0 0 120 65" style={iconStyle}>
+              <path d="M-20 30 Q-10 28 0 30 T20 30 T40 30 T60 30 T80 30 T100 30 T120 30 T140 30" stroke="#4FC3F7" strokeWidth="1" opacity="0.4" fill="none" />
+              <g transform="rotate(4, 60, 30)">
+                <path d="M6 18 Q8 36 25 38 L85 38 Q112 36 112 24 L112 18 L85 18 L85 10 L48 10 L42 18 Z" fill="#e8e8e8" stroke="#ccc" strokeWidth="1" />
+                <rect x="52" y="12" width="6" height="4" rx="1" fill="#8bb8d0" opacity="0.6" />
+                <rect x="62" y="12" width="6" height="4" rx="1" fill="#8bb8d0" opacity="0.6" />
+                <rect x="72" y="12" width="6" height="4" rx="1" fill="#8bb8d0" opacity="0.6" />
+              </g>
             </svg>
             <div style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '-2px' }}>1.5°</div>
+          </div>
+        );
+      case 'switch':
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <svg width="32" height="20" viewBox="0 0 24 14" fill="none" style={iconStyle}>
+              <rect x="1" y="1" width="22" height="12" rx="6" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="16" cy="7" r="4" fill="#4caf50" />
+            </svg>
+            <div style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: '2px' }}>ON</div>
           </div>
         );
       default:
@@ -699,6 +726,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
                 onNavigate={onNavigate}
                 editMode={editMode}
                 onDelete={() => handleDeleteItem(item.id)}
+                onTap={item.type === 'switch' && item.switchConfig?.switchId ? () => toggleSwitch(item.switchConfig!.switchId) : undefined}
+                onSettings={item.type === 'switch' ? () => setSwitchConfigItem(item.id) : undefined}
               >
                 {renderItemContent(item)}
               </DashboardItem>
@@ -1099,6 +1128,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ sensorData, onNavigate }) 
             </div>
           </div>
         </>
+      )}
+      {/* Switch Config Dialog */}
+      {switchConfigItem && (
+        <SwitchConfigDialog
+          config={items.find(i => i.id === switchConfigItem)?.switchConfig}
+          onSave={(config) => {
+            setItems(prev => {
+              const updated = prev.map(item =>
+                item.id === switchConfigItem ? { ...item, switchConfig: config } : item
+              );
+              localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(updated));
+              return updated;
+            });
+          }}
+          onClose={() => setSwitchConfigItem(null)}
+        />
       )}
     </div>
   );

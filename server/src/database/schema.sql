@@ -135,6 +135,24 @@ INSERT OR IGNORE INTO db_metadata (key, value) VALUES ('schema_version', '1');
 INSERT OR IGNORE INTO db_metadata (key, value) VALUES ('created_at', datetime('now'));
 INSERT OR IGNORE INTO db_metadata (key, value) VALUES ('app_name', 'Biga OS');
 
+-- Switches
+-- Physical relay control via GPIO pins
+CREATE TABLE IF NOT EXISTS switches (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL DEFAULT 'lightbulb',
+    target_client_id TEXT NOT NULL,
+    device_type TEXT NOT NULL DEFAULT 'rpi4b',
+    relay_type TEXT NOT NULL DEFAULT 'normally-off',
+    gpio_pin INTEGER NOT NULL,
+    state INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(target_client_id, gpio_pin)
+);
+
+CREATE INDEX IF NOT EXISTS idx_switches_target ON switches(target_client_id);
+
 -- Insert default settings
 INSERT OR IGNORE INTO settings (key, value, description)
 VALUES ('data_retention_days', '30', 'Number of days to retain sensor data');

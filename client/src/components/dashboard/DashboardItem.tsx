@@ -9,6 +9,8 @@ interface DashboardItemProps {
   onNavigate: (view: ViewType) => void;
   editMode?: boolean;
   onDelete?: () => void;
+  onTap?: () => void;
+  onSettings?: () => void;
 }
 
 export const DashboardItem: React.FC<DashboardItemProps> = ({
@@ -17,11 +19,17 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
   onNavigate,
   editMode = false,
   onDelete,
+  onTap,
+  onSettings,
 }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const handleClick = () => {
     if (editMode) {
+      return;
+    }
+    if (onTap) {
+      onTap();
       return;
     }
     onNavigate(targetView);
@@ -68,6 +76,48 @@ export const DashboardItem: React.FC<DashboardItemProps> = ({
       <div style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1, containerType: 'size' as any }}>
         {children}
       </div>
+
+      {/* Settings Button (only in edit mode, for switch items) */}
+      {editMode && onSettings && (
+        <button
+          onMouseDown={handleDeleteMouseDown}
+          onTouchStart={handleDeleteMouseDown}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onSettings(); }}
+          onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); onSettings(); }}
+          className="touch-btn"
+          style={{
+            position: 'absolute',
+            top: theme.space.sm,
+            left: theme.space.sm,
+            width: '36px',
+            height: '36px',
+            borderRadius: theme.radius.sm,
+            background: theme.colors.primaryMedium,
+            border: `2px solid ${theme.colors.borderFocus}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: theme.zIndex.tooltip,
+            boxShadow: theme.shadow.md,
+          }}
+          title={t('common.settings')}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      )}
 
       {/* Delete Button (only in edit mode) */}
       {editMode && onDelete && (
